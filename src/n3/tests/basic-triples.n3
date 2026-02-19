@@ -1,0 +1,5 @@
+@prefix : <#> .
+
+:alice :knows :bob, :carol .
+:bob :knows :carol ;
+     :name "Bob" .

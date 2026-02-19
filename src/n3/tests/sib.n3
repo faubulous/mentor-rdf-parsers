@@ -1,0 +1,4 @@
+@prefix : <foo.n3#>.
+@prefix foo: <foo.n3#>.
+
+ :theSky :is :blue .

@@ -1,0 +1,12 @@
+@prefix ex: <http://www.example.net/2000/10/whatever#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix doc: <http://www.w3.org/2000/10/swap/pim/doc#> .
+@prefix contact: <http://www.w3.org/2000/10/swap/pim/contact#> .
+
+@prefix : <foo.n3#>.
+@prefix foo: <foo.n3#>.
+
+[] doc:creator [ contact:email <mailto:fred@example.com> ];
+   ex:says  {
+       [] doc:title "Huckleberry Finn";
+          doc:creator [ contact:knownAs "Mark Twain"] }.

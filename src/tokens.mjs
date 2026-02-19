@@ -196,6 +196,31 @@ const _VAR1 = seq(/\?/, _VARNAME);
 
 const _VAR2 = seq(/\$/, _VARNAME);
 
+// N3-specific token patterns
+const _QUICK_VAR = seq(/\?/, choice(_PN_CHARS_U, /\d/), repeat(_PN_CHARS));
+
+const _IMPLIES = /=>/;
+
+const _IMPLIED_BY = /<=/;
+
+const _EQUALS_SIGN = /=/;
+
+const _INVERSE_OF = /<-/;
+
+const _EXCL = /!/;
+
+const _CARET = /\^/;
+
+const _FORALL = /@forAll/;
+
+const _FORSOME = /@forSome/;
+
+const _HAS = /has\b/;
+
+const _IS = /is\b/;
+
+const _OF = /of\b/;
+
 /**
  * Common tokens for W3C RDF syntaxes such as N-Triples, N-Quads, Turtle, TriG and SPARQL.
  */
@@ -244,5 +269,19 @@ export const tokens = {
     VAR1: createToken({ name: 'VAR1', pattern: _VAR1, }),
     VAR2: createToken({ name: 'VAR2', pattern: _VAR2, }),
     VERSION: createToken({ name: 'VERSION', label: '@version', pattern: _VERSION }),
-    WS: createToken({ name: 'WS', pattern: _WS, group: Lexer.SKIPPED })
+    WS: createToken({ name: 'WS', pattern: _WS, group: Lexer.SKIPPED }),
+
+    // N3-specific tokens
+    QUICK_VAR: createToken({ name: 'QUICK_VAR', pattern: _QUICK_VAR }),
+    IMPLIES: createToken({ name: 'IMPLIES', label: '=>', pattern: _IMPLIES }),
+    IMPLIED_BY: createToken({ name: 'IMPLIED_BY', label: '<=', pattern: _IMPLIED_BY }),
+    EQUALS_SIGN: createToken({ name: 'EQUALS_SIGN', label: '=', pattern: _EQUALS_SIGN }),
+    INVERSE_OF: createToken({ name: 'INVERSE_OF', label: '<-', pattern: _INVERSE_OF }),
+    EXCL: createToken({ name: 'EXCL', label: '!', pattern: _EXCL }),
+    CARET: createToken({ name: 'CARET', label: '^', pattern: _CARET }),
+    FORALL: createToken({ name: 'FORALL', label: '@forAll', pattern: _FORALL }),
+    FORSOME: createToken({ name: 'FORSOME', label: '@forSome', pattern: _FORSOME }),
+    HAS: createToken({ name: 'HAS', label: 'has', pattern: _HAS }),
+    IS: createToken({ name: 'IS', label: 'is', pattern: _IS }),
+    OF: createToken({ name: 'OF', label: 'of', pattern: _OF }),
 }

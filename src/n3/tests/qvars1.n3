@@ -1,0 +1,3 @@
+{ ?a <#mother> ?b; <#sister> ?c } => { ?b <#aunt> ?c }.
+
+#ends

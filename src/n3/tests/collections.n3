@@ -1,0 +1,4 @@
+@prefix : <#> .
+
+() a :EmptyList .
+( :a :b :c ) a :ThreeElementList .

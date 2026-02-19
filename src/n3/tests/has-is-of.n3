@@ -1,0 +1,5 @@
+@prefix : <#> .
+
+:water :is :blue .
+:ice is :temperature of :water .
+:water has :temperature :cold .

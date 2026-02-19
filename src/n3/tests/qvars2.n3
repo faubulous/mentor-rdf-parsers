@@ -1,0 +1,3 @@
+{ ?b <#aunt> ?c } <= { [] <#parent> ?b; <#sister> ?c }.
+
+#ends
