@@ -31,7 +31,7 @@ export class TurtleReader extends BaseVisitor {
                 if (prefix !== undefined) {
                     this.namespaces[prefix] = namespaceIri;
                 } else if (baseIri !== undefined) {
-                    this.base = baseIri;
+                    this.baseIri = baseIri;
                 }
             }
         }
@@ -87,7 +87,7 @@ export class TurtleReader extends BaseVisitor {
         const quads = [];
 
         if (ctx.subject) {
-            const subject = this.visit(ctx.subject[0]);
+            const subject = this.visit(ctx.subject[0], quads);
 
             if (!ctx.predicateObjectList) {
                 throw new Error('Invalid triples: ' + JSON.stringify(ctx));
@@ -97,8 +97,17 @@ export class TurtleReader extends BaseVisitor {
                 quads.push(dataFactory.quad(subject, predicate, object));
             }
         } else if (ctx.blankNodePropertyList) {
-            for (const object of this.visit(ctx.blankNodePropertyList[0], quads)) {
-                quads.push(dataFactory.quad(subject, predicate, object));
+            // The blank node property list itself generates quads via blankNodePropertyList visitor.
+            // It returns the blank node subject(s). If there is also a predicateObjectList after it,
+            // we use the blank node as subject for those additional predicate-object pairs.
+            const subjects = this.visit(ctx.blankNodePropertyList[0], quads);
+
+            if (ctx.predicateObjectList) {
+                const subject = subjects[0];
+
+                for (const { predicate, object } of this.visit(ctx.predicateObjectList[0], quads)) {
+                    quads.push(dataFactory.quad(subject, predicate, object));
+                }
             }
         } else {
             throw new Error('Invalid triples: ' + JSON.stringify(ctx));
@@ -107,46 +116,50 @@ export class TurtleReader extends BaseVisitor {
         return quads;
     }
 
-    collection(ctx) {
-        // Generate a linked list of blank nodes and return the quads.
+    collection(ctx, quads) {
+        // Generate a linked list of blank nodes, push internal quads to `quads`,
+        // and return the head blank node (or rdf:nil for an empty list).
         const nil = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+        const rest = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+        const first = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
 
-        const objects = ctx.object ? ctx.object.map(o => this.visit(o)) : [];
+        const objectNodes = ctx.object ?? [];
 
-        if (objects.length === 0) {
-            return [nil];
+        if (objectNodes.length === 0) {
+            return nil;
         }
-
-        const result = [];
 
         let head = dataFactory.blankNode();
         let current = head;
 
-        const rest = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-        const first = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+        for (let i = 0; i < objectNodes.length; i++) {
+            // Visit the object, which may push sub-collection quads into `quads`.
+            const elements = this.visit(objectNodes[i], quads);
+            const element = Array.isArray(elements) ? elements[0] : elements;
 
-        objects.forEach((element, i) => {
-            result.push(dataFactory.quad(current, first, element));
+            quads.push(dataFactory.quad(current, first, element));
 
-            if (i < objects.length - 1) {
+            if (i < objectNodes.length - 1) {
                 const next = dataFactory.blankNode();
 
-                result.push(dataFactory.quad(current, rest, next));
+                quads.push(dataFactory.quad(current, rest, next));
 
                 current = next;
             } else {
-                result.push(dataFactory.quad(current, rest, nil));
+                quads.push(dataFactory.quad(current, rest, nil));
             }
-        });
+        }
 
-        return result;
+        return head;
     }
 
-    subject(ctx) {
+    subject(ctx, quads) {
         if (ctx.iri) {
             return this.visit(ctx.iri[0]);
         } else if (ctx.blankNode) {
             return this.visit(ctx.blankNode[0]);
+        } else if (ctx.collection) {
+            return this.visit(ctx.collection[0], quads);
         }
     }
 
@@ -161,7 +174,6 @@ export class TurtleReader extends BaseVisitor {
     }
 
     object(ctx, quads) {
-        // TODO: Always return an iterable.
         if (ctx.iri) {
             return [this.visit(ctx.iri[0])];
         } else if (ctx.literal) {
@@ -171,7 +183,8 @@ export class TurtleReader extends BaseVisitor {
         } else if (ctx.blankNodePropertyList) {
             return this.visit(ctx.blankNodePropertyList[0], quads);
         } else if (ctx.collection) {
-            return this.visit(ctx.collection[0], quads);
+            // collection() pushes internal quads and returns the head node
+            return [this.visit(ctx.collection[0], quads)];
         }
     }
 
@@ -187,11 +200,15 @@ export class TurtleReader extends BaseVisitor {
             throw new Error('Invalid predicateObjectList: ' + JSON.stringify(ctx));
         }
 
-        const predicate = this.visit(ctx.predicate);
+        // The CST may contain multiple predicate/objectList pairs (separated by ';').
+        // predicate[i] corresponds to objectList[i].
+        for (let i = 0; i < ctx.predicate.length; i++) {
+            const predicate = this.visit(ctx.predicate[i]);
 
-        for (let objects of this.visit(ctx.objectList[0], quads)) {
-            for (let object of objects) {
-                result.push({ predicate, object });
+            for (let objects of this.visit(ctx.objectList[i], quads)) {
+                for (let object of objects) {
+                    result.push({ predicate, object });
+                }
             }
         }
 
@@ -242,9 +259,9 @@ export class TurtleReader extends BaseVisitor {
     }
 
     booleanLiteral(ctx) {
-        if (ctx.TRUE) {
+        if (ctx.true) {
             return dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
-        } else if (ctx.FALSE) {
+        } else if (ctx.false) {
             return dataFactory.literal('false', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
         } else {
             throw new Error('Invalid boolean literal: ' + JSON.stringify(ctx));
@@ -252,21 +269,59 @@ export class TurtleReader extends BaseVisitor {
     }
 
     stringLiteral(ctx) {
-        if (ctx.STRING_LITERAL_QUOTE) {
-            return dataFactory.literal(ctx.STRING_LITERAL_QUOTE[0].image.slice(1, -1));
-        } else if (ctx.STRING_LITERAL_SINGLE_QUOTE) {
-            return dataFactory.literal(ctx.STRING_LITERAL_SINGLE_QUOTE[0].image.slice(1, -1));
-        } else if (ctx.STRING_LITERAL_LONG_SINGLE_QUOTE) {
-            return dataFactory.literal(ctx.STRING_LITERAL_LONG_SINGLE_QUOTE[0].image.slice(3, -3));
-        } else if (ctx.STRING_LITERAL_LONG_QUOTE) {
-            return dataFactory.literal(ctx.STRING_LITERAL_LONG_QUOTE[0].image.slice(3, -3));
+        const value = this.visit(ctx.string[0]);
+
+        if (ctx.datatype) {
+            const datatype = this.visit(ctx.datatype[0]);
+
+            return dataFactory.literal(value, datatype);
+        } else if (ctx.LANGTAG) {
+            // LANGTAG image includes the leading '@', e.g. "@en" — strip it.
+            const langtag = ctx.LANGTAG[0].image.slice(1);
+
+            return dataFactory.literal(value, langtag);
         } else {
-            throw new Error('Invalid string literal: ' + JSON.stringify(ctx));
+            return dataFactory.literal(value);
         }
     }
 
     string(ctx) {
-        return this.stringLiteral(ctx);
+        let raw;
+
+        if (ctx.STRING_LITERAL_QUOTE) {
+            raw = ctx.STRING_LITERAL_QUOTE[0].image.slice(1, -1);
+        } else if (ctx.STRING_LITERAL_SINGLE_QUOTE) {
+            raw = ctx.STRING_LITERAL_SINGLE_QUOTE[0].image.slice(1, -1);
+        } else if (ctx.STRING_LITERAL_LONG_QUOTE) {
+            raw = ctx.STRING_LITERAL_LONG_QUOTE[0].image.slice(3, -3);
+        } else if (ctx.STRING_LITERAL_LONG_SINGLE_QUOTE) {
+            raw = ctx.STRING_LITERAL_LONG_SINGLE_QUOTE[0].image.slice(3, -3);
+        } else {
+            throw new Error('Invalid string: ' + JSON.stringify(ctx));
+        }
+
+        return this.unescapeString(raw);
+    }
+
+    /**
+     * Interpret escape sequences in a Turtle string value.
+     */
+    unescapeString(raw) {
+        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match, u4, u8, ch) => {
+            if (u4) return String.fromCodePoint(parseInt(u4, 16));
+            if (u8) return String.fromCodePoint(parseInt(u8, 16));
+            switch (ch) {
+                case 't': return '\t';
+                case 'n': return '\n';
+                case 'r': return '\r';
+                case 'b': return '\b';
+                case 'f': return '\f';
+                case '"': return '"';
+                case "'": return "'";
+                case '\\': return '\\';
+                default: return match;
+            }
+        });
     }
 
     iri(ctx) {
@@ -281,8 +336,9 @@ export class TurtleReader extends BaseVisitor {
 
     prefixedName(ctx) {
         const pname = ctx.PNAME_LN ? ctx.PNAME_LN[0].image : ctx.PNAME_NS[0].image;
-        const prefix = pname.split(':')[0] ?? '';
-        const localName = pname.split(':')[1] ?? '';
+        const colonIndex = pname.indexOf(':');
+        const prefix = colonIndex > -1 ? pname.slice(0, colonIndex) : '';
+        const localName = colonIndex > -1 ? pname.slice(colonIndex + 1) : '';
 
         const namespaceIri = this.namespaces[prefix];
 
@@ -290,22 +346,21 @@ export class TurtleReader extends BaseVisitor {
             throw new Error(`Undefined prefix: ${prefix}`);
         }
 
-        return dataFactory.namedNode(namespaceIri.value + localName);
+        // Unescape backslash-escaped characters in local names (e.g. \~ \. \- \! etc.)
+        const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
+
+        return dataFactory.namedNode(namespaceIri.value + unescapedLocalName);
     }
 
     literal(ctx) {
-        const value = this.getLiteralValue(ctx);
-
-        if (ctx.datatype) {
-            const datatype = this.visit(ctx.datatype[0]);
-
-            return dataFactory.literal(value, datatype);
-        } else if (ctx.LANGTAG) {
-            const langtag = ctx.LANGTAG[0].image;
-
-            return dataFactory.literal(value, langtag);
+        if (ctx.stringLiteral) {
+            return this.visit(ctx.stringLiteral[0]);
+        } else if (ctx.numericLiteral) {
+            return this.visit(ctx.numericLiteral[0]);
+        } else if (ctx.booleanLiteral) {
+            return this.visit(ctx.booleanLiteral[0]);
         } else {
-            return dataFactory.literal(value);
+            throw new Error('Invalid literal: ' + JSON.stringify(ctx));
         }
     }
 
@@ -320,24 +375,30 @@ export class TurtleReader extends BaseVisitor {
     getBaseIri(ctx) {
         const value = this.getNamedNode(ctx);
 
-        if (this.baseIri) {
-            throw new Error('Multiple base IRIs are not allowed.');
-        } else {
-            this.baseIri = value;
-        }
+        this.baseIri = value;
 
         return { baseIri: value };
     }
 
     getNamedNode(ctx) {
-        const value = ctx.IRIREF[0].image.slice(1, -1);
+        let value = ctx.IRIREF[0].image.slice(1, -1);
 
-        if (value.includes((':'))) {
+        // Resolve Unicode escapes (\uXXXX and \UXXXXXXXX)
+        value = value.replace(/\\u([0-9A-Fa-f]{4})/g, (_, hex) =>
+            String.fromCodePoint(parseInt(hex, 16))
+        ).replace(/\\U([0-9A-Fa-f]{8})/g, (_, hex) =>
+            String.fromCodePoint(parseInt(hex, 16))
+        );
+
+        if (value.includes(':')) {
             return dataFactory.namedNode(value);
-        } else if (this.baseIri) {
+        } else if (value === '' && this.baseIri) {
+            return dataFactory.namedNode(this.baseIri.value);
+        } else if (value !== '' && this.baseIri) {
             return dataFactory.namedNode(new URL(value, this.baseIri.value).href);
         } else {
-            throw new Error('Cannot resolve relative IRI without base IRI: ' + value);
+            // No base IRI available — keep the relative IRI as-is.
+            return dataFactory.namedNode(value);
         }
     }
 
@@ -349,10 +410,5 @@ export class TurtleReader extends BaseVisitor {
         } else {
             return dataFactory.blankNode();
         }
-    }
-
-    getLiteralValue(ctx) {
-        // TODO: This does not handle multiline strings correctly.
-        return ctx.STRING_LITERAL_QUOTE[0].image.slice(1, -1);
     }
 }

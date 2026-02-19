@@ -1,5 +1,5 @@
 {
-  "name": "@faubulous/chevrotain-rdf",
+  "name": "@faubulous/mentor-rdf-parsers",
   "description": "Chevrotain parsers for RDF languages such as N-Triples, N-Quads, Turtle and Trig.",
   "version": "1.0.0",
   "keywords": [
@@ -11,10 +11,10 @@
     "chevrotain"
   ],
   "author": "Sebastian Faubel",
-  "license": "GPL-3.0",
+  "license": "LGPL-3.0-or-later",
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  "test": "vitest run"
   },
   "dependencies": {
     "@rdfjs/data-model": "^2.1.0",
@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "command-line-args": "^6.0.1",
-    "jest": "^29.7.0",
-    "n3": "^1.23.1"
+  "n3": "^1.23.1",
+  "vitest": "^2.1.9"
   }
 }

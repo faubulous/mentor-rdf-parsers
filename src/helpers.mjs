@@ -82,7 +82,7 @@ function canonicalizeQuad(quad, bnodeMap, getNextId) {
         subject: canonicalizeTerm(quad.subject, bnodeMap, getNextId),
         predicate: canonicalizeTerm(quad.predicate, bnodeMap, getNextId),
         object: canonicalizeTerm(quad.object, bnodeMap, getNextId),
-        graph: quad.graph ? canonicalizeTerm(quad.graph, bnodeMap, getNextId) : null
+    graph: quad.graph ? canonicalizeTerm(quad.graph, bnodeMap, getNextId) : null
     };
 }
 
@@ -90,6 +90,10 @@ function canonicalizeQuad(quad, bnodeMap, getNextId) {
  * Convert a single term's blank node labels into a stable local label.
  */
 function canonicalizeTerm(term, bnodeMap, getNextId) {
+    if (!term) {
+        return null;
+    }
+
     if (term.termType === 'BlankNode') {
         if (!bnodeMap.has(term.value)) {
             bnodeMap.set(term.value, `_b${getNextId()}`);

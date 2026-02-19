@@ -75,7 +75,9 @@ export class NQuadsReader extends BaseVisitor {
 
             return dataFactory.literal(value, datatype);
         } else if (ctx.LANGTAG) {
-            const langtag = ctx.LANGTAG[0].image;
+            // LANGTAG image includes the leading '@', e.g. "@en" — strip it.
+            // Language tags are normalized to lowercase per BCP 47.
+            const langtag = ctx.LANGTAG[0].image.slice(1).toLowerCase();
 
             return dataFactory.literal(value, langtag);
         } else {
@@ -100,7 +102,16 @@ export class NQuadsReader extends BaseVisitor {
     }
 
     getNamedNode(ctx) {
-        return dataFactory.namedNode(ctx.IRIREF_ABS[0].image.slice(1, -1));
+        let value = ctx.IRIREF_ABS[0].image.slice(1, -1);
+
+        // Resolve Unicode escapes (\uXXXX and \UXXXXXXXX)
+        value = value.replace(/\\u([0-9A-Fa-f]{4})/g, (_, hex) =>
+            String.fromCodePoint(parseInt(hex, 16))
+        ).replace(/\\U([0-9A-Fa-f]{8})/g, (_, hex) =>
+            String.fromCodePoint(parseInt(hex, 16))
+        );
+
+        return dataFactory.namedNode(value);
     }
 
     getBlankNode(ctx) {
@@ -108,6 +119,29 @@ export class NQuadsReader extends BaseVisitor {
     }
 
     getLiteralValue(ctx) {
-        return ctx.STRING_LITERAL_QUOTE[0].image.slice(1, -1);
+        const raw = ctx.STRING_LITERAL_QUOTE[0].image.slice(1, -1);
+
+        return this.unescapeString(raw);
+    }
+
+    /**
+     * Interpret escape sequences in a string value.
+     */
+    unescapeString(raw) {
+        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match, u4, u8, ch) => {
+            if (u4) return String.fromCodePoint(parseInt(u4, 16));
+            if (u8) return String.fromCodePoint(parseInt(u8, 16));
+            switch (ch) {
+                case 't': return '\t';
+                case 'n': return '\n';
+                case 'r': return '\r';
+                case 'b': return '\b';
+                case 'f': return '\f';
+                case '"': return '"';
+                case "'": return "'";
+                case '\\': return '\\';
+                default: return match;
+            }
+        });
     }
 }
