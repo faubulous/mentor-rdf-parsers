@@ -1,4 +1,4 @@
-# Chevrotain RDF
+# Mentor RDF Parsers
 
 A set of parsers built using the Chevrotain library.
 
