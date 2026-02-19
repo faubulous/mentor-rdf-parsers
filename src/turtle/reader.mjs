@@ -58,6 +58,10 @@ export class TurtleReader extends BaseVisitor {
             return this.visit(ctx.sparqlPrefix[0]);
         } else if (ctx.sparqlBase) {
             return this.visit(ctx.sparqlBase[0]);
+        } else if (ctx.version) {
+            return this.visit(ctx.version[0]);
+        } else if (ctx.sparqlVersion) {
+            return this.visit(ctx.sparqlVersion[0]);
         }
     }
 
@@ -83,6 +87,19 @@ export class TurtleReader extends BaseVisitor {
         return this.getBaseIri(ctx);
     }
 
+    version(ctx) {
+        // Version directives are informational hints; we don't enforce them.
+        return {};
+    }
+
+    sparqlVersion(ctx) {
+        return {};
+    }
+
+    versionSpecifier(ctx) {
+        return {};
+    }
+
     triples(ctx) {
         const quads = [];
 
@@ -93,20 +110,30 @@ export class TurtleReader extends BaseVisitor {
                 throw new Error('Invalid triples: ' + JSON.stringify(ctx));
             }
 
-            for (const { predicate, object } of this.visit(ctx.predicateObjectList[0], quads)) {
+            for (const { predicate, object, annotationCtx } of this.visit(ctx.predicateObjectList[0], quads)) {
                 quads.push(dataFactory.quad(subject, predicate, object));
+                this.processAnnotation(annotationCtx, subject, predicate, object, quads);
             }
         } else if (ctx.blankNodePropertyList) {
-            // The blank node property list itself generates quads via blankNodePropertyList visitor.
-            // It returns the blank node subject(s). If there is also a predicateObjectList after it,
-            // we use the blank node as subject for those additional predicate-object pairs.
             const subjects = this.visit(ctx.blankNodePropertyList[0], quads);
 
             if (ctx.predicateObjectList) {
                 const subject = subjects[0];
 
-                for (const { predicate, object } of this.visit(ctx.predicateObjectList[0], quads)) {
+                for (const { predicate, object, annotationCtx } of this.visit(ctx.predicateObjectList[0], quads)) {
                     quads.push(dataFactory.quad(subject, predicate, object));
+                    this.processAnnotation(annotationCtx, subject, predicate, object, quads);
+                }
+            }
+        } else if (ctx.reifiedTriple) {
+            // A reifiedTriple at top level acts as the subject of subsequent predicateObjectList.
+            // It also generates the rdf:reifies quad for the reifier.
+            const reifierNode = this.visit(ctx.reifiedTriple[0], quads);
+
+            if (ctx.predicateObjectList) {
+                for (const { predicate, object, annotationCtx } of this.visit(ctx.predicateObjectList[0], quads)) {
+                    quads.push(dataFactory.quad(reifierNode, predicate, object));
+                    this.processAnnotation(annotationCtx, reifierNode, predicate, object, quads);
                 }
             }
         } else {
@@ -185,12 +212,28 @@ export class TurtleReader extends BaseVisitor {
         } else if (ctx.collection) {
             // collection() pushes internal quads and returns the head node
             return [this.visit(ctx.collection[0], quads)];
+        } else if (ctx.tripleTerm) {
+            return [this.visit(ctx.tripleTerm[0])];
+        } else if (ctx.reifiedTriple) {
+            // reifiedTriple returns the reifier node and pushes rdf:reifies quad
+            return [this.visit(ctx.reifiedTriple[0], quads)];
         }
     }
 
     objectList(ctx, quads) {
         // Parse a list of objects that are separated by commas.
-        return ctx.object.map(o => this.visit(o, quads));
+        // Each object may have an associated annotation.
+        // annotation[i] corresponds to object[i].
+        const results = [];
+
+        for (let i = 0; i < ctx.object.length; i++) {
+            const objectNodes = this.visit(ctx.object[i], quads);
+            const annotationCtx = ctx.annotation?.[i];
+
+            results.push({ objectNodes, annotationCtx });
+        }
+
+        return results;
     }
 
     predicateObjectList(ctx, quads) {
@@ -205,9 +248,9 @@ export class TurtleReader extends BaseVisitor {
         for (let i = 0; i < ctx.predicate.length; i++) {
             const predicate = this.visit(ctx.predicate[i]);
 
-            for (let objects of this.visit(ctx.objectList[i], quads)) {
-                for (let object of objects) {
-                    result.push({ predicate, object });
+            for (let { objectNodes, annotationCtx } of this.visit(ctx.objectList[i], quads)) {
+                for (let object of objectNodes) {
+                    result.push({ predicate, object, annotationCtx });
                 }
             }
         }
@@ -221,8 +264,9 @@ export class TurtleReader extends BaseVisitor {
         if (ctx.predicateObjectList) {
             const subject = this.getBlankNode(ctx);
 
-            for (const { predicate, object } of this.visit(ctx.predicateObjectList[0], quads)) {
+            for (const { predicate, object, annotationCtx } of this.visit(ctx.predicateObjectList[0], quads)) {
                 quads.push(dataFactory.quad(subject, predicate, object));
+                this.processAnnotation(annotationCtx, subject, predicate, object, quads);
             }
 
             // TODO: Return a quad instead ob a single node.
@@ -369,6 +413,208 @@ export class TurtleReader extends BaseVisitor {
             return this.visit(ctx.iri[0]);
         } else {
             throw new Error('Invalid datatype: ' + ctx);
+        }
+    }
+
+    /**
+     * Process a reifiedTriple node. Returns the reifier node (IRI or blank node).
+     * Emits: reifierNode rdf:reifies <<( s p o )>> .
+     */
+    reifiedTriple(ctx, quads) {
+        const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+
+        const subject = this.visit(ctx.rtSubject[0], quads);
+        const predicate = this.visit(ctx.predicate[0]);
+        const object = this.visit(ctx.rtObject[0], quads);
+
+        // Determine the reifier node
+        let reifierNode;
+        if (ctx.reifier) {
+            reifierNode = this.visit(ctx.reifier[0]);
+        } else {
+            reifierNode = dataFactory.blankNode();
+        }
+
+        // Create the triple term
+        const tripleTerm = dataFactory.quad(subject, predicate, object);
+
+        // Emit: reifierNode rdf:reifies <<( s p o )>>
+        quads.push(dataFactory.quad(reifierNode, rdfReifies, tripleTerm));
+
+        return reifierNode;
+    }
+
+    rtSubject(ctx, quads) {
+        if (ctx.iri) {
+            return this.visit(ctx.iri[0]);
+        } else if (ctx.blankNode) {
+            return this.visit(ctx.blankNode[0]);
+        } else if (ctx.reifiedTriple) {
+            return this.visit(ctx.reifiedTriple[0], quads);
+        }
+    }
+
+    rtObject(ctx, quads) {
+        if (ctx.iri) {
+            return this.visit(ctx.iri[0]);
+        } else if (ctx.blankNode) {
+            return this.visit(ctx.blankNode[0]);
+        } else if (ctx.literal) {
+            return this.visit(ctx.literal[0]);
+        } else if (ctx.tripleTerm) {
+            return this.visit(ctx.tripleTerm[0]);
+        } else if (ctx.reifiedTriple) {
+            return this.visit(ctx.reifiedTriple[0], quads);
+        }
+    }
+
+    /**
+     * Process a tripleTerm node: <<( s p o )>>
+     * Returns a triple term (RDF/JS Quad used as a term).
+     */
+    tripleTerm(ctx) {
+        const subject = this.visit(ctx.ttSubject[0]);
+        const predicate = this.visit(ctx.predicate[0]);
+        const object = this.visit(ctx.ttObject[0]);
+
+        return dataFactory.quad(subject, predicate, object);
+    }
+
+    ttSubject(ctx) {
+        if (ctx.iri) {
+            return this.visit(ctx.iri[0]);
+        } else if (ctx.blankNode) {
+            return this.visit(ctx.blankNode[0]);
+        }
+    }
+
+    ttObject(ctx) {
+        if (ctx.iri) {
+            return this.visit(ctx.iri[0]);
+        } else if (ctx.blankNode) {
+            return this.visit(ctx.blankNode[0]);
+        } else if (ctx.literal) {
+            return this.visit(ctx.literal[0]);
+        } else if (ctx.tripleTerm) {
+            return this.visit(ctx.tripleTerm[0]);
+        }
+    }
+
+    /**
+     * Process a reifier node: ~ (iri | BlankNode)?
+     * Returns the reifier term (IRI, blank node, or fresh blank node).
+     */
+    reifier(ctx) {
+        if (ctx.iri) {
+            return this.visit(ctx.iri[0]);
+        } else if (ctx.blankNode) {
+            return this.visit(ctx.blankNode[0]);
+        } else {
+            return dataFactory.blankNode();
+        }
+    }
+
+    /**
+     * Process an annotation node: (reifier | annotationBlock)*
+     * This is only visited when needed, not always.
+     */
+    annotation(ctx, quads) {
+        // Annotations are processed in processAnnotation, not directly here.
+        // This visitor is needed to satisfy Chevrotain validation.
+    }
+
+    /**
+     * Process an annotationBlock node: {| predicateObjectList |}
+     */
+    annotationBlock(ctx, quads) {
+        // This visitor is needed to satisfy Chevrotain validation.
+        // Actual processing is done in processAnnotation.
+    }
+
+    /**
+     * Process annotation context from the CST.
+     * Annotations create reifiers and emit triples.
+     */
+    processAnnotation(annotationCtx, subject, predicate, object, quads) {
+        if (!annotationCtx) return;
+
+        const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+        const tripleTerm = dataFactory.quad(subject, predicate, object);
+
+        // The annotation CST has reifier and/or annotationBlock children.
+        const children = annotationCtx.children;
+        if (!children) return;
+
+        const reifierNodes = children.reifier || [];
+        const annotationBlocks = children.annotationBlock || [];
+
+        // Helper to extract the start offset from the first token in a CST rule node.
+        const getStartOffset = (node) => {
+            for (const key in node.children) {
+                const arr = node.children[key];
+                if (arr && arr.length > 0) {
+                    const first = arr[0];
+                    // Token nodes have startOffset directly
+                    if (typeof first.startOffset === 'number') return first.startOffset;
+                    // Sub-rule nodes: recurse
+                    if (first.children) return getStartOffset(first);
+                }
+            }
+            return 0;
+        };
+
+        // Collect all items with their start offset for ordering
+        const items = [];
+
+        for (const r of reifierNodes) {
+            const reifierTerm = this.visit(r);
+            items.push({
+                offset: getStartOffset(r),
+                type: 'reifier',
+                term: reifierTerm
+            });
+        }
+
+        for (const ab of annotationBlocks) {
+            items.push({
+                offset: getStartOffset(ab),
+                type: 'annotationBlock',
+                ctx: ab
+            });
+        }
+
+        // Sort by source position
+        items.sort((a, b) => a.offset - b.offset);
+
+        // Process items in order
+        let lastReifier = null;
+        for (const item of items) {
+            if (item.type === 'reifier') {
+                // A reifier without a following annotation block just emits rdf:reifies
+                const reifierTerm = item.term;
+                quads.push(dataFactory.quad(reifierTerm, rdfReifies, tripleTerm));
+                lastReifier = reifierTerm;
+            } else if (item.type === 'annotationBlock') {
+                // An annotation block uses the preceding reifier, or creates a fresh blank node
+                let reifierTerm;
+                if (lastReifier) {
+                    reifierTerm = lastReifier;
+                    lastReifier = null;
+                } else {
+                    reifierTerm = dataFactory.blankNode();
+                    quads.push(dataFactory.quad(reifierTerm, rdfReifies, tripleTerm));
+                }
+
+                // Process the predicateObjectList inside the annotation block
+                const polChildren = item.ctx.children;
+                if (polChildren?.predicateObjectList) {
+                    for (const { predicate: p, object: o, annotationCtx: innerAnnotation } of this.visit(polChildren.predicateObjectList[0], quads)) {
+                        quads.push(dataFactory.quad(reifierTerm, p, o));
+                        // Handle nested annotations recursively
+                        this.processAnnotation(innerAnnotation, reifierTerm, p, o, quads);
+                    }
+                }
+            }
         }
     }
 

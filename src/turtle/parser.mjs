@@ -12,13 +12,22 @@ const allTokens = [
     tokens.DCARET,
     tokens.LBRACKET,
     tokens.RBRACKET,
+    tokens.OPEN_ANNOTATION,
+    tokens.CLOSE_ANNOTATION,
+    tokens.OPEN_TRIPLE_TERM,
+    tokens.CLOSE_TRIPLE_TERM,
+    tokens.OPEN_REIFIED_TRIPLE,
+    tokens.CLOSE_REIFIED_TRIPLE,
+    tokens.TILDE,
     tokens.LPARENT,
     tokens.RPARENT,
     tokens.A,
     tokens.TRUE,
     tokens.FALSE,
+    tokens.VERSION,
     tokens.PREFIX,
     tokens.BASE,
+    tokens.SPARQL_VERSION,
     tokens.SPARQL_PREFIX,
     tokens.SPARQL_BASE,
     tokens.PNAME_LN,
@@ -67,12 +76,14 @@ export class TurtleParserBase extends CstParser {
             { ALT: () => this.SUBRULE1(this.prefix) },
             { ALT: () => this.SUBRULE2(this.base) },
             { ALT: () => this.SUBRULE3(this.sparqlPrefix) },
-            { ALT: () => this.SUBRULE4(this.sparqlBase) }
+            { ALT: () => this.SUBRULE4(this.sparqlBase) },
+            { ALT: () => this.SUBRULE5(this.version) },
+            { ALT: () => this.SUBRULE6(this.sparqlVersion) }
         ]);
     });
 
     /**
-    * https://www.w3.org/TR/n-quads/#grammar-production-triples
+    * https://www.w3.org/TR/rdf12-turtle/#grammar-production-triples
     */
     triples = this.RULE('triples', () => {
         this.OR([
@@ -86,6 +97,13 @@ export class TurtleParserBase extends CstParser {
                     this.SUBRULE(this.blankNodePropertyList);
                     this.OPTION(() => {
                         this.SUBRULE(this.predicateObjectList);
+                    });
+                }
+            }, {
+                ALT: () => {
+                    this.SUBRULE(this.reifiedTriple);
+                    this.OPTION2(() => {
+                        this.SUBRULE3(this.predicateObjectList);
                     });
                 }
             }
@@ -177,11 +195,153 @@ export class TurtleParserBase extends CstParser {
     });
 
     /**
-     * https://www.w3.org/TR/turtle/#grammar-production-sparqlBase
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-sparqlBase
      */
     sparqlBase = this.RULE('sparqlBase', () => {
         this.CONSUME(tokens.SPARQL_BASE);
         this.CONSUME(tokens.IRIREF);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-version
+     * version ::= '@version' VersionSpecifier '.'
+     */
+    version = this.RULE('version', () => {
+        this.CONSUME(tokens.VERSION);
+        this.SUBRULE(this.versionSpecifier);
+        this.CONSUME(tokens.PERIOD);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-sparqlVersion
+     * sparqlVersion ::= "VERSION" VersionSpecifier
+     */
+    sparqlVersion = this.RULE('sparqlVersion', () => {
+        this.CONSUME(tokens.SPARQL_VERSION);
+        this.SUBRULE(this.versionSpecifier);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-VersionSpecifier
+     * VersionSpecifier ::= STRING_LITERAL_QUOTE | STRING_LITERAL_SINGLE_QUOTE
+     */
+    versionSpecifier = this.RULE('versionSpecifier', () => {
+        this.OR([
+            { ALT: () => this.CONSUME(tokens.STRING_LITERAL_QUOTE) },
+            { ALT: () => this.CONSUME(tokens.STRING_LITERAL_SINGLE_QUOTE) }
+        ]);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-reifiedTriple
+     * reifiedTriple ::= '<<' rtSubject verb rtObject reifier? '>>'
+     */
+    reifiedTriple = this.RULE('reifiedTriple', () => {
+        this.CONSUME(tokens.OPEN_REIFIED_TRIPLE);
+        this.SUBRULE(this.rtSubject);
+        this.SUBRULE(this.predicate);
+        this.SUBRULE(this.rtObject);
+        this.OPTION(() => this.SUBRULE(this.reifier));
+        this.CONSUME(tokens.CLOSE_REIFIED_TRIPLE);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-rtSubject
+     * rtSubject ::= iri | BlankNode | reifiedTriple
+     */
+    rtSubject = this.RULE('rtSubject', () => {
+        this.OR([
+            { ALT: () => this.SUBRULE(this.iri) },
+            { ALT: () => this.SUBRULE(this.blankNode) },
+            { ALT: () => this.SUBRULE(this.reifiedTriple) }
+        ]);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-rtObject
+     * rtObject ::= iri | BlankNode | literal | tripleTerm | reifiedTriple
+     */
+    rtObject = this.RULE('rtObject', () => {
+        this.OR([
+            { ALT: () => this.SUBRULE(this.iri) },
+            { ALT: () => this.SUBRULE(this.blankNode) },
+            { ALT: () => this.SUBRULE(this.literal) },
+            { ALT: () => this.SUBRULE(this.tripleTerm) },
+            { ALT: () => this.SUBRULE(this.reifiedTriple) }
+        ]);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-tripleTerm
+     * tripleTerm ::= '<<(' ttSubject verb ttObject ')>>'
+     */
+    tripleTerm = this.RULE('tripleTerm', () => {
+        this.CONSUME(tokens.OPEN_TRIPLE_TERM);
+        this.SUBRULE(this.ttSubject);
+        this.SUBRULE(this.predicate);
+        this.SUBRULE(this.ttObject);
+        this.CONSUME(tokens.CLOSE_TRIPLE_TERM);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-ttSubject
+     * ttSubject ::= iri | BlankNode
+     */
+    ttSubject = this.RULE('ttSubject', () => {
+        this.OR([
+            { ALT: () => this.SUBRULE(this.iri) },
+            { ALT: () => this.SUBRULE(this.blankNode) }
+        ]);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-ttObject
+     * ttObject ::= iri | BlankNode | literal | tripleTerm
+     */
+    ttObject = this.RULE('ttObject', () => {
+        this.OR([
+            { ALT: () => this.SUBRULE(this.iri) },
+            { ALT: () => this.SUBRULE(this.blankNode) },
+            { ALT: () => this.SUBRULE(this.literal) },
+            { ALT: () => this.SUBRULE(this.tripleTerm) }
+        ]);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-reifier
+     * reifier ::= '~' (iri | BlankNode)?
+     */
+    reifier = this.RULE('reifier', () => {
+        this.CONSUME(tokens.TILDE);
+        this.OPTION(() => {
+            this.OR([
+                { ALT: () => this.SUBRULE(this.iri) },
+                { ALT: () => this.SUBRULE(this.blankNode) }
+            ]);
+        });
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-annotation
+     * annotation ::= (reifier | annotationBlock)*
+     */
+    annotation = this.RULE('annotation', () => {
+        this.MANY(() => {
+            this.OR([
+                { ALT: () => this.SUBRULE(this.reifier) },
+                { ALT: () => this.SUBRULE(this.annotationBlock) }
+            ]);
+        });
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-annotationBlock
+     * annotationBlock ::= '{|' predicateObjectList '|}'
+     */
+    annotationBlock = this.RULE('annotationBlock', () => {
+        this.CONSUME(tokens.OPEN_ANNOTATION);
+        this.SUBRULE(this.predicateObjectList);
+        this.CONSUME(tokens.CLOSE_ANNOTATION);
     });
 
     /**
@@ -211,14 +371,17 @@ export class TurtleParserBase extends CstParser {
     });
 
     /**
-     * https://www.w3.org/TR/turtle/#grammar-production-objectList
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-objectList
+     * objectList ::= object annotation ( ',' object annotation )*
      */
     objectList = this.RULE('objectList', () => {
         this.SUBRULE1(this.object);
+        this.SUBRULE1(this.annotation);
 
         this.MANY(() => {
             this.CONSUME(tokens.COMMA);
             this.SUBRULE2(this.object);
+            this.SUBRULE2(this.annotation);
         });
     });
 
@@ -355,7 +518,7 @@ export class TurtleParser extends TurtleParserBase {
     });
 
     /**
-     * https://www.w3.org/TR/n-quads/#grammar-production-object
+     * https://www.w3.org/TR/rdf12-turtle/#grammar-production-object
      */
     object = this.RULE('object', () => {
         this.OR([
@@ -364,6 +527,8 @@ export class TurtleParser extends TurtleParserBase {
             { ALT: () => this.SUBRULE3(this.collection) },
             { ALT: () => this.SUBRULE4(this.blankNodePropertyList) },
             { ALT: () => this.SUBRULE5(this.literal) },
+            { ALT: () => this.SUBRULE6(this.tripleTerm) },
+            { ALT: () => this.SUBRULE7(this.reifiedTriple) },
         ]);
     });
 }

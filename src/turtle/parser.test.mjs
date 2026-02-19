@@ -731,4 +731,328 @@ describe("TurtleDocument", () => {
         const result = parse('file://./tests/turtle-syntax-datatypes-01.ttl');
         expect(result.lexResult.errors.length).toEqual(0);
     });
+
+    // RDF 1.2 Syntax Tests: Reified Triples
+    it('+ RDF 1.2: subject reified triple', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-basic-01.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: object reified triple', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-basic-02.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: object triple term', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-basic-03.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple outside triple', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-basic-04.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple with literal object', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-basic-05.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple with keyword object', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-basic-06.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: triple term with literal object', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-basic-07.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: triple term with keyword object', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-basic-08.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    // RDF 1.2: Reified triples inside other constructs
+    it('+ RDF 1.2: reified triple inside blankNodePropertyList', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-inside-01.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple inside collection', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-inside-02.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple with IRI reifier', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-inside-03.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple with blank node reifier', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-inside-04.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    // RDF 1.2: Nested reified triples
+    it('+ RDF 1.2: nested reified triple in subject', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-nested-01.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: nested reified triple in object', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-nested-02.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: compound reified triples', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-compound.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    // RDF 1.2: Blank nodes in reified triples
+    it('+ RDF 1.2: blank node subject in reified triple', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-bnode-01.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: blank node object in reified triple', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-bnode-02.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: ANON in reified triple', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-syntax-bnode-03.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    // RDF 1.2: Bad syntax
+    it('- RDF 1.2: reified triple as predicate (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-syntax-bad-01.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: literal in subject of reified triple (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-syntax-bad-02.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: ANON as predicate in reified triple (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-syntax-bad-03.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: incomplete reified triple (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-syntax-bad-04.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: over-long reified triple (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-syntax-bad-05.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: reified triple with list object (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-syntax-bad-06.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: compound blank node expression (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-syntax-bad-07.ttl')).toThrowError();
+    });
+
+    // RDF 1.2: Annotation syntax
+    it('+ RDF 1.2: annotation form', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-annotation-1.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: annotation example', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-annotation-2.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: annotation predicateObjectList', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-annotation-3.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: annotation followed by predicate', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-annotation-4.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reifier without annotation block', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-annotation-5.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: empty reifier without annotation block', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-annotation-6.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reifier with annotation block', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-annotation-7.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: empty reifier with annotation block', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-annotation-8.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    // RDF 1.2: Bad annotation syntax
+    it('- RDF 1.2: empty annotation (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-syntax-bad-ann-1.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: triple as annotation (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-syntax-bad-ann-2.ttl')).toThrowError();
+    });
+
+    // RDF 1.2: N-Triples in Turtle syntax
+    it('+ RDF 1.2: N-Triples triple term', () => {
+        const result = parse('file://./tests/rdf12/syntax/nt-ttl12-syntax-1.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: N-Triples triple term (compact)', () => {
+        const result = parse('file://./tests/rdf12/syntax/nt-ttl12-syntax-2.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: N-Triples nested triple term', () => {
+        const result = parse('file://./tests/rdf12/syntax/nt-ttl12-syntax-3.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: N-Triples blank node in triple term', () => {
+        const result = parse('file://./tests/rdf12/syntax/nt-ttl12-bnode-1.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: N-Triples nested triple term (expanded)', () => {
+        const result = parse('file://./tests/rdf12/syntax/nt-ttl12-nested-1.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    // RDF 1.2: Language direction
+    it('+ RDF 1.2: base direction ltr', () => {
+        const result = parse('file://./tests/rdf12/syntax/nt-ttl12-langdir-1.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: base direction rtl', () => {
+        const result = parse('file://./tests/rdf12/syntax/nt-ttl12-langdir-2.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('- RDF 1.2: undefined base direction (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-langdir-bad-1.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: upper case LTR (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-langdir-bad-2.ttl')).toThrowError();
+    });
+
+    // RDF 1.2: N-Triples bad syntax
+    it('- RDF 1.2: triple term as subject (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-10.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: triple term as predicate (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-syntax-01.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: literal as subject in triple term (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-syntax-02.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: literal as predicate in triple term (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-syntax-03.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: reified triple instead of triple term (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-syntax-04.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: triple term as subject of triple (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-syntax-05.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: triple term as predicate of triple (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-syntax-06.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: reified triple as subject of N-Triples (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-syntax-07.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: literal as predicate in reified triple (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-syntax-08.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: blank node as predicate in reified triple (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/nt-ttl12-bad-syntax-09.ttl')).toThrowError();
+    });
+
+    // RDF 1.2: VERSION directive
+    it('+ RDF 1.2: VERSION directive', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-version-01.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: @version directive', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-version-02.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: VERSION in middle of document', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-version-03.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: @version in middle of document', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-version-04.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: VERSION with variant string', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-version-05.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: @version with variant string', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-version-06.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: mixed version directives', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-version-07.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: multiple version directives', () => {
+        const result = parse('file://./tests/rdf12/syntax/turtle12-version-08.ttl');
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('- RDF 1.2: VERSION not a string (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-version-bad-01.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: VERSION triple-quoted string (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-version-bad-02.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: VERSION triple-quoted single string (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-version-bad-03.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: @version not a string (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-version-bad-04.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: @version triple-quoted string (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-version-bad-05.ttl')).toThrowError();
+    });
+
+    it('- RDF 1.2: @version triple-quoted single string (negative test)', () => {
+        expect(() => parse('file://./tests/rdf12/syntax/turtle12-version-bad-06.ttl')).toThrowError();
+    });
 });

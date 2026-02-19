@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { parseQuads, quadsMatch } from '../helpers.mjs';
+import { parseQuads, quadsMatch, parseNTriples12 } from '../helpers.mjs';
 import { TurtleLexer, TurtleParser } from './parser.mjs';
 import { TurtleReader } from './reader.mjs';
 
@@ -25,6 +25,26 @@ describe("TurtleReader", () => {
 
         const cst = new TurtleParser().parse(baseIri, lexResult.tokens);
         const actual = new TurtleReader().visit(cst);
+
+        return quadsMatch(actual, expected);
+    }
+
+    /**
+     * Match quads for RDF 1.2 tests by comparing against expected N-Triples output.
+     */
+    const matchQuads12 = (ttlFileIri, ntFileIri) => {
+        const ttlData = getTestData(ttlFileIri);
+        const ntData = getTestData(ntFileIri);
+
+        const lexResult = new TurtleLexer().tokenize(ttlData);
+
+        if (lexResult.errors.length > 0) {
+            throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
+        }
+
+        const cst = new TurtleParser().parse(ttlFileIri, lexResult.tokens);
+        const actual = new TurtleReader().visit(cst);
+        const expected = parseNTriples12(ntData);
 
         return quadsMatch(actual, expected);
     }
@@ -336,5 +356,213 @@ describe("TurtleReader", () => {
 
     it('+ xsd:byte literal', async () => {
         expect(await matchQuads('file://./tests/turtle-syntax-datatypes-01.ttl')).toBe(true);
+    });
+
+    // RDF 1.2 Evaluation Tests: Reified Triples
+    it('+ RDF 1.2: eval reified triple (rt-01)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-rt-01.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-rt-01.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval reified triple (rt-02)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-rt-02.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-rt-02.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval reified triple with reifier (rt-03)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-rt-03.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-rt-03.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval reified triple emits asserted triple (rt-04)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-rt-04.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-rt-04.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval reified triple with reifier emits asserted triple (rt-05)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-rt-05.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-rt-05.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval reified triple with literal object (rt-06)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-rt-06.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-rt-06.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval reified triple with boolean keyword object (rt-07)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-rt-07.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-rt-07.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval reified triple with integer object (rt-08)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-rt-08.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-rt-08.nt'
+        )).toBe(true);
+    });
+
+    // RDF 1.2 Evaluation Tests: Blank Nodes
+    it('+ RDF 1.2: eval blank node subject in reified triple (bnode-01)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-bnode-01.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-bnode-01.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval blank node object in reified triple (bnode-02)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-bnode-02.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-bnode-02.nt'
+        )).toBe(true);
+    });
+
+    // RDF 1.2 Evaluation Tests: Triple Terms
+    it('+ RDF 1.2: eval triple term (tt-01)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-tt-01.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-tt-01.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval triple term with literal (tt-02)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-tt-02.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-tt-02.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval triple term with boolean keyword (tt-03)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-tt-03.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-tt-03.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval nested triple term (tt-04)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-tt-04.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-tt-04.nt'
+        )).toBe(true);
+    });
+
+    // RDF 1.2 Evaluation Tests: Annotations
+    it('+ RDF 1.2: eval annotation (annotation-01)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-01.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-01.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation (annotation-02)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-02.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-02.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation multi predicate-object (annotation-03)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-03.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-03.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval nested annotation (annotation-04)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-04.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-04.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation on second object (annotation-05)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-05.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-05.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation with named reifier (annotation-06)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-06.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-06.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation with two reifiers (annotation-07)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-07.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-07.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation with named reifier and block (annotation-08)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-08.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-08.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation with multiple named reifiers (annotation-09)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-09.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-09.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation with multiple blocks (annotation-10)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-10.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-10.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation mixed reifier and block (annotation-11)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-11.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-11.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval annotation multiple named reifiers with blocks (annotation-12)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-12.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-annotation-12.nt'
+        )).toBe(true);
+    });
+
+    // RDF 1.2 Evaluation Tests: Reified Triples with Annotations
+    it('+ RDF 1.2: eval reified triple with annotation (rta-01)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-reified-triples-annotation-01.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-reified-triples-annotation-01.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval reified triple with annotation (rta-02)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-reified-triples-annotation-02.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-reified-triples-annotation-02.nt'
+        )).toBe(true);
+    });
+
+    it('+ RDF 1.2: eval reified triple with annotation (rta-03)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/eval/turtle12-eval-reified-triples-annotation-03.ttl',
+            'file://./tests/rdf12/eval/turtle12-eval-reified-triples-annotation-03.nt'
+        )).toBe(true);
     });
 });
