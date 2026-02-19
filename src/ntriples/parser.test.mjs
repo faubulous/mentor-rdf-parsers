@@ -335,4 +335,128 @@ describe("NTriplesDocument", () => {
         const result = parse(getTestData('file://./tests/nt-syntax-datatypes-01.nt'));
         expect(result.lexResult.errors.length).toEqual(0);
     });
+
+    // =====================================================
+    // RDF 1.2 Tests
+    // =====================================================
+
+    // Positive syntax tests
+
+    it('+ RDF 1.2: object triple term', () => {
+        const result = parse(getTestData('file://./tests/rdf12/ntriples12-syntax-01.nt'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: object triple term, no whitespace', () => {
+        const result = parse(getTestData('file://./tests/rdf12/ntriples12-syntax-02.nt'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: nested, no whitespace', () => {
+        const result = parse(getTestData('file://./tests/rdf12/ntriples12-syntax-03.nt'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: blank node subject', () => {
+        const result = parse(getTestData('file://./tests/rdf12/ntriples12-bnode-1.nt'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: nested object term', () => {
+        const result = parse(getTestData('file://./tests/rdf12/ntriples12-nested-1.nt'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: literal with base direction ltr', () => {
+        const result = parse(getTestData('file://./tests/rdf12/ntriples-langdir-1.nt'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: literal with base direction rtl', () => {
+        const result = parse(getTestData('file://./tests/rdf12/ntriples-langdir-2.nt'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    // Negative syntax tests
+
+    it('- RDF 1.2: reified triple as predicate (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-01.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: reified triple, literal subject (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-02.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: reified triple, literal predicate (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-03.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: reified triple, blank node predicate (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-04.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: triple term as predicate (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-05.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: triple term, literal subject (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-06.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: triple term, literal predicate (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-07.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: triple term, blank node predicate (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-08.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: reified triple object (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-09.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: triple term as subject (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-syntax-10.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: bad IRI (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-iri-1.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: subject reified triple (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-reified-syntax-1.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: object reified triple (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-reified-syntax-2.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: subject and object reified triples (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-reified-syntax-3.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: predicate reified triple (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bad-reified-syntax-4.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: annotated triple, blank node subject (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bnode-bad-annotated-syntax-1.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: annotated triple, blank node object (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples12-bnode-bad-annotated-syntax-2.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: undefined base direction (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples-langdir-bad-1.nt'))).toThrowError();
+    });
+
+    it('- RDF 1.2: upper case LTR (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/ntriples-langdir-bad-2.nt'))).toThrowError();
+    });
+
+    // Note: langdir-bad-3 requires rejecting "..."^^rdf:langString (semantic validation).
+    // Note: langdir-bad-4 requires enforcing BCP47 subtag length limits (semantic validation).
+    // Note: langdir-bad-5 requires rejecting "..."^^rdf:dirLangString (semantic validation).
+    // These are beyond pure syntactic parsing and are skipped.
 });

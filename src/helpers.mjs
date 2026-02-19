@@ -138,7 +138,7 @@ function canonicalizeTerm(term, bnodeMap, getNextId) {
 }
 
 /**
- * Parse RDF 1.2 N-Triples content that may contain triple terms <<( s p o )>>.
+ * Parse RDF 1.2 N-Triples/N-Quads content that may contain triple terms <<( s p o )>>.
  * Returns an array of RDF/JS quads.
  */
 export function parseNTriples12(input) {
@@ -148,6 +148,8 @@ export function parseNTriples12(input) {
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#')) continue;
+        // Skip VERSION directives
+        if (/^VERSION\s+/i.test(trimmed)) continue;
 
         const parser = new NT12LineParser(trimmed);
         const subject = parser.parseTerm();
@@ -157,12 +159,19 @@ export function parseNTriples12(input) {
         const object = parser.parseTerm();
         parser.skipWS();
 
+        // Check for optional graph label (N-Quads)
+        let graph = undefined;
+        if (parser.peek() && parser.peek() !== '.') {
+            graph = parser.parseTerm();
+            parser.skipWS();
+        }
+
         // Consume trailing '.'
         if (parser.peek() === '.') {
             parser.advance();
         }
 
-        quads.push(dataFactory.quad(subject, predicate, object));
+        quads.push(dataFactory.quad(subject, predicate, object, graph));
     }
 
     return quads;

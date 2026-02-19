@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { parseQuads, quadsMatch } from '../helpers.mjs';
+import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.mjs';
 import { NQuadsLexer, NQuadsParser } from './parser.mjs';
 import { NQuadsReader } from './reader.mjs';
 
@@ -290,5 +290,59 @@ describe("NQuadsReader", () => {
     it('+ xsd:byte literal', async () => {
         const data = getTestData('file://./tests/nt-syntax-datatypes-01.nq');
         expect(await matchQuads(data)).toBe(true);
+    });
+
+    // =====================================================
+    // RDF 1.2 Tests
+    // =====================================================
+
+    const matchQuads12 = (text) => {
+        const lexResult = new NQuadsLexer().tokenize(text);
+
+        if (lexResult.errors.length > 0) {
+            throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
+        }
+
+        const cst = new NQuadsParser().parse(lexResult.tokens);
+
+        const actual = new NQuadsReader().visit(cst);
+        const expected = parseNTriples12(text);
+
+        return quadsMatch(actual, expected);
+    }
+
+    it('+ RDF 1.2: object triple term', () => {
+        const data = getTestData('file://./tests/rdf12/nquads12-syntax-01.nq');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: object triple term, no whitespace', () => {
+        const data = getTestData('file://./tests/rdf12/nquads12-syntax-02.nq');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: nested, no whitespace', () => {
+        const data = getTestData('file://./tests/rdf12/nquads12-syntax-03.nq');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: blank node subject', () => {
+        const data = getTestData('file://./tests/rdf12/nquads12-bnode-1.nq');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: nested object term', () => {
+        const data = getTestData('file://./tests/rdf12/nquads12-nested-1.nq');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: literal with base direction ltr', () => {
+        const data = getTestData('file://./tests/rdf12/nquads-langdir-1.nq');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: literal with base direction rtl', () => {
+        const data = getTestData('file://./tests/rdf12/nquads-langdir-2.nq');
+        expect(matchQuads12(data)).toBe(true);
     });
 });

@@ -10,6 +10,13 @@ const allTokens = [
     tokens.DCARET,
     tokens.LBRACKET,
     tokens.RBRACKET,
+    tokens.OPEN_ANNOTATION,
+    tokens.CLOSE_ANNOTATION,
+    tokens.OPEN_TRIPLE_TERM,
+    tokens.CLOSE_TRIPLE_TERM,
+    tokens.OPEN_REIFIED_TRIPLE,
+    tokens.CLOSE_REIFIED_TRIPLE,
+    tokens.TILDE,
     tokens.LPARENT,
     tokens.RPARENT,
     tokens.LCURLY,
@@ -17,8 +24,10 @@ const allTokens = [
     tokens.A,
     tokens.TRUE,
     tokens.FALSE,
+    tokens.VERSION,
     tokens.PREFIX,
     tokens.BASE,
+    tokens.SPARQL_VERSION,
     tokens.SPARQL_PREFIX,
     tokens.SPARQL_BASE,
     tokens.GRAPH,
@@ -73,7 +82,7 @@ export class TrigParser extends TurtleParserBase {
     });
 
     /**
-     * https://www.w3.org/TR/trig/#grammar-production-block
+     * https://www.w3.org/TR/rdf12-trig/#grammar-production-block
      */
     block = this.RULE('block', () => {
         this.OR([
@@ -91,7 +100,7 @@ export class TrigParser extends TurtleParserBase {
     });
 
     /**
-     * https://www.w3.org/TR/trig/#grammar-production-wrappedGraph
+     * https://www.w3.org/TR/rdf12-trig/#grammar-production-wrappedGraph
      */
     wrappedGraph = this.RULE('wrappedGraph', () => {
         this.CONSUME(tokens.LCURLY);
@@ -100,16 +109,29 @@ export class TrigParser extends TurtleParserBase {
     });
 
     /**
-     * https://www.w3.org/TR/trig/#grammar-production-triplesOrGraph
+     * https://www.w3.org/TR/rdf12-trig/#grammar-production-triplesOrGraph
      */
     triplesOrGraph = this.RULE('triplesOrGraph', () => {
-        this.SUBRULE(this.labelOrSubject);
         this.OR([
-            { ALT: () => { this.SUBRULE(this.wrappedGraph) } },
             {
                 ALT: () => {
-                    this.SUBRULE(this.predicateObjectList);
-                    this.CONSUME(tokens.PERIOD);
+                    this.SUBRULE(this.labelOrSubject);
+                    this.OR2([
+                        { ALT: () => { this.SUBRULE(this.wrappedGraph) } },
+                        {
+                            ALT: () => {
+                                this.SUBRULE(this.predicateObjectList);
+                                this.CONSUME(tokens.PERIOD);
+                            }
+                        }
+                    ]);
+                }
+            },
+            {
+                ALT: () => {
+                    this.SUBRULE(this.reifiedTriple);
+                    this.OPTION(() => { this.SUBRULE2(this.predicateObjectList) });
+                    this.CONSUME2(tokens.PERIOD);
                 }
             }
         ]);
@@ -185,6 +207,8 @@ export class TrigParser extends TurtleParserBase {
             { ALT: () => { this.SUBRULE2(this.blank) } },
             { ALT: () => { this.SUBRULE3(this.blankNodePropertyList) } },
             { ALT: () => { this.SUBRULE4(this.literal) } },
+            { ALT: () => { this.SUBRULE5(this.tripleTerm) } },
+            { ALT: () => { this.SUBRULE6(this.reifiedTriple) } },
         ])
     });
 }

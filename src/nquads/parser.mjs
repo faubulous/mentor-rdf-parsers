@@ -6,11 +6,16 @@ import { NTriplesParserBase } from '../ntriples/parser.mjs';
 const allTokens = [
     tokens.WS,
     tokens.PERIOD,
+    tokens.OPEN_TRIPLE_TERM,
+    tokens.CLOSE_TRIPLE_TERM,
+    tokens.OPEN_REIFIED_TRIPLE,
+    tokens.CLOSE_REIFIED_TRIPLE,
     tokens.IRIREF_ABS,
     tokens.BLANK_NODE_LABEL,
     tokens.STRING_LITERAL_QUOTE,
     tokens.DCARET,
     tokens.LANGTAG,
+    tokens.SPARQL_VERSION,
     tokens.COMMENT,
 ];
 
@@ -52,18 +57,19 @@ export class NQuadsParser extends NTriplesParserBase {
     }
 
     /**
-     * https://www.w3.org/TR/n-quads/#grammar-production-nquadsDoc
+     * https://www.w3.org/TR/rdf12-n-quads/#grammar-production-nquadsDoc
      */
     nquadsDoc = this.RULE('nquadsDoc', () => {
         this.MANY(() => {
             this.OR([
-                { ALT: () => this.SUBRULE(this.statement) }
+                { ALT: () => this.SUBRULE(this.statement) },
+                { ALT: () => this.SUBRULE(this.versionDirective) }
             ]);
         });
     });
 
     /**
-     * https://www.w3.org/TR/n-quads/#grammar-production-statement
+     * https://www.w3.org/TR/rdf12-n-quads/#grammar-production-statement
      */
     statement = this.RULE('statement', () => {
         this.SUBRULE1(this.subject);
@@ -74,12 +80,21 @@ export class NQuadsParser extends NTriplesParserBase {
     });
 
     /**
-     * https://www.w3.org/TR/n-quads/#grammar-production-graphLabel
+     * https://www.w3.org/TR/rdf12-n-quads/#grammar-production-graphLabel
      */
     graphLabel = this.RULE('graphLabel', () => {
         this.OR([
             { ALT: () => this.CONSUME(tokens.IRIREF_ABS) },
             { ALT: () => this.CONSUME(tokens.BLANK_NODE_LABEL) }
         ]);
+    });
+
+    /**
+     * https://www.w3.org/TR/rdf12-n-quads/#grammar-production-versionDirective
+     * versionDirective ::= 'VERSION' versionSpecifier
+     */
+    versionDirective = this.RULE('versionDirective', () => {
+        this.CONSUME(tokens.SPARQL_VERSION);
+        this.CONSUME(tokens.STRING_LITERAL_QUOTE);
     });
 }

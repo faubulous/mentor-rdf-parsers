@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { parseQuads, quadsMatch } from '../helpers.mjs';
+import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.mjs';
 import { NTriplesLexer, NTriplesParser } from './parser.mjs';
 import { NTriplesReader } from './reader.mjs';
 
@@ -230,5 +230,59 @@ describe("NTriplesReader", () => {
     it('+ xsd:byte literal', async () => {
         const data = getTestData('file://./tests/nt-syntax-datatypes-01.nt');
         expect(await matchQuads(data)).toBe(true);
+    });
+
+    // =====================================================
+    // RDF 1.2 Tests
+    // =====================================================
+
+    const matchQuads12 = (text) => {
+        const lexResult = new NTriplesLexer().tokenize(text);
+
+        if (lexResult.errors.length > 0) {
+            throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
+        }
+
+        const cst = new NTriplesParser().parse(lexResult.tokens);
+
+        const actual = new NTriplesReader().visit(cst);
+        const expected = parseNTriples12(text);
+
+        return quadsMatch(actual, expected);
+    }
+
+    it('+ RDF 1.2: object triple term', () => {
+        const data = getTestData('file://./tests/rdf12/ntriples12-syntax-01.nt');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: object triple term, no whitespace', () => {
+        const data = getTestData('file://./tests/rdf12/ntriples12-syntax-02.nt');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: nested, no whitespace', () => {
+        const data = getTestData('file://./tests/rdf12/ntriples12-syntax-03.nt');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: blank node subject', () => {
+        const data = getTestData('file://./tests/rdf12/ntriples12-bnode-1.nt');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: nested object term', () => {
+        const data = getTestData('file://./tests/rdf12/ntriples12-nested-1.nt');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: literal with base direction ltr', () => {
+        const data = getTestData('file://./tests/rdf12/ntriples-langdir-1.nt');
+        expect(matchQuads12(data)).toBe(true);
+    });
+
+    it('+ RDF 1.2: literal with base direction rtl', () => {
+        const data = getTestData('file://./tests/rdf12/ntriples-langdir-2.nt');
+        expect(matchQuads12(data)).toBe(true);
     });
 });

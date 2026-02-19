@@ -906,4 +906,176 @@ describe("TrigDocument", () => {
         const result = parse(getTestData('file://./tests/trig-syntax-datatypes-01.trig'));
         expect(result.lexResult.errors.length).toEqual(0);
     });
+
+    // =====================================================
+    // RDF 1.2 Tests
+    // =====================================================
+
+    // Positive syntax tests
+
+    it('+ RDF 1.2: subject reified triple', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-basic-01.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: object reified triple', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-basic-02.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: triple term object', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-basic-03.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple outside triple', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-basic-04.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple inside blankNodePropertyList', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-inside-01.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple inside collection', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-inside-02.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple with IRI identifier', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-inside-03.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reified triple with blank node identifier', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-inside-04.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: nested quoted triple, subject position', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-nested-01.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: nested quoted triple, object position', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-nested-02.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: compound forms', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-compound.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: blank node subject', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-bnode-01.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: blank node object', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-bnode-02.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: blank node', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-syntax-bnode-03.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: annotation form', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-annotation-1.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: annotation example', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-annotation-2.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: annotation predicateObjectList', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-annotation-3.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: annotation followed by predicate/object', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-annotation-4.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reifier without annotation block', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-annotation-5.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: empty reifier without annotation block', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-annotation-6.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: reifier with annotation block', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-annotation-7.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: empty reifier with annotation block', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-annotation-8.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: base direction ltr', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-base-1.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    it('+ RDF 1.2: base direction rtl', () => {
+        const result = parse(getTestData('file://./tests/rdf12/trig12-base-2.trig'));
+        expect(result.lexResult.errors.length).toEqual(0);
+    });
+
+    // Negative syntax tests
+
+    it('- RDF 1.2: reified triple as predicate (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-syntax-bad-01.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: literal in subject position of reified triple (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-syntax-bad-02.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: blank node as predicate in reified triple (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-syntax-bad-03.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: incomplete reified triple (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-syntax-bad-04.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: over-long reified triple (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-syntax-bad-05.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: reified with list object (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-syntax-bad-06.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: compound blank node expression (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-syntax-bad-07.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: empty annotation (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-syntax-bad-ann-1.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: triple as annotation (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-syntax-bad-ann-2.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: undefined base direction (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-base-bad-1.trig'))).toThrowError();
+    });
+
+    it('- RDF 1.2: upper case LTR (negative test)', () => {
+        expect(() => parse(getTestData('file://./tests/rdf12/trig12-base-bad-2.trig'))).toThrowError();
+    });
 });

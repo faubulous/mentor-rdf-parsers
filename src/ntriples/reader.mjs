@@ -30,6 +30,11 @@ export class NTriplesReader extends BaseVisitor {
         return quads;
     }
 
+    versionDirective(ctx) {
+        // Version directive is informational only, no quads emitted
+        return undefined;
+    }
+
     triple(ctx) {
         const subject = this.visit(ctx.subject[0]);
         const predicate = this.visit(ctx.predicate[0]);
@@ -64,6 +69,17 @@ export class NTriplesReader extends BaseVisitor {
         else if (ctx.literal) {
             return this.visit(ctx.literal[0]);
         }
+        else if (ctx.tripleTerm) {
+            return this.visit(ctx.tripleTerm[0]);
+        }
+    }
+
+    tripleTerm(ctx) {
+        const subject = this.visit(ctx.subject[0]);
+        const predicate = this.visit(ctx.predicate[0]);
+        const object = this.visit(ctx.object[0]);
+
+        return dataFactory.quad(subject, predicate, object);
     }
 
     literal(ctx) {
