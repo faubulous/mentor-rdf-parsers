@@ -1,6 +1,17 @@
 import * as fs from 'fs';
 import { N3Lexer, N3Parser } from './parser.mjs';
 
+/**
+ * Notation3 (N3) Parser Tests
+ *
+ * Test datasets:
+ *
+ * The .n3 fixture files in the `tests/` directory are hand-crafted test
+ * documents written specifically for this parser. They are NOT derived from
+ * an official W3C test suite. Each fixture targets one or more N3-specific
+ * grammar features such as formulae, built-in predicates, quick variables,
+ * path expressions, and boolean/decimal literals.
+ */
 describe("N3Document", () => {
     const getTestData = (fileUrl) => {
         const relativePath = fileUrl.substring(7);

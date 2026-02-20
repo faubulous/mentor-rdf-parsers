@@ -1,0 +1,4 @@
+SELECT (COALESCE(?name, ?label, "unknown") AS ?display) WHERE {
+  OPTIONAL { ?s <http://example.org/name> ?name }
+  OPTIONAL { ?s <http://example.org/label> ?label }
+}

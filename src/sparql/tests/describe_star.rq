@@ -1,0 +1,2 @@
+DESCRIBE *
+WHERE { ?s <http://example.org/type> <http://example.org/Person> }

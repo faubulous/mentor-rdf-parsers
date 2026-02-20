@@ -1,0 +1,7 @@
+SELECT ?name WHERE {
+  VALUES (?name ?age) {
+    ("Alice" 30)
+    ("Bob" 25)
+  }
+  ?s <http://example.org/name> ?name
+}

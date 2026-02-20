@@ -1,0 +1,1 @@
+SELECT (IRI("http://example.org/s") AS ?s) (BNODE() AS ?b) WHERE { }

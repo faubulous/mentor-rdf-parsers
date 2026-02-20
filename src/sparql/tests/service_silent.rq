@@ -1,0 +1,3 @@
+SELECT ?s WHERE {
+  SERVICE SILENT <http://example.org/sparql> { ?s ?p ?o }
+}

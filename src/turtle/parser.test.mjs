@@ -1,6 +1,27 @@
 import * as fs from 'fs';
 import { TurtleLexer, TurtleParser } from './parser.mjs';
 
+/**
+ * Turtle Parser Tests
+ *
+ * Test datasets:
+ *
+ * The .ttl fixture files in the `tests/` directory are derived from the
+ * official W3C RDF Test Suite for Turtle, distributed under the W3C Test
+ * Suite License and the W3C 3-clause BSD License.
+ *
+ * Source manifest: tests/manifest.ttl
+ * Upstream: https://w3c.github.io/rdf-tests/
+ *
+ * The fixture files were generated from the manifest using:
+ *   node src/util/generate-tests.js \
+ *     --manifest src/tree-sitter-turtle/tests/manifest.ttl \
+ *     -p TestTurtlePositiveSyntax \
+ *     -n TestTurtleNegativeSyntax \
+ *     -e .ttl
+ *
+ * See src/util/README.md for details on the test generation process.
+ */
 describe("TurtleDocument", () => {
     const getTestData = (fileUrl) => {
         const relativePath = fileUrl.substring(7);

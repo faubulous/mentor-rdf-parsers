@@ -1,0 +1,4 @@
+DELETE { ?s <http://example.org/old> ?o }
+INSERT { ?s <http://example.org/new> ?o }
+USING <http://example.org/graph1>
+WHERE { ?s <http://example.org/old> ?o }

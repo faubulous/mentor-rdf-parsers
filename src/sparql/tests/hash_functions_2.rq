@@ -1,0 +1,4 @@
+PREFIX ex: <http://example.org/>
+SELECT (SHA1(?name) AS ?s1) (SHA384(?name) AS ?s384) (SHA512(?name) AS ?s512) WHERE {
+  ?s ex:name ?name
+}

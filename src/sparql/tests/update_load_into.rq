@@ -1,0 +1,1 @@
+LOAD SILENT <http://example.org/data> INTO GRAPH <http://example.org/target>

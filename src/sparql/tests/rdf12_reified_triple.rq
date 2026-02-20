@@ -1,0 +1,3 @@
+SELECT ?s ?p ?o WHERE {
+  << ?s ?p ?o >> <http://example.org/source> <http://example.org/web>
+}

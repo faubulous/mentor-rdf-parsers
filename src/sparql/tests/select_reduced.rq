@@ -1,0 +1,1 @@
+SELECT REDUCED ?name WHERE { ?s <http://example.org/name> ?name }

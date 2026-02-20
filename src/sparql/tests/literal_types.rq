@@ -1,0 +1,6 @@
+SELECT ?s WHERE {
+  ?s <http://example.org/p> "hello"@en .
+  ?s <http://example.org/q> "42"^^<http://www.w3.org/2001/XMLSchema#integer> .
+  ?s <http://example.org/r> true .
+  ?s <http://example.org/t> 3.14
+}

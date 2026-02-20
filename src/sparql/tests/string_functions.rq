@@ -1,0 +1,3 @@
+SELECT (SUBSTR(?name, 1, 3) AS ?short) (REPLACE(?name, "foo", "bar") AS ?replaced) WHERE {
+  ?s <http://example.org/name> ?name
+}

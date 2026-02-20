@@ -1,0 +1,3 @@
+SELECT (STR(?x) AS ?str) (LANG(?x) AS ?lang) (DATATYPE(?x) AS ?dt) WHERE {
+  ?s ?p ?x
+}

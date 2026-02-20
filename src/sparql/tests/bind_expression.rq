@@ -1,0 +1,4 @@
+SELECT ?s WHERE {
+  ?s <http://example.org/value> ?v .
+  BIND (?v * 2 AS ?doubled)
+}

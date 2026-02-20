@@ -3,6 +3,15 @@ import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.mjs';
 import { NQuadsLexer, NQuadsParser } from './parser.mjs';
 import { NQuadsReader } from './reader.mjs';
 
+/**
+ * N-Quads Reader Tests
+ *
+ * Test datasets:
+ *
+ * The .nq fixture files in the `tests/` directory are derived from the
+ * official W3C RDF Test Suite for N-Quads. See parser.test.mjs for full
+ * provenance details.
+ */
 describe("NQuadsReader", () => {
     const getTestData = (fileUrl) => {
         const relativePath = fileUrl.substring(7);

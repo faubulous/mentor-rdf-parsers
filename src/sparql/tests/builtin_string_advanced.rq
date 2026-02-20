@@ -1,0 +1,5 @@
+PREFIX ex: <http://example.org/>
+SELECT (STRBEFORE(?name, " ") AS ?first) (STRAFTER(?name, " ") AS ?last) WHERE {
+  ?s ex:name ?name .
+  FILTER (LANGMATCHES(LANG(?name), "en"))
+}

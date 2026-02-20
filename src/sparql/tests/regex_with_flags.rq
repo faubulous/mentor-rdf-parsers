@@ -1,0 +1,5 @@
+PREFIX ex: <http://example.org/>
+SELECT ?name WHERE {
+  ?s ex:name ?name
+  FILTER regex(?name, "^alice", "i")
+}

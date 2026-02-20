@@ -1,0 +1,4 @@
+SELECT ?name WHERE {
+  ?s <http://example.org/name> ?name
+}
+ORDER BY ASC(?name)

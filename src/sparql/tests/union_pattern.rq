@@ -1,0 +1,5 @@
+SELECT ?name WHERE {
+  { ?s <http://example.org/firstName> ?name }
+  UNION
+  { ?s <http://example.org/lastName> ?name }
+}

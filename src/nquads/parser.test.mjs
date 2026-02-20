@@ -1,6 +1,27 @@
 import * as fs from 'fs';
 import { NQuadsLexer, NQuadsParser } from './parser.mjs';
 
+/**
+ * N-Quads Parser Tests
+ *
+ * Test datasets:
+ *
+ * The .nq fixture files in the `tests/` directory are derived from the
+ * official W3C RDF Test Suite for N-Quads, distributed under the W3C
+ * Test Suite License and the W3C 3-clause BSD License.
+ *
+ * Source manifest: tests/manifest.ttl
+ * Upstream: https://w3c.github.io/rdf-tests/
+ *
+ * The fixture files were generated from the manifest using:
+ *   node src/util/generate-tests.js \
+ *     --manifest src/tree-sitter-nquads/tests/manifest.ttl \
+ *     -p TestNQuadsPositiveSyntax \
+ *     -n TestNQuadsNegativeSyntax \
+ *     -e .nq
+ *
+ * See src/util/README.md for details on the test generation process.
+ */
 describe("NQuadsDocument", () => {
     const getTestData = (fileUrl) => {
         const relativePath = fileUrl.substring(7);

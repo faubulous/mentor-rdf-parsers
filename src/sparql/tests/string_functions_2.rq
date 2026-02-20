@@ -1,0 +1,3 @@
+SELECT (UCASE(?name) AS ?upper) (LCASE(?name) AS ?lower) (STRLEN(?name) AS ?len) (ENCODE_FOR_URI(?name) AS ?encoded) WHERE {
+  ?s <http://example.org/name> ?name
+}

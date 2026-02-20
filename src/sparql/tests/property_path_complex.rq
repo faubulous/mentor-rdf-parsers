@@ -1,0 +1,5 @@
+PREFIX ex: <http://example.org/>
+SELECT ?person WHERE {
+  ?person ex:knows/ex:knows/ex:knows ?friend .
+  ?friend ex:name "Alice"
+}

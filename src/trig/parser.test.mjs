@@ -1,6 +1,20 @@
 import * as fs from 'fs';
 import { TrigLexer, TrigParser } from './parser.mjs';
 
+/**
+ * TriG Parser Tests
+ *
+ * Test datasets:
+ *
+ * The .trig fixture files in the `tests/` directory are derived from the
+ * official W3C RDF Test Suite for TriG, distributed under the W3C Test
+ * Suite License and the W3C 3-clause BSD License.
+ *
+ * Source manifest: tests/manifest.ttl
+ * Upstream: https://w3c.github.io/rdf-tests/rdf/rdf11/rdf-trig/
+ *
+ * See src/util/README.md for details on the test generation process.
+ */
 describe("TrigDocument", () => {
     const getTestData = (fileUrl) => {
         const relativePath = fileUrl.substring(7);

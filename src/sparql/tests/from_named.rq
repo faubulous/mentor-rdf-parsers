@@ -1,0 +1,3 @@
+SELECT ?name FROM NAMED <http://example.org/graph1> WHERE {
+  GRAPH <http://example.org/graph1> { ?s <http://example.org/name> ?name }
+}

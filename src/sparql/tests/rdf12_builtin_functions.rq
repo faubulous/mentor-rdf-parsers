@@ -1,0 +1,7 @@
+SELECT ?s WHERE {
+  FILTER (isTRIPLE(?o))
+  BIND (SUBJECT(?o) AS ?subj)
+  BIND (PREDICATE(?o) AS ?pred)
+  BIND (OBJECT(?o) AS ?obj)
+  BIND (TRIPLE(?subj, ?pred, ?obj) AS ?triple)
+}

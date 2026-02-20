@@ -1,0 +1,1 @@
+SELECT (NOW() AS ?now) (RAND() AS ?random) (UUID() AS ?uuid) (STRUUID() AS ?struuid) WHERE { }

@@ -1,0 +1,6 @@
+PREFIX ex: <http://example.org/>
+SELECT ?s WHERE {
+  ?s ex:date ?d .
+  FILTER (TIMEZONE(?d) = "PT0S"^^<http://www.w3.org/2001/XMLSchema#dayTimeDuration>)
+  BIND (TZ(?d) AS ?tz)
+}

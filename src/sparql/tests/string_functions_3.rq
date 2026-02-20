@@ -1,0 +1,3 @@
+SELECT (CONTAINS(?name, "ali") AS ?has) (STRSTARTS(?name, "A") AS ?starts) (STRENDS(?name, "e") AS ?ends) WHERE {
+  ?s <http://example.org/name> ?name
+}

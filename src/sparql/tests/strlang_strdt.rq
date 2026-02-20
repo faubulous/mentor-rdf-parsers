@@ -1,0 +1,4 @@
+PREFIX ex: <http://example.org/>
+SELECT (STRLANG(?s, "en") AS ?langStr) (STRDT(?s, <http://www.w3.org/2001/XMLSchema#integer>) AS ?typed) WHERE {
+  ?x ex:p ?s
+}

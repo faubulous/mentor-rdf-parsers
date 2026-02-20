@@ -1,0 +1,4 @@
+SELECT (LANGDIR(?label) AS ?dir) WHERE {
+  ?s <http://example.org/label> ?label .
+  FILTER (hasLANG(?label) && hasLANGDIR(?label))
+}

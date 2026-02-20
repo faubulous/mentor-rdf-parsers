@@ -3,6 +3,15 @@ import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.mjs';
 import { NTriplesLexer, NTriplesParser } from './parser.mjs';
 import { NTriplesReader } from './reader.mjs';
 
+/**
+ * N-Triples Reader Tests
+ *
+ * Test datasets:
+ *
+ * The .nt fixture files in the `tests/` directory are derived from the
+ * official W3C RDF Test Suite for N-Triples. See parser.test.mjs for full
+ * provenance details.
+ */
 describe("NTriplesReader", () => {
     const getTestData = (fileUrl) => {
         const relativePath = fileUrl.substring(7);

@@ -3,6 +3,14 @@ import { N3Lexer, N3Parser } from './parser.mjs';
 import { N3Reader } from './reader.mjs';
 import dataFactory from '@rdfjs/data-model';
 
+/**
+ * Notation3 (N3) Reader Tests
+ *
+ * Test datasets:
+ *
+ * The .n3 fixture files in the `tests/` directory are hand-crafted.
+ * See parser.test.mjs for full provenance details.
+ */
 describe("N3Reader", () => {
     const getTestData = (fileIri) => {
         const relativePath = fileIri.substring(7);

@@ -1,0 +1,10 @@
+PREFIX ex: <http://example.org/>
+CONSTRUCT {
+  ?s ex:fullName ?name .
+  ?s a ex:Person
+}
+WHERE {
+  ?s ex:firstName ?first .
+  ?s ex:lastName ?last .
+  BIND (CONCAT(?first, " ", ?last) AS ?name)
+}

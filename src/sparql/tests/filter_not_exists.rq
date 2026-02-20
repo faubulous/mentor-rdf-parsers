@@ -1,0 +1,4 @@
+SELECT ?x WHERE {
+  ?x <http://example.org/name> ?name .
+  FILTER NOT EXISTS { ?x <http://example.org/email> ?email }
+}

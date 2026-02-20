@@ -1,0 +1,4 @@
+SELECT ?s WHERE {
+  ?s <http://example.org/value> ?v .
+  MINUS { ?s <http://example.org/excluded> true }
+}

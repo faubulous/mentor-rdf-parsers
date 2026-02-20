@@ -1,0 +1,3 @@
+SELECT (ABS(?val) AS ?abs) (CEIL(?val) AS ?ceil) (FLOOR(?val) AS ?floor) (ROUND(?val) AS ?round) WHERE {
+  ?s <http://example.org/value> ?val
+}

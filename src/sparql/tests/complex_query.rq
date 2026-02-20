@@ -1,0 +1,14 @@
+PREFIX ex: <http://example.org/>
+SELECT ?x WHERE {
+  ?x ex:knows ?y .
+  ?x ex:age ?age .
+  FILTER (?age >= 18 && ?age <= 65)
+  FILTER (?y != ex:nobody)
+  OPTIONAL {
+    ?y ex:email ?email .
+    FILTER (STRSTARTS(?email, "admin"))
+  }
+}
+ORDER BY DESC(?age) ?x
+LIMIT 100
+OFFSET 10

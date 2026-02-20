@@ -3,6 +3,15 @@ import { parseQuads, quadsMatch, parseNTriples12 } from '../helpers.mjs';
 import { TurtleLexer, TurtleParser } from './parser.mjs';
 import { TurtleReader } from './reader.mjs';
 
+/**
+ * Turtle Reader Tests
+ *
+ * Test datasets:
+ *
+ * The .ttl fixture files in the `tests/` directory are derived from the
+ * official W3C RDF Test Suite for Turtle. See parser.test.mjs for full
+ * provenance details.
+ */
 describe("TurtleReader", () => {
     const getTestData = (fileIri) => {
         const relativePath = fileIri.substring(7);
