@@ -28,14 +28,14 @@ import { SparqlLexer, SparqlParser, resolveCodepointEscapes } from './parser.js'
  */
 
 describe("SparqlDocument", () => {
-    const getTestData = (fileUrl) => {
+    const getTestData = (fileUrl: string) => {
         const relativePath = fileUrl.substring(7);
         const resolvedPath = new URL(relativePath, import.meta.url).pathname;
 
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
-    const parse = (fileIri, text) => {
+    const parse = (fileIri: string, text?: string) => {
         const data = fileIri ? getTestData(fileIri) : text;
 
         // Per SPARQL 1.2 spec section 19.2, codepoint escape sequences are

@@ -20,7 +20,7 @@ describe("TurtleReader", () => {
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
-    const matchQuads = async (fileIri, text) => {
+    const matchQuads = async (fileIri: string, text?: string) => {
         const baseIri = fileIri;
         const data = fileIri ? getTestData(fileIri) : text;
 

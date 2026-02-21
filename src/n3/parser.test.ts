@@ -13,14 +13,14 @@ import { N3Lexer, N3Parser } from './parser.js';
  * path expressions, and boolean/decimal literals.
  */
 describe("N3Document", () => {
-    const getTestData = (fileUrl) => {
+    const getTestData = (fileUrl: string) => {
         const relativePath = fileUrl.substring(7);
         const resolvedPath = new URL(relativePath, import.meta.url).pathname;
 
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
-    const parse = (fileIri, text) => {
+    const parse = (fileIri: string, text?: string) => {
         const data = fileIri ? getTestData(fileIri) : text;
 
         const lexResult = new N3Lexer().tokenize(data);

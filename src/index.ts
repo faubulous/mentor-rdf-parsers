@@ -5,6 +5,7 @@ export * as NQuadsReader from './nquads/reader.js';
 export * as Turtle from './turtle/parser.js';
 export * as TurtleReader from './turtle/reader.js';
 export * as Trig from './trig/parser.js';
+export * as TrigReader from './trig/reader.js';
 export * as N3 from './n3/parser.js';
 export * as N3Reader from './n3/reader.js';
 export * as Sparql from './sparql/parser.js';

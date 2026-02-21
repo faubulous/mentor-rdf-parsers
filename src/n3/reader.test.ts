@@ -12,14 +12,14 @@ import dataFactory from '@rdfjs/data-model';
  * See parser.test.mjs for full provenance details.
  */
 describe("N3Reader", () => {
-    const getTestData = (fileIri) => {
+    const getTestData = (fileIri: string) => {
         const relativePath = fileIri.substring(7);
         const resolvedPath = new URL(relativePath, import.meta.url).pathname;
 
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
-    const readQuads = (fileIri, text) => {
+    const readQuads = (fileIri: string | null, text?: string) => {
         const data = fileIri ? getTestData(fileIri) : text;
 
         const lexResult = new N3Lexer().tokenize(data);

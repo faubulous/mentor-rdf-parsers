@@ -65,7 +65,9 @@ const _SPARQL_VERSION = /VERSION\b/i;
 
 const _GRAPH = /GRAPH\b/i;
 
-const _A = /a/;
+// The 'a' keyword (rdf:type shorthand) must not be followed by a colon,
+// otherwise it would be a prefix like 'a:localname'
+const _A = /a(?!:)/;
 
 const _EXPONENT = /[eE][+-]?\d+/;
 

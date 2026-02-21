@@ -23,14 +23,14 @@ import { TurtleLexer, TurtleParser } from './parser.js';
  * See src/util/README.md for details on the test generation process.
  */
 describe("TurtleDocument", () => {
-    const getTestData = (fileUrl) => {
+    const getTestData = (fileUrl: string) => {
         const relativePath = fileUrl.substring(7);
         const resolvedPath = new URL(relativePath, import.meta.url).pathname;
 
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
-    const parse = (fileIri, text) => {
+    const parse = (fileIri: string, text?: string) => {
         const data = fileIri ? getTestData(fileIri) : text;
 
         const lexResult = new TurtleLexer().tokenize(data);
