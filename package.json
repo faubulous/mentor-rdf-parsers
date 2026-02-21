@@ -16,6 +16,9 @@
   },
   "license": "LGPL-2.1-or-later",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
