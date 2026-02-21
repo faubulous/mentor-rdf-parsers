@@ -1,9 +1,9 @@
-import { Lexer } from 'chevrotain';
-import { tokens } from '../tokens.mjs';
-import { NTriplesParserBase } from '../ntriples/parser.mjs';
+import { Lexer, IToken, CstNode, TokenType } from 'chevrotain';
+import { tokens } from '../tokens.js';
+import { NTriplesParserBase } from '../ntriples/parser.js';
 
 // The order of tokens matters if multiple can match the same text
-const allTokens = [
+const allTokens: TokenType[] = [
     tokens.WS,
     tokens.PERIOD,
     tokens.OPEN_TRIPLE_TERM,
@@ -41,11 +41,11 @@ export class NQuadsParser extends NTriplesParserBase {
 
     /**
      * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed N-Quads document.
-     * @param tokens A set of tokens created by the lexer.
+     * @param inputTokens A set of tokens created by the lexer.
      * @returns A concrete syntax tree (CST) object.
      */
-    parse(tokens) {
-        this.input = tokens;
+    parse(inputTokens: IToken[]): CstNode {
+        this.input = inputTokens;
 
         const cst = this.nquadsDoc();
 

@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { TurtleLexer, TurtleParser } from './parser.mjs';
+import { TurtleLexer, TurtleParser } from './parser.js';
 
 /**
  * Turtle Parser Tests

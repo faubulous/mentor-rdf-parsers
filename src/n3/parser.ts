@@ -1,8 +1,8 @@
-import { Lexer, CstParser } from 'chevrotain';
-import { tokens } from '../tokens.mjs';
+import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
+import { tokens } from '../tokens.js';
 
 // N3 token order - note that longer/more specific patterns must come before shorter ones
-const allTokens = [
+const allTokens: TokenType[] = [
     tokens.WS,
     tokens.COMMA,
     tokens.SEMICOLON,
@@ -78,7 +78,7 @@ export class N3Parser extends CstParser {
     /**
      * A map of prefixes to their namespace IRI.
      */
-    namespaces = {};
+    namespaces: Record<string, string> = {};
 
     constructor() {
         super(allTokens, {
@@ -88,7 +88,7 @@ export class N3Parser extends CstParser {
         this.performSelfAnalysis();
     }
 
-    registerNamespace(prefixToken, iriToken) {
+    registerNamespace(prefixToken: IToken, iriToken: IToken): void {
         const prefix = prefixToken.image.slice(0, -1);
         const iri = iriToken.image.slice(1, -1);
 
@@ -98,7 +98,7 @@ export class N3Parser extends CstParser {
     /**
      * Parses a set of tokens into a CST.
      */
-    parse(documentIri, inputTokens) {
+    parse(documentIri: string, inputTokens: IToken[]): CstNode {
         this.input = inputTokens;
 
         const cst = this.n3Doc();
@@ -471,7 +471,7 @@ export class N3Parser extends CstParser {
                     this.namespaces[''] = '#';
                 } else {
                     const error = new Error(`Undefined prefix: ${prefix}`);
-                    error.stack = [...this.RULE_OCCURRENCE_STACK];
+                    (error as any).stack = [...(this as any).RULE_OCCURRENCE_STACK];
                     throw error;
                 }
             }

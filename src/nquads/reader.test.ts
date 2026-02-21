@@ -1,7 +1,7 @@
 import * as fs from 'fs';
-import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.mjs';
-import { NQuadsLexer, NQuadsParser } from './parser.mjs';
-import { NQuadsReader } from './reader.mjs';
+import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.js';
+import { NQuadsLexer, NQuadsParser } from './parser.js';
+import { NQuadsReader } from './reader.js';
 
 /**
  * N-Quads Reader Tests

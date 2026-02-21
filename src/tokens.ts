@@ -1,11 +1,13 @@
 import { createToken, Lexer } from 'chevrotain';
 
+type PatternInput = RegExp | string;
+
 // Inspired by the Tree Sitter DSL: https://tree-sitter.github.io/tree-sitter/creating-parsers#defining-tokens
-export const seq = (...patterns) => new RegExp(patterns.map(p => p.source || p).join(''));
-export const choice = (...patterns) => new RegExp(`(${patterns.map(p => p.source || p).join('|')})`);
-export const repeat = (...patterns) => new RegExp(`(${patterns.map(p => p.source || p).join('')})*`);
-export const repeat1 = (...patterns) => new RegExp(`(${patterns.map(p => p.source || p).join('')})+`);
-export const optional = (...patterns) => new RegExp(`(${patterns.map(p => p.source || p).join('')})?`);
+export const seq = (...patterns: PatternInput[]): RegExp => new RegExp(patterns.map(p => (p as RegExp).source || p).join(''));
+export const choice = (...patterns: PatternInput[]): RegExp => new RegExp(`(${patterns.map(p => (p as RegExp).source || p).join('|')})`);
+export const repeat = (...patterns: PatternInput[]): RegExp => new RegExp(`(${patterns.map(p => (p as RegExp).source || p).join('')})*`);
+export const repeat1 = (...patterns: PatternInput[]): RegExp => new RegExp(`(${patterns.map(p => (p as RegExp).source || p).join('')})+`);
+export const optional = (...patterns: PatternInput[]): RegExp => new RegExp(`(${patterns.map(p => (p as RegExp).source || p).join('')})?`);
 
 const _COMMENT = /#[^\n\r]*/;
 
@@ -190,7 +192,7 @@ const _STRING_LITERAL_LONG_QUOTE = seq(
 const _VARNAME = seq(
     choice(_PN_CHARS_U, /\d/),
     repeat(choice(_PN_CHARS_U, /\d/, /\u00b7/, /[\u0300-\u036f]/, /[\u203f-\u2040]/))
-)
+);
 
 const _VAR1 = seq(/\?/, _VARNAME);
 
@@ -601,4 +603,4 @@ export const tokens = {
     OBJECT_KW: createToken({ name: 'OBJECT', pattern: _OBJECT }),
     HASLANG: createToken({ name: 'HASLANG', pattern: _HASLANG }),
     HASLANGDIR: createToken({ name: 'HASLANGDIR', pattern: _HASLANGDIR }),
-}
+};

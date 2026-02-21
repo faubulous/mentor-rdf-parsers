@@ -1,8 +1,8 @@
-import { Lexer, CstParser } from 'chevrotain';
-import { tokens } from '../tokens.mjs';
+import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
+import { tokens } from '../tokens.js';
 
 // The order of tokens matters if multiple can match the same text
-const allTokens = [
+const allTokens: TokenType[] = [
     tokens.WS,
     tokens.PERIOD,
     tokens.OPEN_TRIPLE_TERM,
@@ -31,6 +31,10 @@ export class NTriplesLexer extends Lexer {
  * Base class for parsers of the N-Triples syntax.
  */
 export class NTriplesParserBase extends CstParser {
+    constructor(tokenVocabulary: TokenType[] = allTokens, config?: object) {
+        super(tokenVocabulary, config);
+    }
+
     /**
     * https://www.w3.org/TR/n-triples/#grammar-production-subject
     */
@@ -107,8 +111,8 @@ export class NTriplesParser extends NTriplesParserBase {
      * @param tokens A set of tokens created by the lexer.
      * @returns A concrete syntax tree (CST) object.
      */
-    parse(tokens) {
-        this.input = tokens;
+    parse(inputTokens: IToken[]): CstNode {
+        this.input = inputTokens;
 
         const cst = this.ntriplesDoc();
 

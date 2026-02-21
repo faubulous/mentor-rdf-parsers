@@ -1,5 +1,5 @@
-import { Lexer, CstParser } from 'chevrotain';
-import { tokens } from '../tokens.mjs';
+import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
+import { tokens } from '../tokens.js';
 
 /**
  * SPARQL 1.2 Parser
@@ -18,7 +18,7 @@ import { tokens } from '../tokens.mjs';
  */
 
 // SPARQL token order - longer/more specific patterns must come before shorter ones
-const allTokens = [
+const allTokens: TokenType[] = [
     tokens.WS,
     tokens.COMMENT,
 
@@ -240,10 +240,10 @@ const allTokens = [
  * @returns {string} The input with codepoint escapes resolved.
  * @throws {Error} If a surrogate code point is encountered.
  */
-export function resolveCodepointEscapes(input) {
-    return input.replace(/\\U([0-9A-Fa-f]{8})|\\u([0-9A-Fa-f]{4})/g, (match, u8, u4) => {
+export function resolveCodepointEscapes(input: string): string {
+    return input.replace(/\\U([0-9A-Fa-f]{8})|\\u([0-9A-Fa-f]{4})/g, (_match, u8: string | undefined, u4: string | undefined) => {
         const hex = u8 || u4;
-        const codePoint = parseInt(hex, 16);
+        const codePoint = parseInt(hex!, 16);
 
         // Reject surrogate code points (U+D800 to U+DFFF)
         if (codePoint >= 0xD800 && codePoint <= 0xDFFF) {
@@ -271,24 +271,22 @@ export class SparqlParser extends CstParser {
     /**
      * A map of prefixes to their namespace IRI.
      */
-    namespaces = {};
+    namespaces: Record<string, string> = {};
 
     /**
      * Tracks whether the current verb in a PropertyListPathNotEmpty is a simple
      * path (IRI or 'a') vs a complex property path expression. Per spec note 16,
      * annotations and reifiers are only permitted when the verb is a simple path.
-     * @type {boolean}
      */
-    _verbIsSimplePath = true;
+    _verbIsSimplePath: boolean = true;
 
     /**
      * Tracks whether we are inside a DELETE block (DELETE DATA, DELETE WHERE,
      * or DeleteClause). Per grammar note 7, blank node syntax is not allowed
      * in these contexts, which means anonymous reifiers and annotation blocks
      * without a named reifier are disallowed.
-     * @type {boolean}
      */
-    _insideDeleteBlock = false;
+    _insideDeleteBlock: boolean = false;
 
     constructor() {
         super(allTokens, {
@@ -298,7 +296,7 @@ export class SparqlParser extends CstParser {
         this.performSelfAnalysis();
     }
 
-    registerNamespace(prefixToken, iriToken) {
+    registerNamespace(prefixToken: IToken, iriToken: IToken): void {
         const prefix = prefixToken.image.slice(0, -1);
         const iri = iriToken.image.slice(1, -1);
 
@@ -308,8 +306,8 @@ export class SparqlParser extends CstParser {
     /**
      * Parses tokens into a CST.
      */
-    parse(tokens) {
-        this.input = tokens;
+    parse(inputTokens: IToken[]): CstNode {
+        this.input = inputTokens;
 
         const cst = this.queryOrUpdate();
 
@@ -1713,10 +1711,7 @@ export class SparqlParser extends CstParser {
                 }},
                 { ALT: () => {
                     if (this._insideDeleteBlock && !hasNamedReifier) {
-                        this._errors.push({
-                            name: 'NoViableAltException',
-                            message: 'Anonymous reifiers (annotation blocks without a named reifier) are not allowed in DELETE blocks (grammar note 7: no blank nodes)'
-                        });
+                        throw new Error('Anonymous reifiers (annotation blocks without a named reifier) are not allowed in DELETE blocks (grammar note 7: no blank nodes)');
                     }
                     this.SUBRULE(this.annotationBlock);
                     hasNamedReifier = false;

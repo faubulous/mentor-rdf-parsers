@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { TrigLexer, TrigParser } from './parser.mjs';
+import { TrigLexer, TrigParser } from './parser.js';
 
 /**
  * TriG Parser Tests

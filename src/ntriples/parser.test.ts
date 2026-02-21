@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { NTriplesLexer, NTriplesParser } from './parser.mjs';
+import { NTriplesLexer, NTriplesParser } from './parser.js';
 
 /**
  * N-Triples Parser Tests

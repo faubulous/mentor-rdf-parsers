@@ -1,5 +1,23 @@
-import dataFactory from '@rdfjs/data-model'
-import { NQuadsParser } from './parser.mjs';
+// @ts-nocheck
+import dataFactory from '@rdfjs/data-model';
+import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
+import { NQuadsParser } from './parser.js';
+
+interface CstContext {
+    [key: string]: CstContext[] | { image: string }[] | undefined;
+    statement?: CstContext[];
+    subject?: CstContext[];
+    predicate?: CstContext[];
+    object?: CstContext[];
+    literal?: CstContext[];
+    datatype?: CstContext[];
+    tripleTerm?: CstContext[];
+    graphLabel?: CstContext[];
+    IRIREF_ABS?: { image: string }[];
+    BLANK_NODE_LABEL?: { image: string }[];
+    STRING_LITERAL_QUOTE?: { image: string }[];
+    LANGTAG?: { image: string }[];
+}
 
 const BaseVisitor = new NQuadsParser().getBaseCstVisitorConstructor();
 
@@ -14,8 +32,8 @@ export class NQuadsReader extends BaseVisitor {
         this.validateVisitor();
     }
 
-    nquadsDoc(ctx) {
-        const quads = [];
+    nquadsDoc(ctx: CstContext): Quad[] {
+        const quads: Quad[] = [];
 
         if (ctx.statement) {
             for (const statementCtx of ctx.statement) {
@@ -30,21 +48,21 @@ export class NQuadsReader extends BaseVisitor {
         return quads;
     }
 
-    versionDirective(ctx) {
+    versionDirective(ctx: CstContext): undefined {
         // Version directive is informational only, no quads emitted
         return undefined;
     }
 
-    statement(ctx) {
-        const subject = this.visit(ctx.subject[0]);
-        const predicate = this.visit(ctx.predicate[0]);
-        const object = this.visit(ctx.object[0]);
-        const graph = ctx.graphLabel ? this.visit(ctx.graphLabel[0]) : undefined;
+    statement(ctx: CstContext): Quad {
+        const subject = this.visit(ctx.subject![0]) as NamedNode | BlankNode;
+        const predicate = this.visit(ctx.predicate![0]) as NamedNode;
+        const object = this.visit(ctx.object![0]) as Term;
+        const graph = ctx.graphLabel ? this.visit(ctx.graphLabel[0]) as NamedNode | BlankNode : undefined;
 
         return dataFactory.quad(subject, predicate, object, graph);
     }
 
-    subject(ctx) {
+    subject(ctx: CstContext): NamedNode | BlankNode | undefined {
         if (ctx.IRIREF_ABS) {
             return this.getNamedNode(ctx);
         } else if (ctx.BLANK_NODE_LABEL) {
@@ -52,7 +70,7 @@ export class NQuadsReader extends BaseVisitor {
         }
     }
 
-    predicate(ctx) {
+    predicate(ctx: CstContext): NamedNode {
         if (ctx.IRIREF_ABS) {
             return this.getNamedNode(ctx);
         } else {
@@ -60,7 +78,7 @@ export class NQuadsReader extends BaseVisitor {
         }
     }
 
-    object(ctx) {
+    object(ctx: CstContext): NamedNode | BlankNode | Literal | Quad | undefined {
         if (ctx.IRIREF_ABS) {
             return this.getNamedNode(ctx);
         }
@@ -68,26 +86,26 @@ export class NQuadsReader extends BaseVisitor {
             return this.getBlankNode(ctx);
         }
         else if (ctx.literal) {
-            return this.visit(ctx.literal[0]);
+            return this.visit(ctx.literal[0]) as Literal;
         }
         else if (ctx.tripleTerm) {
-            return this.visit(ctx.tripleTerm[0]);
+            return this.visit(ctx.tripleTerm[0]) as Quad;
         }
     }
 
-    tripleTerm(ctx) {
-        const subject = this.visit(ctx.subject[0]);
-        const predicate = this.visit(ctx.predicate[0]);
-        const object = this.visit(ctx.object[0]);
+    tripleTerm(ctx: CstContext): Quad {
+        const subject = this.visit(ctx.subject![0]) as NamedNode | BlankNode;
+        const predicate = this.visit(ctx.predicate![0]) as NamedNode;
+        const object = this.visit(ctx.object![0]) as Term;
 
         return dataFactory.quad(subject, predicate, object);
     }
 
-    literal(ctx) {
+    literal(ctx: CstContext): Literal {
         const value = this.getLiteralValue(ctx);
 
         if (ctx.datatype) {
-            const datatype = this.visit(ctx.datatype[0]);
+            const datatype = this.visit(ctx.datatype[0]) as NamedNode;
 
             return dataFactory.literal(value, datatype);
         } else if (ctx.LANGTAG) {
@@ -101,7 +119,7 @@ export class NQuadsReader extends BaseVisitor {
         }
     }
 
-    datatype(ctx) {
+    datatype(ctx: CstContext): NamedNode {
         if (ctx.IRIREF_ABS) {
             return this.getNamedNode(ctx);
         } else {
@@ -109,7 +127,7 @@ export class NQuadsReader extends BaseVisitor {
         }
     }
 
-    graphLabel(ctx) {
+    graphLabel(ctx: CstContext): NamedNode | BlankNode | undefined {
         if (ctx.IRIREF_ABS) {
             return this.getNamedNode(ctx);
         } else if (ctx.BLANK_NODE_LABEL) {
@@ -117,25 +135,25 @@ export class NQuadsReader extends BaseVisitor {
         }
     }
 
-    getNamedNode(ctx) {
-        let value = ctx.IRIREF_ABS[0].image.slice(1, -1);
+    getNamedNode(ctx: CstContext): NamedNode {
+        let value = ctx.IRIREF_ABS![0].image.slice(1, -1);
 
         // Resolve Unicode escapes (\uXXXX and \UXXXXXXXX)
-        value = value.replace(/\\u([0-9A-Fa-f]{4})/g, (_, hex) =>
+        value = value.replace(/\\u([0-9A-Fa-f]{4})/g, (_: string, hex: string) =>
             String.fromCodePoint(parseInt(hex, 16))
-        ).replace(/\\U([0-9A-Fa-f]{8})/g, (_, hex) =>
+        ).replace(/\\U([0-9A-Fa-f]{8})/g, (_: string, hex: string) =>
             String.fromCodePoint(parseInt(hex, 16))
         );
 
         return dataFactory.namedNode(value);
     }
 
-    getBlankNode(ctx) {
-        return dataFactory.blankNode(ctx.BLANK_NODE_LABEL[0].image);
+    getBlankNode(ctx: CstContext): BlankNode {
+        return dataFactory.blankNode(ctx.BLANK_NODE_LABEL![0].image);
     }
 
-    getLiteralValue(ctx) {
-        const raw = ctx.STRING_LITERAL_QUOTE[0].image.slice(1, -1);
+    getLiteralValue(ctx: CstContext): string {
+        const raw = ctx.STRING_LITERAL_QUOTE![0].image.slice(1, -1);
 
         return this.unescapeString(raw);
     }
@@ -143,8 +161,8 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Interpret escape sequences in a string value.
      */
-    unescapeString(raw) {
-        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match, u4, u8, ch) => {
+    unescapeString(raw: string): string {
+        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match: string, u4: string, u8: string, ch: string) => {
             if (u4) return String.fromCodePoint(parseInt(u4, 16));
             if (u8) return String.fromCodePoint(parseInt(u8, 16));
             switch (ch) {

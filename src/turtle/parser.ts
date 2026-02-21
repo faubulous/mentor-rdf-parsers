@@ -1,11 +1,11 @@
-import { Lexer, CstParser } from 'chevrotain';
-import { tokens } from '../tokens.mjs';
+import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
+import { tokens } from '../tokens.js';
 
 // TODO:
 // - Define 'triples' acoording to https://www.w3.org/TR/n-quads/#grammar-production-triples
 
 // The order of tokens matters if multiple can match the same text
-const allTokens = [
+const allTokens: TokenType[] = [
     tokens.WS,
     tokens.COMMA,
     tokens.SEMICOLON,
@@ -62,9 +62,13 @@ export class TurtleParserBase extends CstParser {
     /**
      * A map of prefixes to their namespace IRI.
      */
-    namespaces = {};
+    namespaces: Record<string, string> = {};
 
-    registerNamespace(prefixToken, iriToken) {
+    // These are declared here but defined in derived classes
+    protected subject!: ReturnType<typeof this.RULE>;
+    protected object!: ReturnType<typeof this.RULE>;
+
+    registerNamespace(prefixToken: IToken, iriToken: IToken) {
         const prefix = prefixToken.image.slice(0, -1);
         const iri = iriToken.image.slice(1, -1);
 
@@ -155,7 +159,7 @@ export class TurtleParserBase extends CstParser {
 
             if (this.namespaces[prefix] === undefined) {
                 const error = new Error(`Undefined prefix: ${prefix}`);
-                error.stack = [...this.RULE_OCCURRENCE_STACK];
+                (error as any).stack = [...(this as any).RULE_OCCURRENCE_STACK];
 
                 throw error;
             }
@@ -477,7 +481,7 @@ export class TurtleParser extends TurtleParserBase {
      * @param tokens A set of tokens created by the lexer.
      * @returns A concrete syntax tree (CST) object.
      */
-    parse(documentIri, tokens) {
+    parse(documentIri: string, tokens: IToken[]): CstNode {
         this.input = tokens;
 
         const cst = this.turtleDoc();

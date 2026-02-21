@@ -1,7 +1,7 @@
 import * as fs from 'fs';
-import { parseQuads, quadsMatch, parseNTriples12 } from '../helpers.mjs';
-import { TurtleLexer, TurtleParser } from './parser.mjs';
-import { TurtleReader } from './reader.mjs';
+import { parseQuads, quadsMatch, parseNTriples12 } from '../helpers.js';
+import { TurtleLexer, TurtleParser } from './parser.js';
+import { TurtleReader } from './reader.js';
 
 /**
  * Turtle Reader Tests

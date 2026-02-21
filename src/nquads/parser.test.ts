@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { NQuadsLexer, NQuadsParser } from './parser.mjs';
+import { NQuadsLexer, NQuadsParser } from './parser.js';
 
 /**
  * N-Quads Parser Tests

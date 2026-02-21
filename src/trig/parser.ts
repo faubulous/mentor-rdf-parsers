@@ -1,9 +1,9 @@
-import { Lexer } from 'chevrotain';
-import { tokens } from '../tokens.mjs';
-import { TurtleParserBase } from '../turtle/parser.mjs';
+import { Lexer, IToken, CstNode, TokenType } from 'chevrotain';
+import { tokens } from '../tokens.js';
+import { TurtleParserBase } from '../turtle/parser.js';
 
 // The order of tokens matters if multiple can match the same text
-const allTokens = [
+const allTokens: TokenType[] = [
     tokens.WS,
     tokens.COMMA,
     tokens.SEMICOLON,

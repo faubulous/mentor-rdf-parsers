@@ -1,34 +1,52 @@
 {
   "name": "@faubulous/mentor-rdf-parsers",
   "description": "Chevrotain parsers for RDF languages such as N-Triples, N-Quads, Turtle and Trig.",
-  "version": "1.0.0",
-  "private": false,
   "keywords": [
     "rdf",
     "parser",
     "turtle",
     "n3",
-    "javascript",
+    "typescript",
     "chevrotain"
   ],
-  "author": "Sebastian Faubel",
+  "version": "1.0.0",
+  "private": false,
+  "author": {
+    "name": "Sebastian Faubel"
+  },
   "license": "LGPL-2.1-or-later",
   "type": "module",
-  "main": "./dist/index.mjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.mjs"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/faubulous/mentor-rdf-parsers.git"
+  },
+  "bugs": {
+    "url": "https://github.com/faubulous/mentor-rdf-parsers/issues"
   },
   "scripts": {
-  "test": "vitest run",
-  "build": "node build.cjs"
+    "test": "vitest run",
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@rdfjs/data-model": "^2.1.0",
     "chevrotain": "^11.0.3"
   },
   "devDependencies": {
+    "@rdfjs/types": "^2.0.1",
+    "@types/n3": "^1.21.1",
+    "@types/rdfjs__data-model": "^2.0.9",
     "command-line-args": "^6.0.1",
-  "n3": "^1.23.1",
-  "vitest": "^2.1.9"
+    "n3": "^1.23.1",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
   }
 }

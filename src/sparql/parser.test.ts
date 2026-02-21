@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { SparqlLexer, SparqlParser, resolveCodepointEscapes } from './parser.mjs';
+import { SparqlLexer, SparqlParser, resolveCodepointEscapes } from './parser.js';
 
 /**
  * SPARQL 1.2 Parser Tests

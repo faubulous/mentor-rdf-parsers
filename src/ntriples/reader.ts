@@ -1,7 +1,24 @@
-import dataFactory from '@rdfjs/data-model'
-import { NTriplesParser } from './parser.mjs';
+// @ts-nocheck
+import dataFactory from '@rdfjs/data-model';
+import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
+import { NTriplesParser } from './parser.js';
 
 const BaseVisitor = new NTriplesParser().getBaseCstVisitorConstructor();
+
+interface CstContext {
+    [key: string]: CstContext[] | { image: string }[] | undefined;
+    triple?: CstContext[];
+    subject?: CstContext[];
+    predicate?: CstContext[];
+    object?: CstContext[];
+    literal?: CstContext[];
+    datatype?: CstContext[];
+    tripleTerm?: CstContext[];
+    IRIREF_ABS?: { image: string }[];
+    BLANK_NODE_LABEL?: { image: string }[];
+    STRING_LITERAL_QUOTE?: { image: string }[];
+    LANGTAG?: { image: string }[];
+}
 
 /**
  * A visitor class that constructs RDF/JS quads from N-Triples syntax trees.
@@ -14,8 +31,8 @@ export class NTriplesReader extends BaseVisitor {
         this.validateVisitor();
     }
 
-    ntriplesDoc(ctx) {
-        const quads = [];
+    ntriplesDoc(ctx: CstContext): Quad[] {
+        const quads: Quad[] = [];
 
         if (ctx.triple) {
             for (const tripleCtx of ctx.triple) {
@@ -30,28 +47,29 @@ export class NTriplesReader extends BaseVisitor {
         return quads;
     }
 
-    versionDirective(ctx) {
+    versionDirective(_ctx: CstContext): undefined {
         // Version directive is informational only, no quads emitted
         return undefined;
     }
 
-    triple(ctx) {
-        const subject = this.visit(ctx.subject[0]);
-        const predicate = this.visit(ctx.predicate[0]);
-        const object = this.visit(ctx.object[0]);
+    triple(ctx: CstContext): Quad {
+        const subject = this.visit(ctx.subject![0]) as NamedNode | BlankNode;
+        const predicate = this.visit(ctx.predicate![0]) as NamedNode;
+        const object = this.visit(ctx.object![0]) as Term;
 
         return dataFactory.quad(subject, predicate, object);
     }
 
-    subject(ctx) {
+    subject(ctx: CstContext): NamedNode | BlankNode {
         if (ctx.IRIREF_ABS) {
             return this.getNamedNode(ctx);
         } else if (ctx.BLANK_NODE_LABEL) {
             return this.getBlankNode(ctx);
         }
+        throw new Error('Invalid subject');
     }
 
-    predicate(ctx) {
+    predicate(ctx: CstContext): NamedNode {
         if (ctx.IRIREF_ABS) {
             return this.getNamedNode(ctx);
         } else {
@@ -59,7 +77,7 @@ export class NTriplesReader extends BaseVisitor {
         }
     }
 
-    object(ctx) {
+    object(ctx: CstContext): Term {
         if (ctx.IRIREF_ABS) {
             return this.getNamedNode(ctx);
         }
@@ -67,28 +85,29 @@ export class NTriplesReader extends BaseVisitor {
             return this.getBlankNode(ctx);
         }
         else if (ctx.literal) {
-            return this.visit(ctx.literal[0]);
+            return this.visit(ctx.literal[0]) as Literal;
         }
         else if (ctx.tripleTerm) {
-            return this.visit(ctx.tripleTerm[0]);
+            return this.visit(ctx.tripleTerm[0]) as Quad;
         }
+        throw new Error('Invalid object');
     }
 
-    tripleTerm(ctx) {
-        const subject = this.visit(ctx.subject[0]);
-        const predicate = this.visit(ctx.predicate[0]);
-        const object = this.visit(ctx.object[0]);
+    tripleTerm(ctx: CstContext): Quad {
+        const subject = this.visit(ctx.subject![0]) as NamedNode | BlankNode;
+        const predicate = this.visit(ctx.predicate![0]) as NamedNode;
+        const object = this.visit(ctx.object![0]) as Term;
 
         return dataFactory.quad(subject, predicate, object);
     }
 
-    literal(ctx) {
+    literal(ctx: CstContext): Literal {
         const value = this.getLiteralValue(ctx);
 
         if (ctx.datatype) {
-            const datatype = this.visit(ctx.datatype[0]);
+            const datatypeNode = this.visit(ctx.datatype[0]) as NamedNode;
 
-            return dataFactory.literal(value, datatype);
+            return dataFactory.literal(value, datatypeNode);
         } else if (ctx.LANGTAG) {
             // LANGTAG image includes the leading '@', e.g. "@en" — strip it.
             // Language tags are normalized to lowercase per BCP 47.
@@ -100,7 +119,7 @@ export class NTriplesReader extends BaseVisitor {
         }
     }
 
-    datatype(ctx) {
+    datatype(ctx: CstContext): NamedNode {
         if (ctx.IRIREF_ABS) {
             return this.getNamedNode(ctx);
         } else {
@@ -108,25 +127,25 @@ export class NTriplesReader extends BaseVisitor {
         }
     }
 
-    getNamedNode(ctx) {
-        let value = ctx.IRIREF_ABS[0].image.slice(1, -1);
+    getNamedNode(ctx: CstContext): NamedNode {
+        let value = ctx.IRIREF_ABS![0].image.slice(1, -1);
 
         // Resolve Unicode escapes (\uXXXX and \UXXXXXXXX)
-        value = value.replace(/\\u([0-9A-Fa-f]{4})/g, (_, hex) =>
+        value = value.replace(/\\u([0-9A-Fa-f]{4})/g, (_, hex: string) =>
             String.fromCodePoint(parseInt(hex, 16))
-        ).replace(/\\U([0-9A-Fa-f]{8})/g, (_, hex) =>
+        ).replace(/\\U([0-9A-Fa-f]{8})/g, (_, hex: string) =>
             String.fromCodePoint(parseInt(hex, 16))
         );
 
         return dataFactory.namedNode(value);
     }
 
-    getBlankNode(ctx) {
-        return dataFactory.blankNode(ctx.BLANK_NODE_LABEL[0].image);
+    getBlankNode(ctx: CstContext): BlankNode {
+        return dataFactory.blankNode(ctx.BLANK_NODE_LABEL![0].image);
     }
 
-    getLiteralValue(ctx) {
-        const raw = ctx.STRING_LITERAL_QUOTE[0].image.slice(1, -1);
+    getLiteralValue(ctx: CstContext): string {
+        const raw = ctx.STRING_LITERAL_QUOTE![0].image.slice(1, -1);
 
         return this.unescapeString(raw);
     }
@@ -134,8 +153,8 @@ export class NTriplesReader extends BaseVisitor {
     /**
      * Interpret escape sequences in a string value.
      */
-    unescapeString(raw) {
-        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match, u4, u8, ch) => {
+    unescapeString(raw: string): string {
+        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match, u4: string | undefined, u8: string | undefined, ch: string | undefined) => {
             if (u4) return String.fromCodePoint(parseInt(u4, 16));
             if (u8) return String.fromCodePoint(parseInt(u8, 16));
             switch (ch) {

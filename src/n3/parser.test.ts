@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { N3Lexer, N3Parser } from './parser.mjs';
+import { N3Lexer, N3Parser } from './parser.js';
 
 /**
  * Notation3 (N3) Parser Tests

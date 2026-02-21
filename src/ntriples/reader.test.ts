@@ -1,7 +1,7 @@
 import * as fs from 'fs';
-import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.mjs';
-import { NTriplesLexer, NTriplesParser } from './parser.mjs';
-import { NTriplesReader } from './reader.mjs';
+import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.js';
+import { NTriplesLexer, NTriplesParser } from './parser.js';
+import { NTriplesReader } from './reader.js';
 
 /**
  * N-Triples Reader Tests
