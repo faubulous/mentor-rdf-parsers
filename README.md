@@ -55,8 +55,7 @@ Each parser follows the same three-step pattern: **tokenize → parse → (optio
 ### Parsing Turtle
 
 ```js
-import { TurtleLexer, TurtleParser } from '@faubulous/mentor-rdf-parsers/turtle/parser.mjs';
-import { TurtleReader } from '@faubulous/mentor-rdf-parsers/turtle/reader.mjs';
+import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .
@@ -79,8 +78,7 @@ const quads = reader.visit(cst);
 ### Parsing N-Triples
 
 ```js
-import { NTriplesLexer, NTriplesParser } from '@faubulous/mentor-rdf-parsers/ntriples/parser.mjs';
-import { NTriplesReader } from '@faubulous/mentor-rdf-parsers/ntriples/reader.mjs';
+import { NTriplesLexer, NTriplesParser, NTriplesReader } from '@faubulous/mentor-rdf-parsers';
 
 const input = '<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .\n';
 
@@ -92,8 +90,7 @@ const quads = new NTriplesReader().visit(cst);
 ### Parsing N-Quads
 
 ```js
-import { NQuadsLexer, NQuadsParser } from '@faubulous/mentor-rdf-parsers/nquads/parser.mjs';
-import { NQuadsReader } from '@faubulous/mentor-rdf-parsers/nquads/reader.mjs';
+import { NQuadsLexer, NQuadsParser, NQuadsReader } from '@faubulous/mentor-rdf-parsers';
 
 const input = '<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> <http://example.org/graph1> .\n';
 
@@ -105,7 +102,7 @@ const quads = new NQuadsReader().visit(cst);
 ### Parsing SPARQL 1.2
 
 ```js
-import { SparqlLexer, SparqlParser, resolveCodepointEscapes } from '@faubulous/mentor-rdf-parsers/sparql/parser.mjs';
+import { SparqlLexer, SparqlParser, resolveCodepointEscapes } from '@faubulous/mentor-rdf-parsers';
 
 const input = 'SELECT ?name WHERE { ?person <http://example.org/name> ?name }';
 
@@ -119,8 +116,7 @@ const cst = new SparqlParser().parse(lexResult.tokens);
 ### Parsing N3 (Notation3)
 
 ```js
-import { N3Lexer, N3Parser } from '@faubulous/mentor-rdf-parsers/n3/parser.mjs';
-import { N3Reader } from '@faubulous/mentor-rdf-parsers/n3/reader.mjs';
+import { N3Lexer, N3Parser, N3Reader } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .
@@ -135,7 +131,7 @@ const quads = new N3Reader().visit(cst);
 ### Parsing TriG
 
 ```js
-import { TrigLexer, TrigParser } from '@faubulous/mentor-rdf-parsers/trig/parser.mjs';
+import { TrigLexer, TrigParser } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .

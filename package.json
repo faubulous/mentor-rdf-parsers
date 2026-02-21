@@ -2,6 +2,7 @@
   "name": "@faubulous/mentor-rdf-parsers",
   "description": "Chevrotain parsers for RDF languages such as N-Triples, N-Quads, Turtle and Trig.",
   "version": "1.0.0",
+  "private": false,
   "keywords": [
     "rdf",
     "parser",
@@ -13,8 +14,13 @@
   "author": "Sebastian Faubel",
   "license": "LGPL-2.1-or-later",
   "type": "module",
+  "main": "./dist/index.mjs",
+  "exports": {
+    ".": "./dist/index.mjs"
+  },
   "scripts": {
-  "test": "vitest run"
+  "test": "vitest run",
+  "build": "node build.cjs"
   },
   "dependencies": {
     "@rdfjs/data-model": "^2.1.0",
