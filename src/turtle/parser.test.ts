@@ -1099,7 +1099,7 @@ describe("TurtleDocument", () => {
     it('- undefined prefix error has correct properties', () => {
         try {
             parse(null, 'foo:bar <http://example.org/p> <http://example.org/o> .');
-            fail('Expected error to be thrown');
+            throw new Error('Expected error to be thrown');
         } catch (e: any) {
             expect(e.name).toBe('UndefinedPrefixError');
             expect(e.message).toBe('Undefined prefix: foo');
