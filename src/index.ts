@@ -9,3 +9,4 @@ export { TrigReader } from './trig/reader.js';
 export { N3Lexer, N3Parser } from './n3/parser.js';
 export { N3Reader } from './n3/reader.js';
 export { SparqlLexer, SparqlParser, resolveCodepointEscapes } from './sparql/parser.js';
+export { RdfSyntax } from './rdf-syntax.js';
