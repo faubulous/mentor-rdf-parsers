@@ -1076,4 +1076,40 @@ describe("TurtleDocument", () => {
     it('- RDF 1.2: @version triple-quoted single string (negative test)', () => {
         expect(() => parse('file://./tests/rdf12/syntax/turtle12-version-bad-06.ttl')).toThrowError();
     });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Undefined Prefix Error Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    it('- undefined prefix in subject (negative test)', () => {
+        expect(() => parse(null, 'undefined:subject <http://example.org/p> <http://example.org/o> .'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix in predicate (negative test)', () => {
+        expect(() => parse(null, '<http://example.org/s> undefined:predicate <http://example.org/o> .'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix in object (negative test)', () => {
+        expect(() => parse(null, '<http://example.org/s> <http://example.org/p> undefined:object .'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix error has correct properties', () => {
+        try {
+            parse(null, 'foo:bar <http://example.org/p> <http://example.org/o> .');
+            fail('Expected error to be thrown');
+        } catch (e: any) {
+            expect(e.name).toBe('UndefinedPrefixError');
+            expect(e.message).toBe('Undefined prefix: foo');
+            expect(e.token).toBeDefined();
+            expect(e.token.image).toBe('foo:bar');
+        }
+    });
+
+    it('+ defined prefix should not throw', () => {
+        expect(() => parse(null, '@prefix ex: <http://example.org/> .\nex:subject ex:predicate ex:object .'))
+            .not.toThrow();
+    });
 });

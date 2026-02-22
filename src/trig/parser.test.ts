@@ -1092,4 +1092,45 @@ describe("TrigDocument", () => {
     it('- RDF 1.2: upper case LTR (negative test)', () => {
         expect(() => parse(getTestData('file://./tests/rdf12/trig12-base-bad-2.trig'))).toThrowError();
     });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Undefined Prefix Error Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    it('- undefined prefix in subject (negative test)', () => {
+        expect(() => parse('undefined:subject <http://example.org/p> <http://example.org/o> .'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix in predicate (negative test)', () => {
+        expect(() => parse('<http://example.org/s> undefined:predicate <http://example.org/o> .'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix in object (negative test)', () => {
+        expect(() => parse('<http://example.org/s> <http://example.org/p> undefined:object .'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix in graph name (negative test)', () => {
+        expect(() => parse('GRAPH undefined:graph { <http://example.org/s> <http://example.org/p> <http://example.org/o> }'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix error has correct properties', () => {
+        try {
+            parse('foo:bar <http://example.org/p> <http://example.org/o> .');
+            fail('Expected error to be thrown');
+        } catch (e: any) {
+            expect(e.name).toBe('UndefinedPrefixError');
+            expect(e.message).toBe('Undefined prefix: foo');
+            expect(e.token).toBeDefined();
+            expect(e.token.image).toBe('foo:bar');
+        }
+    });
+
+    it('+ defined prefix should not throw', () => {
+        expect(() => parse('@prefix ex: <http://example.org/> .\nex:subject ex:predicate ex:object .'))
+            .not.toThrow();
+    });
 });

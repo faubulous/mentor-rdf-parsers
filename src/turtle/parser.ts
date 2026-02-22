@@ -159,6 +159,8 @@ export class TurtleParserBase extends CstParser {
 
             if (this.namespaces[prefix] === undefined) {
                 const error = new Error(`Undefined prefix: ${prefix}`);
+                (error as any).name = 'UndefinedPrefixError';
+                (error as any).token = token;
                 (error as any).stack = [...(this as any).RULE_OCCURRENCE_STACK];
 
                 throw error;

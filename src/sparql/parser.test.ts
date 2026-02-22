@@ -1406,4 +1406,40 @@ describe("SparqlDocument", () => {
     it('- W3C: codepoint-esc-bad-03.rq', () => {
         expect(() => parse('file://./tests/w3c/codepoint-escapes/codepoint-esc-bad-03.rq')).toThrowError();
     });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Undefined Prefix Error Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    it('- undefined prefix in subject (negative test)', () => {
+        expect(() => parse(null, 'SELECT * WHERE { undefined:subject <http://example.org/p> <http://example.org/o> }'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix in predicate (negative test)', () => {
+        expect(() => parse(null, 'SELECT * WHERE { <http://example.org/s> undefined:predicate <http://example.org/o> }'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix in object (negative test)', () => {
+        expect(() => parse(null, 'SELECT * WHERE { <http://example.org/s> <http://example.org/p> undefined:object }'))
+            .toThrowError('Undefined prefix: undefined');
+    });
+
+    it('- undefined prefix error has correct properties', () => {
+        try {
+            parse(null, 'SELECT * WHERE { foo:bar <http://example.org/p> <http://example.org/o> }');
+            fail('Expected error to be thrown');
+        } catch (e: any) {
+            expect(e.name).toBe('UndefinedPrefixError');
+            expect(e.message).toBe('Undefined prefix: foo');
+            expect(e.token).toBeDefined();
+            expect(e.token.image).toBe('foo:bar');
+        }
+    });
+
+    it('+ defined prefix should not throw', () => {
+        expect(() => parse(null, 'PREFIX ex: <http://example.org/>\nSELECT * WHERE { ex:subject ex:predicate ex:object }'))
+            .not.toThrow();
+    });
 });

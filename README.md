@@ -72,7 +72,7 @@ Each parser follows the same three-step pattern: **tokenize → parse → (optio
 ### Parsing Turtle
 
 ```typescript
-import { Turtle, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .
@@ -80,40 +80,40 @@ const input = `
 `;
 
 // 1. Tokenize
-const lexer = new Turtle.TurtleLexer();
+const lexer = new TurtleLexer();
 const lexResult = lexer.tokenize(input);
 
 // 2. Parse into a CST
-const parser = new Turtle.TurtleParser();
+const parser = new TurtleParser();
 const cst = parser.parse('http://example.org/', lexResult.tokens);
 
 // 3. Read RDF/JS quads from the CST
-const reader = new TurtleReader.TurtleReader();
+const reader = new TurtleReader();
 const quads = reader.visit(cst);
 ```
 
 ### Parsing N-Triples
 
 ```typescript
-import { NTriples, NTriplesReader } from '@faubulous/mentor-rdf-parsers';
+import { NTriplesLexer, NTriplesParser, NTriplesReader } from '@faubulous/mentor-rdf-parsers';
 
 const input = '<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .\n';
 
-const lexResult = new NTriples.NTriplesLexer().tokenize(input);
-const cst = new NTriples.NTriplesParser().parse(lexResult.tokens);
-const quads = new NTriplesReader.NTriplesReader().visit(cst);
+const lexResult = new NTriplesLexer().tokenize(input);
+const cst = new NTriplesParser().parse(lexResult.tokens);
+const quads = new NTriplesReader().visit(cst);
 ```
 
 ### Parsing N-Quads
 
 ```typescript
-import { NQuads, NQuadsReader } from '@faubulous/mentor-rdf-parsers';
+import { NQuadsLexer, NQuadsParser, NQuadsReader } from '@faubulous/mentor-rdf-parsers';
 
 const input = '<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> <http://example.org/graph1> .\n';
 
-const lexResult = new NQuads.NQuadsLexer().tokenize(input);
-const cst = new NQuads.NQuadsParser().parse(lexResult.tokens);
-const quads = new NQuadsReader.NQuadsReader().visit(cst);
+const lexResult = new NQuadsLexer().tokenize(input);
+const cst = new NQuadsParser().parse(lexResult.tokens);
+const quads = new NQuadsReader().visit(cst);
 ```
 
 ### Parsing SPARQL 1.2
@@ -133,22 +133,22 @@ const cst = new Sparql.SparqlParser().parse(lexResult.tokens);
 ### Parsing N3 (Notation3)
 
 ```typescript
-import { N3, N3Reader } from '@faubulous/mentor-rdf-parsers';
+import { N3Lexer, N3Parser, N3Reader } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .
   { ex:Alice ex:knows ex:Bob } => { ex:Bob ex:knows ex:Alice } .
 `;
 
-const lexResult = new N3.N3Lexer().tokenize(input);
-const cst = new N3.N3Parser().parse('http://example.org/', lexResult.tokens);
-const quads = new N3Reader.N3Reader().visit(cst);
+const lexResult = new N3Lexer().tokenize(input);
+const cst = new N3Parser().parse('http://example.org/', lexResult.tokens);
+const quads = new N3Reader().visit(cst);
 ```
 
 ### Parsing TriG
 
 ```typescript
-import { Trig } from '@faubulous/mentor-rdf-parsers';
+import { TrigLexer, TrigParser, TrigReader } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .
@@ -157,11 +157,12 @@ const input = `
   }
 `;
 
-const lexer = new Trig.TrigLexer();
+const lexer = new TrigLexer();
 const lexResult = lexer.tokenize(input);
 
-const parser = new Trig.TrigParser();
+const parser = new TrigParser();
 parser.input = lexResult.tokens;
+
 const cst = parser.trigDoc();
 ```
 
@@ -174,11 +175,11 @@ The parsers are fault-tolerant and collect errors rather than throwing immediate
 Lexer errors occur when the input contains invalid tokens (e.g., malformed IRIs, illegal characters):
 
 ```typescript
-import { Turtle } from '@faubulous/mentor-rdf-parsers';
+import { TurtleLexer } from '@faubulous/mentor-rdf-parsers';
 
 const input = '<invalid iri> <http://example.org/p> "value" .';
 
-const lexer = new Turtle.TurtleLexer();
+const lexer = new TurtleLexer();
 const lexResult = lexer.tokenize(input);
 
 // Check for lexing errors
@@ -194,7 +195,7 @@ if (lexResult.errors.length > 0) {
 Parser errors occur when the token sequence doesn't match the grammar (e.g., missing period, invalid structure):
 
 ```typescript
-import { Turtle } from '@faubulous/mentor-rdf-parsers';
+import { TurtleLexer, TurtleParser } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .
@@ -202,10 +203,10 @@ const input = `
   ex:Charlie ex:knows ex:Dave .
 `;
 
-const lexer = new Turtle.TurtleLexer();
+const lexer = new TurtleLexer();
 const lexResult = lexer.tokenize(input);
 
-const parser = new Turtle.TurtleParser();
+const parser = new TurtleParser();
 parser.input = lexResult.tokens;
 
 // Parse without throwing - use the rule method directly
@@ -257,12 +258,12 @@ interface IRecognitionException {
 If you prefer to throw on parsing errors (default behavior of `parse()` method):
 
 ```typescript
-import { Turtle, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 
 const input = `@prefix ex: <http://example.org/> .
 ex:Alice ex:knows ex:Bob .`;
 
-const lexer = new Turtle.TurtleLexer();
+const lexer = new TurtleLexer();
 const lexResult = lexer.tokenize(input);
 
 // Check lexer errors first
@@ -272,10 +273,10 @@ if (lexResult.errors.length > 0) {
 
 try {
     // parse() throws if there are parsing errors
-    const parser = new Turtle.TurtleParser();
+    const parser = new TurtleParser();
     const cst = parser.parse('http://example.org/', lexResult.tokens);
     
-    const reader = new TurtleReader.TurtleReader();
+    const reader = new TurtleReader();
     const quads = reader.visit(cst);
 } catch (error) {
     console.error('Parsing failed:', error.message);

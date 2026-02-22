@@ -2889,10 +2889,24 @@ export class SparqlParser extends CstParser {
      * [147] PrefixedName ::= PNAME_LN | PNAME_NS
      */
     prefixedName = this.RULE('prefixedName', () => {
-        this.OR([
+        const token = this.OR([
             { ALT: () => this.CONSUME(tokens.PNAME_LN) },
             { ALT: () => this.CONSUME(tokens.PNAME_NS) }
         ]);
+
+        if (token?.image) {
+            const n = token.image.indexOf(':');
+            const prefix = n > -1 ? token.image.slice(0, n) : token.image;
+
+            if (this.namespaces[prefix] === undefined) {
+                const error = new Error(`Undefined prefix: ${prefix}`);
+                (error as any).name = 'UndefinedPrefixError';
+                (error as any).token = token;
+                (error as any).stack = [...(this as any).RULE_OCCURRENCE_STACK];
+
+                throw error;
+            }
+        }
     });
 
     /**
