@@ -1,23 +1,23 @@
 import { Lexer, IToken, CstNode, TokenType } from 'chevrotain';
-import { tokens } from '../tokens.js';
+import { TOKENS } from '../tokens.js';
 import { IParser } from '../syntax.js';
 import { NTriplesParserBase } from '../ntriples/parser.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
-    tokens.WS,
-    tokens.PERIOD,
-    tokens.OPEN_TRIPLE_TERM,
-    tokens.CLOSE_TRIPLE_TERM,
-    tokens.OPEN_REIFIED_TRIPLE,
-    tokens.CLOSE_REIFIED_TRIPLE,
-    tokens.IRIREF_ABS,
-    tokens.BLANK_NODE_LABEL,
-    tokens.STRING_LITERAL_QUOTE,
-    tokens.DCARET,
-    tokens.LANGTAG,
-    tokens.SPARQL_VERSION,
-    tokens.COMMENT,
+    TOKENS.WS,
+    TOKENS.PERIOD,
+    TOKENS.OPEN_TRIPLE_TERM,
+    TOKENS.CLOSE_TRIPLE_TERM,
+    TOKENS.OPEN_REIFIED_TRIPLE,
+    TOKENS.CLOSE_REIFIED_TRIPLE,
+    TOKENS.IRIREF_ABS,
+    TOKENS.BLANK_NODE_LABEL,
+    TOKENS.STRING_LITERAL_QUOTE,
+    TOKENS.DCARET,
+    TOKENS.LANGTAG,
+    TOKENS.SPARQL_VERSION,
+    TOKENS.COMMENT,
 ];
 
 /**
@@ -41,16 +41,18 @@ export class NQuadsParser extends NTriplesParserBase implements IParser {
     }
 
     /**
-     * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed N-Quads document.
-     * @param inputTokens A set of tokens created by the lexer.
+    /**
+     * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed document.
+     * @param tokens A set of tokens created by the lexer.
+     * @param throwOnErrors Whether to throw an error if any parsing errors are detected. Defaults to true.
      * @returns A concrete syntax tree (CST) object.
      */
-    parse(inputTokens: IToken[]): CstNode {
-        this.input = inputTokens;
+    parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
+        this.input = tokens;
 
         const cst = this.nquadsDoc();
 
-        if (this.errors.length > 0) {
+        if (throwOnErrors && this.errors.length > 0) {
             throw new Error('Parsing errors detected:\n' + JSON.stringify(this.errors));
         }
 
@@ -77,7 +79,7 @@ export class NQuadsParser extends NTriplesParserBase implements IParser {
         this.SUBRULE2(this.predicate);
         this.SUBRULE3(this.object);
         this.OPTION1(() => this.SUBRULE4(this.graphLabel));
-        this.CONSUME(tokens.PERIOD);
+        this.CONSUME(TOKENS.PERIOD);
     });
 
     /**
@@ -85,8 +87,8 @@ export class NQuadsParser extends NTriplesParserBase implements IParser {
      */
     graphLabel = this.RULE('graphLabel', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.IRIREF_ABS) },
-            { ALT: () => this.CONSUME(tokens.BLANK_NODE_LABEL) }
+            { ALT: () => this.CONSUME(TOKENS.IRIREF_ABS) },
+            { ALT: () => this.CONSUME(TOKENS.BLANK_NODE_LABEL) }
         ]);
     });
 
@@ -95,7 +97,7 @@ export class NQuadsParser extends NTriplesParserBase implements IParser {
      * versionDirective ::= 'VERSION' versionSpecifier
      */
     versionDirective = this.RULE('versionDirective', () => {
-        this.CONSUME(tokens.SPARQL_VERSION);
-        this.CONSUME(tokens.STRING_LITERAL_QUOTE);
+        this.CONSUME(TOKENS.SPARQL_VERSION);
+        this.CONSUME(TOKENS.STRING_LITERAL_QUOTE);
     });
 }

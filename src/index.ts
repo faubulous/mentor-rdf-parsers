@@ -7,7 +7,7 @@ export { NTriplesReader } from './ntriples/reader.js';
 export { RdfSyntax } from './syntax.js';
 export { SparqlLexer, SparqlParser, resolveCodepointEscapes } from './sparql/parser.js';
 export { IParser, ILexer } from './syntax.js';
-export { tokens } from './tokens.js';
+export { TOKENS } from './tokens.js';
 export { TrigLexer, TrigParser } from './trig/parser.js';
 export { TrigReader } from './trig/reader.js';
 export { TurtleLexer, TurtleParser } from './turtle/parser.js';

@@ -1,5 +1,5 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
-import { tokens } from '../tokens.js';
+import { TOKENS } from '../tokens.js';
 import { IParser } from '../syntax.js';
 
 // TODO:
@@ -7,44 +7,44 @@ import { IParser } from '../syntax.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
-    tokens.WS,
-    tokens.COMMA,
-    tokens.SEMICOLON,
-    tokens.DCARET,
-    tokens.LBRACKET,
-    tokens.RBRACKET,
-    tokens.OPEN_ANNOTATION,
-    tokens.CLOSE_ANNOTATION,
-    tokens.OPEN_TRIPLE_TERM,
-    tokens.CLOSE_TRIPLE_TERM,
-    tokens.OPEN_REIFIED_TRIPLE,
-    tokens.CLOSE_REIFIED_TRIPLE,
-    tokens.TILDE,
-    tokens.LPARENT,
-    tokens.RPARENT,
-    tokens.A,
-    tokens.TRUE,
-    tokens.FALSE,
-    tokens.VERSION,
-    tokens.PREFIX,
-    tokens.BASE,
-    tokens.SPARQL_VERSION,
-    tokens.SPARQL_PREFIX,
-    tokens.SPARQL_BASE,
-    tokens.PNAME_LN,
-    tokens.PNAME_NS,
-    tokens.BLANK_NODE_LABEL,
-    tokens.LANGTAG,
-    tokens.DOUBLE,
-    tokens.DECIMAL,
-    tokens.INTEGER,
-    tokens.PERIOD,
-    tokens.IRIREF,
-    tokens.STRING_LITERAL_LONG_SINGLE_QUOTE,
-    tokens.STRING_LITERAL_LONG_QUOTE,
-    tokens.STRING_LITERAL_SINGLE_QUOTE,
-    tokens.STRING_LITERAL_QUOTE,
-    tokens.COMMENT,
+    TOKENS.WS,
+    TOKENS.COMMA,
+    TOKENS.SEMICOLON,
+    TOKENS.DCARET,
+    TOKENS.LBRACKET,
+    TOKENS.RBRACKET,
+    TOKENS.OPEN_ANNOTATION,
+    TOKENS.CLOSE_ANNOTATION,
+    TOKENS.OPEN_TRIPLE_TERM,
+    TOKENS.CLOSE_TRIPLE_TERM,
+    TOKENS.OPEN_REIFIED_TRIPLE,
+    TOKENS.CLOSE_REIFIED_TRIPLE,
+    TOKENS.TILDE,
+    TOKENS.LPARENT,
+    TOKENS.RPARENT,
+    TOKENS.A,
+    TOKENS.TRUE,
+    TOKENS.FALSE,
+    TOKENS.VERSION,
+    TOKENS.TTL_PREFIX,
+    TOKENS.TTL_BASE,
+    TOKENS.SPARQL_VERSION,
+    TOKENS.PREFIX,
+    TOKENS.BASE,
+    TOKENS.PNAME_LN,
+    TOKENS.PNAME_NS,
+    TOKENS.BLANK_NODE_LABEL,
+    TOKENS.LANGTAG,
+    TOKENS.DOUBLE,
+    TOKENS.DECIMAL,
+    TOKENS.INTEGER,
+    TOKENS.PERIOD,
+    TOKENS.IRIREF,
+    TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE,
+    TOKENS.STRING_LITERAL_LONG_QUOTE,
+    TOKENS.STRING_LITERAL_SINGLE_QUOTE,
+    TOKENS.STRING_LITERAL_QUOTE,
+    TOKENS.COMMENT,
 ];
 
 /**
@@ -121,7 +121,7 @@ export class TurtleParserBase extends CstParser {
     predicate = this.RULE('predicate', () => {
         this.OR([
             { ALT: () => this.SUBRULE(this.iri) },
-            { ALT: () => this.CONSUME(tokens.A) }
+            { ALT: () => this.CONSUME(TOKENS.A) }
         ]);
     });
 
@@ -130,7 +130,7 @@ export class TurtleParserBase extends CstParser {
      */
     iri = this.RULE('iri', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.IRIREF) },
+            { ALT: () => this.CONSUME(TOKENS.IRIREF) },
             { ALT: () => this.SUBRULE(this.prefixedName) }
         ]);
     });
@@ -140,7 +140,7 @@ export class TurtleParserBase extends CstParser {
      */
     blankNode = this.RULE('blankNode', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.BLANK_NODE_LABEL) },
+            { ALT: () => this.CONSUME(TOKENS.BLANK_NODE_LABEL) },
             { ALT: () => this.SUBRULE(this.anon) }
         ]);
     });
@@ -150,8 +150,8 @@ export class TurtleParserBase extends CstParser {
      */
     prefixedName = this.RULE('prefixedName', () => {
         const token = this.OR([
-            { ALT: () => this.CONSUME(tokens.PNAME_LN) },
-            { ALT: () => this.CONSUME(tokens.PNAME_NS) },
+            { ALT: () => this.CONSUME(TOKENS.PNAME_LN) },
+            { ALT: () => this.CONSUME(TOKENS.PNAME_NS) },
         ]);
 
         if (token?.image) {
@@ -160,7 +160,7 @@ export class TurtleParserBase extends CstParser {
 
             if (this.namespaces[prefix] === undefined) {
                 const error = new Error(`Undefined prefix: ${prefix}`);
-                (error as any).name = 'UndefinedPrefixError';
+                (error as any).name = 'UndefinedNamespacePrefixError';
                 (error as any).token = token;
                 (error as any).stack = [...(this as any).RULE_OCCURRENCE_STACK];
 
@@ -173,10 +173,10 @@ export class TurtleParserBase extends CstParser {
      * https://www.w3.org/TR/turtle/#grammar-production-prefixID
      */
     prefix = this.RULE('prefix', () => {
-        this.CONSUME(tokens.PREFIX);
-        const prefix = this.CONSUME(tokens.PNAME_NS);
-        const iri = this.CONSUME(tokens.IRIREF);
-        this.CONSUME(tokens.PERIOD);
+        this.CONSUME(TOKENS.TTL_PREFIX);
+        const prefix = this.CONSUME(TOKENS.PNAME_NS);
+        const iri = this.CONSUME(TOKENS.IRIREF);
+        this.CONSUME(TOKENS.PERIOD);
 
         this.registerNamespace(prefix, iri);
     });
@@ -185,18 +185,18 @@ export class TurtleParserBase extends CstParser {
      * https://www.w3.org/TR/turtle/#grammar-production-base
      */
     base = this.RULE('base', () => {
-        this.CONSUME(tokens.BASE);
-        this.CONSUME(tokens.IRIREF);
-        this.CONSUME(tokens.PERIOD);
+        this.CONSUME(TOKENS.TTL_BASE);
+        this.CONSUME(TOKENS.IRIREF);
+        this.CONSUME(TOKENS.PERIOD);
     });
 
     /**
      * https://www.w3.org/TR/turtle/#grammar-production-sparqlPrefix
      */
     sparqlPrefix = this.RULE('sparqlPrefix', () => {
-        this.CONSUME(tokens.SPARQL_PREFIX);
-        const prefix = this.CONSUME(tokens.PNAME_NS);
-        const iri = this.CONSUME(tokens.IRIREF);
+        this.CONSUME(TOKENS.PREFIX);
+        const prefix = this.CONSUME(TOKENS.PNAME_NS);
+        const iri = this.CONSUME(TOKENS.IRIREF);
 
         this.registerNamespace(prefix, iri);
     });
@@ -205,8 +205,8 @@ export class TurtleParserBase extends CstParser {
      * https://www.w3.org/TR/rdf12-turtle/#grammar-production-sparqlBase
      */
     sparqlBase = this.RULE('sparqlBase', () => {
-        this.CONSUME(tokens.SPARQL_BASE);
-        this.CONSUME(tokens.IRIREF);
+        this.CONSUME(TOKENS.BASE);
+        this.CONSUME(TOKENS.IRIREF);
     });
 
     /**
@@ -214,9 +214,9 @@ export class TurtleParserBase extends CstParser {
      * version ::= '@version' VersionSpecifier '.'
      */
     version = this.RULE('version', () => {
-        this.CONSUME(tokens.VERSION);
+        this.CONSUME(TOKENS.VERSION);
         this.SUBRULE(this.versionSpecifier);
-        this.CONSUME(tokens.PERIOD);
+        this.CONSUME(TOKENS.PERIOD);
     });
 
     /**
@@ -224,7 +224,7 @@ export class TurtleParserBase extends CstParser {
      * sparqlVersion ::= "VERSION" VersionSpecifier
      */
     sparqlVersion = this.RULE('sparqlVersion', () => {
-        this.CONSUME(tokens.SPARQL_VERSION);
+        this.CONSUME(TOKENS.SPARQL_VERSION);
         this.SUBRULE(this.versionSpecifier);
     });
 
@@ -234,8 +234,8 @@ export class TurtleParserBase extends CstParser {
      */
     versionSpecifier = this.RULE('versionSpecifier', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.STRING_LITERAL_QUOTE) },
-            { ALT: () => this.CONSUME(tokens.STRING_LITERAL_SINGLE_QUOTE) }
+            { ALT: () => this.CONSUME(TOKENS.STRING_LITERAL_QUOTE) },
+            { ALT: () => this.CONSUME(TOKENS.STRING_LITERAL_SINGLE_QUOTE) }
         ]);
     });
 
@@ -244,12 +244,12 @@ export class TurtleParserBase extends CstParser {
      * reifiedTriple ::= '<<' rtSubject verb rtObject reifier? '>>'
      */
     reifiedTriple = this.RULE('reifiedTriple', () => {
-        this.CONSUME(tokens.OPEN_REIFIED_TRIPLE);
+        this.CONSUME(TOKENS.OPEN_REIFIED_TRIPLE);
         this.SUBRULE(this.rtSubject);
         this.SUBRULE(this.predicate);
         this.SUBRULE(this.rtObject);
         this.OPTION(() => this.SUBRULE(this.reifier));
-        this.CONSUME(tokens.CLOSE_REIFIED_TRIPLE);
+        this.CONSUME(TOKENS.CLOSE_REIFIED_TRIPLE);
     });
 
     /**
@@ -283,11 +283,11 @@ export class TurtleParserBase extends CstParser {
      * tripleTerm ::= '<<(' ttSubject verb ttObject ')>>'
      */
     tripleTerm = this.RULE('tripleTerm', () => {
-        this.CONSUME(tokens.OPEN_TRIPLE_TERM);
+        this.CONSUME(TOKENS.OPEN_TRIPLE_TERM);
         this.SUBRULE(this.ttSubject);
         this.SUBRULE(this.predicate);
         this.SUBRULE(this.ttObject);
-        this.CONSUME(tokens.CLOSE_TRIPLE_TERM);
+        this.CONSUME(TOKENS.CLOSE_TRIPLE_TERM);
     });
 
     /**
@@ -319,7 +319,7 @@ export class TurtleParserBase extends CstParser {
      * reifier ::= '~' (iri | BlankNode)?
      */
     reifier = this.RULE('reifier', () => {
-        this.CONSUME(tokens.TILDE);
+        this.CONSUME(TOKENS.TILDE);
         this.OPTION(() => {
             this.OR([
                 { ALT: () => this.SUBRULE(this.iri) },
@@ -346,18 +346,18 @@ export class TurtleParserBase extends CstParser {
      * annotationBlock ::= '{|' predicateObjectList '|}'
      */
     annotationBlock = this.RULE('annotationBlock', () => {
-        this.CONSUME(tokens.OPEN_ANNOTATION);
+        this.CONSUME(TOKENS.OPEN_ANNOTATION);
         this.SUBRULE(this.predicateObjectList);
-        this.CONSUME(tokens.CLOSE_ANNOTATION);
+        this.CONSUME(TOKENS.CLOSE_ANNOTATION);
     });
 
     /**
      * https://www.w3.org/TR/turtle/#grammar-production-collection
      */
     collection = this.RULE('collection', () => {
-        this.CONSUME(tokens.LPARENT);
+        this.CONSUME(TOKENS.LPARENT);
         this.MANY(() => this.SUBRULE(this.object));
-        this.CONSUME(tokens.RPARENT);
+        this.CONSUME(TOKENS.RPARENT);
     });
 
     /**
@@ -368,7 +368,7 @@ export class TurtleParserBase extends CstParser {
         this.SUBRULE2(this.objectList);
 
         this.MANY(() => {
-            this.CONSUME(tokens.SEMICOLON);
+            this.CONSUME(TOKENS.SEMICOLON);
 
             this.OPTION(() => {
                 this.SUBRULE3(this.predicate);
@@ -386,7 +386,7 @@ export class TurtleParserBase extends CstParser {
         this.SUBRULE1(this.annotation);
 
         this.MANY(() => {
-            this.CONSUME(tokens.COMMA);
+            this.CONSUME(TOKENS.COMMA);
             this.SUBRULE2(this.object);
             this.SUBRULE2(this.annotation);
         });
@@ -396,21 +396,21 @@ export class TurtleParserBase extends CstParser {
      * https://www.w3.org/TR/turtle/#grammar-production-blankNodePropertyList
      */
     blankNodePropertyList = this.RULE('blankNodePropertyList', () => {
-        this.CONSUME1(tokens.LBRACKET);
+        this.CONSUME1(TOKENS.LBRACKET);
 
         this.SUBRULE(this.predicateObjectList);
 
-        this.CONSUME2(tokens.RBRACKET);
+        this.CONSUME2(TOKENS.RBRACKET);
     });
 
     anon = this.RULE('anon', () => {
-        this.CONSUME1(tokens.LBRACKET);
+        this.CONSUME1(TOKENS.LBRACKET);
 
         this.MANY(() => {
-            this.CONSUME2(tokens.WS);
+            this.CONSUME2(TOKENS.WS);
         });
 
-        this.CONSUME3(tokens.RBRACKET);
+        this.CONSUME3(TOKENS.RBRACKET);
     });
 
     /**
@@ -426,16 +426,16 @@ export class TurtleParserBase extends CstParser {
 
     numericLiteral = this.RULE('numericLiteral', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.INTEGER) },
-            { ALT: () => this.CONSUME(tokens.DECIMAL) },
-            { ALT: () => this.CONSUME(tokens.DOUBLE) }
+            { ALT: () => this.CONSUME(TOKENS.INTEGER) },
+            { ALT: () => this.CONSUME(TOKENS.DECIMAL) },
+            { ALT: () => this.CONSUME(TOKENS.DOUBLE) }
         ]);
     });
 
     booleanLiteral = this.RULE('booleanLiteral', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.TRUE) },
-            { ALT: () => this.CONSUME(tokens.FALSE) }
+            { ALT: () => this.CONSUME(TOKENS.TRUE) },
+            { ALT: () => this.CONSUME(TOKENS.FALSE) }
         ]);
     });
 
@@ -444,7 +444,7 @@ export class TurtleParserBase extends CstParser {
 
         this.OPTION(() => {
             this.OR([
-                { ALT: () => this.CONSUME(tokens.LANGTAG) },
+                { ALT: () => this.CONSUME(TOKENS.LANGTAG) },
                 { ALT: () => this.SUBRULE2(this.datatype) }
             ]);
         });
@@ -452,15 +452,15 @@ export class TurtleParserBase extends CstParser {
 
     string = this.RULE('string', () => {
         this.OR([
-            { ALT: () => this.CONSUME1(tokens.STRING_LITERAL_QUOTE) },
-            { ALT: () => this.CONSUME2(tokens.STRING_LITERAL_SINGLE_QUOTE) },
-            { ALT: () => this.CONSUME3(tokens.STRING_LITERAL_LONG_QUOTE) },
-            { ALT: () => this.CONSUME4(tokens.STRING_LITERAL_LONG_SINGLE_QUOTE) }
+            { ALT: () => this.CONSUME1(TOKENS.STRING_LITERAL_QUOTE) },
+            { ALT: () => this.CONSUME2(TOKENS.STRING_LITERAL_SINGLE_QUOTE) },
+            { ALT: () => this.CONSUME3(TOKENS.STRING_LITERAL_LONG_QUOTE) },
+            { ALT: () => this.CONSUME4(TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE) }
         ]);
     });
 
     datatype = this.RULE('datatype', () => {
-        this.CONSUME(tokens.DCARET);
+        this.CONSUME(TOKENS.DCARET);
         this.SUBRULE(this.iri);
     });
 }
@@ -480,16 +480,17 @@ export class TurtleParser extends TurtleParserBase implements IParser {
     }
 
     /**
-     * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed N-Quads document.
+     * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed document.
      * @param tokens A set of tokens created by the lexer.
+     * @param throwOnErrors Whether to throw an error if any parsing errors are detected. Defaults to true.
      * @returns A concrete syntax tree (CST) object.
      */
-    parse(tokens: IToken[]): CstNode {
+    parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
         this.input = tokens;
 
         const cst = this.turtleDoc();
 
-        if (this.errors.length > 0) {
+        if (throwOnErrors && this.errors.length > 0) {
             throw new Error('Parsing errors detected:\n' + JSON.stringify(this.errors));
         }
 
@@ -506,7 +507,7 @@ export class TurtleParser extends TurtleParserBase implements IParser {
                 {
                     ALT: () => {
                         this.SUBRULE(this.triples);
-                        this.CONSUME(tokens.PERIOD);
+                        this.CONSUME(TOKENS.PERIOD);
                     }
                 }
             ]);

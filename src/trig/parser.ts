@@ -1,51 +1,51 @@
 import { CstNode, IToken, Lexer, TokenType } from 'chevrotain';
-import { tokens } from '../tokens.js';
+import { TOKENS } from '../tokens.js';
 import { TurtleParserBase } from '../turtle/parser.js';
 import { IParser } from '../syntax.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
-    tokens.WS,
-    tokens.COMMA,
-    tokens.SEMICOLON,
-    tokens.DCARET,
-    tokens.LBRACKET,
-    tokens.RBRACKET,
-    tokens.OPEN_ANNOTATION,
-    tokens.CLOSE_ANNOTATION,
-    tokens.OPEN_TRIPLE_TERM,
-    tokens.CLOSE_TRIPLE_TERM,
-    tokens.OPEN_REIFIED_TRIPLE,
-    tokens.CLOSE_REIFIED_TRIPLE,
-    tokens.TILDE,
-    tokens.LPARENT,
-    tokens.RPARENT,
-    tokens.LCURLY,
-    tokens.RCURLY,
-    tokens.A,
-    tokens.TRUE,
-    tokens.FALSE,
-    tokens.VERSION,
-    tokens.PREFIX,
-    tokens.BASE,
-    tokens.SPARQL_VERSION,
-    tokens.SPARQL_PREFIX,
-    tokens.SPARQL_BASE,
-    tokens.GRAPH,
-    tokens.PNAME_LN,
-    tokens.PNAME_NS,
-    tokens.BLANK_NODE_LABEL,
-    tokens.LANGTAG,
-    tokens.DOUBLE,
-    tokens.DECIMAL,
-    tokens.INTEGER,
-    tokens.PERIOD,
-    tokens.IRIREF,
-    tokens.STRING_LITERAL_LONG_SINGLE_QUOTE,
-    tokens.STRING_LITERAL_LONG_QUOTE,
-    tokens.STRING_LITERAL_SINGLE_QUOTE,
-    tokens.STRING_LITERAL_QUOTE,
-    tokens.COMMENT,
+    TOKENS.WS,
+    TOKENS.COMMA,
+    TOKENS.SEMICOLON,
+    TOKENS.DCARET,
+    TOKENS.LBRACKET,
+    TOKENS.RBRACKET,
+    TOKENS.OPEN_ANNOTATION,
+    TOKENS.CLOSE_ANNOTATION,
+    TOKENS.OPEN_TRIPLE_TERM,
+    TOKENS.CLOSE_TRIPLE_TERM,
+    TOKENS.OPEN_REIFIED_TRIPLE,
+    TOKENS.CLOSE_REIFIED_TRIPLE,
+    TOKENS.TILDE,
+    TOKENS.LPARENT,
+    TOKENS.RPARENT,
+    TOKENS.LCURLY,
+    TOKENS.RCURLY,
+    TOKENS.A,
+    TOKENS.TRUE,
+    TOKENS.FALSE,
+    TOKENS.VERSION,
+    TOKENS.TTL_PREFIX,
+    TOKENS.TTL_BASE,
+    TOKENS.SPARQL_VERSION,
+    TOKENS.PREFIX,
+    TOKENS.BASE,
+    TOKENS.GRAPH,
+    TOKENS.PNAME_LN,
+    TOKENS.PNAME_NS,
+    TOKENS.BLANK_NODE_LABEL,
+    TOKENS.LANGTAG,
+    TOKENS.DOUBLE,
+    TOKENS.DECIMAL,
+    TOKENS.INTEGER,
+    TOKENS.PERIOD,
+    TOKENS.IRIREF,
+    TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE,
+    TOKENS.STRING_LITERAL_LONG_QUOTE,
+    TOKENS.STRING_LITERAL_SINGLE_QUOTE,
+    TOKENS.STRING_LITERAL_QUOTE,
+    TOKENS.COMMENT,
 ];
 
 /**
@@ -71,16 +71,17 @@ export class TrigParser extends TurtleParserBase implements IParser {
     }
 
     /**
-     * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed TriG document.
+     * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed document.
      * @param tokens A set of tokens created by the lexer.
+     * @param throwOnErrors Whether to throw an error if any parsing errors are detected. Defaults to true.
      * @returns A concrete syntax tree (CST) object.
      */
-    parse(tokens: IToken[]): CstNode {
+    parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
         this.input = tokens;
 
         const cst = this.trigDoc();
 
-        if (this.errors.length > 0) {
+        if (throwOnErrors && this.errors.length > 0) {
             throw new Error('Parsing errors detected:\n' + JSON.stringify(this.errors));
         }
 
@@ -109,7 +110,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
             { ALT: () => { this.SUBRULE3(this.triples2) } },
             {
                 ALT: () => {
-                    this.CONSUME(tokens.GRAPH);
+                    this.CONSUME(TOKENS.GRAPH);
                     this.SUBRULE4(this.labelOrSubject);
                     this.SUBRULE5(this.wrappedGraph);
                 }
@@ -121,9 +122,9 @@ export class TrigParser extends TurtleParserBase implements IParser {
      * https://www.w3.org/TR/rdf12-trig/#grammar-production-wrappedGraph
      */
     wrappedGraph = this.RULE('wrappedGraph', () => {
-        this.CONSUME(tokens.LCURLY);
+        this.CONSUME(TOKENS.LCURLY);
         this.OPTION(() => { this.SUBRULE(this.triplesBlock) });
-        this.CONSUME(tokens.RCURLY);
+        this.CONSUME(TOKENS.RCURLY);
     });
 
     /**
@@ -139,7 +140,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
                         {
                             ALT: () => {
                                 this.SUBRULE(this.predicateObjectList);
-                                this.CONSUME(tokens.PERIOD);
+                                this.CONSUME(TOKENS.PERIOD);
                             }
                         }
                     ]);
@@ -149,7 +150,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
                 ALT: () => {
                     this.SUBRULE(this.reifiedTriple);
                     this.OPTION(() => { this.SUBRULE2(this.predicateObjectList) });
-                    this.CONSUME2(tokens.PERIOD);
+                    this.CONSUME2(TOKENS.PERIOD);
                 }
             }
         ]);
@@ -162,7 +163,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
         this.SUBRULE(this.triples);
 
         this.OPTION(() => {
-            this.CONSUME(tokens.PERIOD);
+            this.CONSUME(TOKENS.PERIOD);
 
             this.OPTION1(() => {
                 this.SUBRULE1(this.triplesBlock);
@@ -189,7 +190,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
             }
         ]);
 
-        this.CONSUME(tokens.PERIOD);
+        this.CONSUME(TOKENS.PERIOD);
     });
 
     /**

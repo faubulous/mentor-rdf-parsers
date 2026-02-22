@@ -1122,7 +1122,7 @@ describe("TrigDocument", () => {
             parse('foo:bar <http://example.org/p> <http://example.org/o> .');
             throw new Error('Expected error to be thrown');
         } catch (e: any) {
-            expect(e.name).toBe('UndefinedPrefixError');
+            expect(e.name).toBe('UndefinedNamespacePrefixError');
             expect(e.message).toBe('Undefined prefix: foo');
             expect(e.token).toBeDefined();
             expect(e.token.image).toBe('foo:bar');

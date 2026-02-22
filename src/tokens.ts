@@ -398,10 +398,10 @@ const _GTE = />=/;
 /**
  * Common tokens for W3C RDF syntaxes such as N-Triples, N-Quads, Turtle, TriG and SPARQL.
  */
-export const tokens = {
+export const TOKENS = {
     A: createToken({ name: 'A', label: 'a', pattern: _A }),
     ANON: createToken({ name: 'ANON', pattern: _ANON }),
-    BASE: createToken({ name: 'BASE', label: '@base', pattern: _BASE }),
+    TTL_BASE: createToken({ name: 'BASE', label: '@base', pattern: _BASE }),
     BLANK_NODE_LABEL: createToken({ name: 'BLANK_NODE_LABEL', pattern: _BLANK_NODE_LABEL }),
     CLOSE_ANNOTATION: createToken({ name: 'CLOSE_ANNOTATION', label: '|}', pattern: _CLOSE_ANNOTATION }),
     CLOSE_REIFIED_TRIPLE: createToken({ name: 'CLOSE_REIFIED_TRIPLE', label: '>>', pattern: _CLOSE_REIFIED_TRIPLE }),
@@ -426,13 +426,13 @@ export const tokens = {
     OPEN_TRIPLE_TERM: createToken({ name: 'OPEN_TRIPLE_TERM', label: '<<(', pattern: _OPEN_TRIPLE_TERM }),
     PNAME_LN: createToken({ name: 'PNAME_LN', pattern: _PNAME_LN }),
     PNAME_NS: createToken({ name: 'PNAME_NS', pattern: _PNAME_NS }),
-    PREFIX: createToken({ name: 'PREFIX', label: '@prefix', pattern: _PREFIX }),
+    TTL_PREFIX: createToken({ name: 'PREFIX', label: '@prefix', pattern: _PREFIX }),
     RBRACKET: createToken({ name: 'RBRACKET', label: ']', pattern: _RBRACKET }),
     RCURLY: createToken({ name: 'RCURLY', label: '}', pattern: _RCURLY }),
     RPARENT: createToken({ name: 'RPARENT', label: ')', pattern: _RPARENT }),
     SEMICOLON: createToken({ name: 'SEMICOLON', label: ';', pattern: _SEMICOLON }),
-    SPARQL_BASE: createToken({ name: 'BASE', pattern: _SPARQL_BASE }),
-    SPARQL_PREFIX: createToken({ name: 'PREFIX', pattern: _SPARQL_PREFIX }),
+    BASE: createToken({ name: 'BASE', pattern: _SPARQL_BASE }),
+    PREFIX: createToken({ name: 'PREFIX', pattern: _SPARQL_PREFIX }),
     SPARQL_VERSION: createToken({ name: 'SPARQL_VERSION', pattern: _SPARQL_VERSION }),
     STRING_LITERAL_LONG_QUOTE: createToken({ name: 'STRING_LITERAL_LONG_QUOTE', pattern: _STRING_LITERAL_LONG_QUOTE }),
     STRING_LITERAL_LONG_SINGLE_QUOTE: createToken({ name: 'STRING_LITERAL_LONG_SINGLE_QUOTE', pattern: _STRING_LITERAL_LONG_SINGLE_QUOTE }),

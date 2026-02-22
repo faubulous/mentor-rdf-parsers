@@ -1,52 +1,52 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
-import { tokens } from '../tokens.js';
+import { TOKENS } from '../tokens.js';
 import { IParser } from '../syntax.js';
 
 // N3 token order - note that longer/more specific patterns must come before shorter ones
 const allTokens: TokenType[] = [
-    tokens.WS,
-    tokens.COMMA,
-    tokens.SEMICOLON,
-    tokens.DCARET,         // ^^ before CARET ^
-    tokens.LBRACKET,
-    tokens.RBRACKET,
-    tokens.LPARENT,
-    tokens.RPARENT,
-    tokens.LCURLY,
-    tokens.RCURLY,
-    tokens.IMPLIES,        // => before EQUALS_SIGN =
-    tokens.IMPLIED_BY,     // <= before EQUALS_SIGN = and before IRIREF <
-    tokens.EQUALS_SIGN,    // =
-    tokens.INVERSE_OF,     // <- before IRIREF <
-    tokens.EXCL,           // !
-    tokens.CARET,          // ^ (single caret, after DCARET ^^)
-    tokens.A,
-    tokens.TRUE,
-    tokens.FALSE,
-    tokens.FORALL,         // @forAll before PREFIX @prefix
-    tokens.FORSOME,        // @forSome before PREFIX @prefix
-    tokens.PREFIX,
-    tokens.BASE,
-    tokens.SPARQL_PREFIX,
-    tokens.SPARQL_BASE,
-    tokens.HAS,
-    tokens.IS,
-    tokens.OF,
-    tokens.QUICK_VAR,
-    tokens.PNAME_LN,
-    tokens.PNAME_NS,
-    tokens.BLANK_NODE_LABEL,
-    tokens.LANGTAG,
-    tokens.DOUBLE,
-    tokens.DECIMAL,
-    tokens.INTEGER,
-    tokens.PERIOD,
-    tokens.IRIREF,
-    tokens.STRING_LITERAL_LONG_SINGLE_QUOTE,
-    tokens.STRING_LITERAL_LONG_QUOTE,
-    tokens.STRING_LITERAL_SINGLE_QUOTE,
-    tokens.STRING_LITERAL_QUOTE,
-    tokens.COMMENT,
+    TOKENS.WS,
+    TOKENS.COMMA,
+    TOKENS.SEMICOLON,
+    TOKENS.DCARET,         // ^^ before CARET ^
+    TOKENS.LBRACKET,
+    TOKENS.RBRACKET,
+    TOKENS.LPARENT,
+    TOKENS.RPARENT,
+    TOKENS.LCURLY,
+    TOKENS.RCURLY,
+    TOKENS.IMPLIES,        // => before EQUALS_SIGN =
+    TOKENS.IMPLIED_BY,     // <= before EQUALS_SIGN = and before IRIREF <
+    TOKENS.EQUALS_SIGN,    // =
+    TOKENS.INVERSE_OF,     // <- before IRIREF <
+    TOKENS.EXCL,           // !
+    TOKENS.CARET,          // ^ (single caret, after DCARET ^^)
+    TOKENS.A,
+    TOKENS.TRUE,
+    TOKENS.FALSE,
+    TOKENS.FORALL,         // @forAll before PREFIX @prefix
+    TOKENS.FORSOME,        // @forSome before PREFIX @prefix
+    TOKENS.TTL_PREFIX,
+    TOKENS.TTL_BASE,
+    TOKENS.PREFIX,
+    TOKENS.BASE,
+    TOKENS.HAS,
+    TOKENS.IS,
+    TOKENS.OF,
+    TOKENS.QUICK_VAR,
+    TOKENS.PNAME_LN,
+    TOKENS.PNAME_NS,
+    TOKENS.BLANK_NODE_LABEL,
+    TOKENS.LANGTAG,
+    TOKENS.DOUBLE,
+    TOKENS.DECIMAL,
+    TOKENS.INTEGER,
+    TOKENS.PERIOD,
+    TOKENS.IRIREF,
+    TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE,
+    TOKENS.STRING_LITERAL_LONG_QUOTE,
+    TOKENS.STRING_LITERAL_SINGLE_QUOTE,
+    TOKENS.STRING_LITERAL_QUOTE,
+    TOKENS.COMMENT,
 ];
 
 /**
@@ -97,14 +97,17 @@ export class N3Parser extends CstParser implements IParser {
     }
 
     /**
-     * Parses a set of tokens into a CST.
+     * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed document.
+     * @param tokens A set of tokens created by the lexer.
+     * @param throwOnErrors Whether to throw an error if any parsing errors are detected. Defaults to true.
+     * @returns A concrete syntax tree (CST) object.
      */
-    parse(inputTokens: IToken[]): CstNode {
-        this.input = inputTokens;
+    parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
+        this.input = tokens;
 
         const cst = this.n3Doc();
 
-        if (this.errors.length > 0) {
+        if (throwOnErrors && this.errors.length > 0) {
             throw new Error('Parsing errors detected:\n' + JSON.stringify(this.errors));
         }
 
@@ -123,7 +126,7 @@ export class N3Parser extends CstParser implements IParser {
                 {
                     ALT: () => {
                         this.SUBRULE(this.n3Statement);
-                        this.CONSUME(tokens.PERIOD);
+                        this.CONSUME(TOKENS.PERIOD);
                     }
                 }
             ]);
@@ -169,9 +172,9 @@ export class N3Parser extends CstParser implements IParser {
      * Note: The '.' is consumed by n3Doc.
      */
     prefix = this.RULE('prefix', () => {
-        this.CONSUME(tokens.PREFIX);
-        const prefixToken = this.CONSUME(tokens.PNAME_NS);
-        const iriToken = this.CONSUME(tokens.IRIREF);
+        this.CONSUME(TOKENS.TTL_PREFIX);
+        const prefixToken = this.CONSUME(TOKENS.PNAME_NS);
+        const iriToken = this.CONSUME(TOKENS.IRIREF);
 
         this.registerNamespace(prefixToken, iriToken);
     });
@@ -181,17 +184,17 @@ export class N3Parser extends CstParser implements IParser {
      * Note: The '.' is consumed by n3Doc.
      */
     base = this.RULE('base', () => {
-        this.CONSUME(tokens.BASE);
-        this.CONSUME(tokens.IRIREF);
+        this.CONSUME(TOKENS.TTL_BASE);
+        this.CONSUME(TOKENS.IRIREF);
     });
 
     /**
      * sparqlPrefix ::= 'PREFIX' PNAME_NS IRIREF
      */
     sparqlPrefix = this.RULE('sparqlPrefix', () => {
-        this.CONSUME(tokens.SPARQL_PREFIX);
-        const prefixToken = this.CONSUME(tokens.PNAME_NS);
-        const iriToken = this.CONSUME(tokens.IRIREF);
+        this.CONSUME(TOKENS.PREFIX);
+        const prefixToken = this.CONSUME(TOKENS.PNAME_NS);
+        const iriToken = this.CONSUME(TOKENS.IRIREF);
 
         this.registerNamespace(prefixToken, iriToken);
     });
@@ -200,18 +203,18 @@ export class N3Parser extends CstParser implements IParser {
      * sparqlBase ::= 'BASE' IRIREF
      */
     sparqlBase = this.RULE('sparqlBase', () => {
-        this.CONSUME(tokens.SPARQL_BASE);
-        this.CONSUME(tokens.IRIREF);
+        this.CONSUME(TOKENS.BASE);
+        this.CONSUME(TOKENS.IRIREF);
     });
 
     /**
      * @forAll :x, :y, :z.
      */
     forAll = this.RULE('forAll', () => {
-        this.CONSUME(tokens.FORALL);
+        this.CONSUME(TOKENS.FORALL);
         this.SUBRULE1(this.iri);
         this.MANY(() => {
-            this.CONSUME(tokens.COMMA);
+            this.CONSUME(TOKENS.COMMA);
             this.SUBRULE2(this.iri);
         });
     });
@@ -220,10 +223,10 @@ export class N3Parser extends CstParser implements IParser {
      * @forSome :a, :b, :c.
      */
     forSome = this.RULE('forSome', () => {
-        this.CONSUME(tokens.FORSOME);
+        this.CONSUME(TOKENS.FORSOME);
         this.SUBRULE1(this.iri);
         this.MANY(() => {
-            this.CONSUME(tokens.COMMA);
+            this.CONSUME(TOKENS.COMMA);
             this.SUBRULE2(this.iri);
         });
     });
@@ -257,7 +260,7 @@ export class N3Parser extends CstParser implements IParser {
         this.SUBRULE1(this.objectList);
 
         this.MANY(() => {
-            this.CONSUME(tokens.SEMICOLON);
+            this.CONSUME(TOKENS.SEMICOLON);
 
             this.OPTION(() => {
                 this.SUBRULE2(this.verb);
@@ -271,23 +274,23 @@ export class N3Parser extends CstParser implements IParser {
      */
     verb = this.RULE('verb', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.A) },
+            { ALT: () => this.CONSUME(TOKENS.A) },
             {
                 ALT: () => {
-                    this.CONSUME(tokens.HAS);
+                    this.CONSUME(TOKENS.HAS);
                     this.SUBRULE1(this.expression);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(tokens.IS);
+                    this.CONSUME(TOKENS.IS);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME(tokens.OF);
+                    this.CONSUME(TOKENS.OF);
                 }
             },
-            { ALT: () => this.CONSUME(tokens.EQUALS_SIGN) },
-            { ALT: () => this.CONSUME(tokens.IMPLIED_BY) },
-            { ALT: () => this.CONSUME(tokens.IMPLIES) },
+            { ALT: () => this.CONSUME(TOKENS.EQUALS_SIGN) },
+            { ALT: () => this.CONSUME(TOKENS.IMPLIED_BY) },
+            { ALT: () => this.CONSUME(TOKENS.IMPLIES) },
             { ALT: () => this.SUBRULE3(this.predicate) }
         ]);
     });
@@ -299,7 +302,7 @@ export class N3Parser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(tokens.INVERSE_OF);
+                    this.CONSUME(TOKENS.INVERSE_OF);
                     this.SUBRULE1(this.expression);
                 }
             },
@@ -313,7 +316,7 @@ export class N3Parser extends CstParser implements IParser {
     objectList = this.RULE('objectList', () => {
         this.SUBRULE1(this.object);
         this.MANY(() => {
-            this.CONSUME(tokens.COMMA);
+            this.CONSUME(TOKENS.COMMA);
             this.SUBRULE2(this.object);
         });
     });
@@ -344,13 +347,13 @@ export class N3Parser extends CstParser implements IParser {
             this.OR([
                 {
                     ALT: () => {
-                        this.CONSUME(tokens.EXCL);
+                        this.CONSUME(TOKENS.EXCL);
                         this.SUBRULE1(this.path);
                     }
                 },
                 {
                     ALT: () => {
-                        this.CONSUME(tokens.CARET);
+                        this.CONSUME(TOKENS.CARET);
                         this.SUBRULE2(this.path);
                     }
                 }
@@ -379,9 +382,9 @@ export class N3Parser extends CstParser implements IParser {
      * formula ::= '{' formulaContent? '}'
      */
     formula = this.RULE('formula', () => {
-        this.CONSUME(tokens.LCURLY);
+        this.CONSUME(TOKENS.LCURLY);
         this.OPTION(() => this.SUBRULE(this.formulaContent));
-        this.CONSUME(tokens.RCURLY);
+        this.CONSUME(TOKENS.RCURLY);
     });
 
     /**
@@ -399,7 +402,7 @@ export class N3Parser extends CstParser implements IParser {
                 ALT: () => {
                     this.SUBRULE2(this.n3Statement);
                     this.OPTION2(() => {
-                        this.CONSUME(tokens.PERIOD);
+                        this.CONSUME(TOKENS.PERIOD);
                         this.OPTION3(() => this.SUBRULE2(this.formulaContent));
                     });
                 }
@@ -413,7 +416,7 @@ export class N3Parser extends CstParser implements IParser {
      * quickVar ::= '?' PN_CHARS_U PN_CHARS*
      */
     quickVar = this.RULE('quickVar', () => {
-        this.CONSUME(tokens.QUICK_VAR);
+        this.CONSUME(TOKENS.QUICK_VAR);
     });
 
     // ── Collections ────────────────────────────────────────────────────────
@@ -422,9 +425,9 @@ export class N3Parser extends CstParser implements IParser {
      * collection ::= '(' object* ')'
      */
     collection = this.RULE('collection', () => {
-        this.CONSUME(tokens.LPARENT);
+        this.CONSUME(TOKENS.LPARENT);
         this.MANY(() => this.SUBRULE(this.object));
-        this.CONSUME(tokens.RPARENT);
+        this.CONSUME(TOKENS.RPARENT);
     });
 
     // ── Blank Node Property List ───────────────────────────────────────────
@@ -433,9 +436,9 @@ export class N3Parser extends CstParser implements IParser {
      * blankNodePropertyList ::= '[' predicateObjectList ']'
      */
     blankNodePropertyList = this.RULE('blankNodePropertyList', () => {
-        this.CONSUME1(tokens.LBRACKET);
+        this.CONSUME1(TOKENS.LBRACKET);
         this.SUBRULE(this.predicateObjectList);
-        this.CONSUME2(tokens.RBRACKET);
+        this.CONSUME2(TOKENS.RBRACKET);
     });
 
     // ── IRIs ───────────────────────────────────────────────────────────────
@@ -445,7 +448,7 @@ export class N3Parser extends CstParser implements IParser {
      */
     iri = this.RULE('iri', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.IRIREF) },
+            { ALT: () => this.CONSUME(TOKENS.IRIREF) },
             { ALT: () => this.SUBRULE(this.prefixedName) }
         ]);
     });
@@ -458,8 +461,8 @@ export class N3Parser extends CstParser implements IParser {
      */
     prefixedName = this.RULE('prefixedName', () => {
         const token = this.OR([
-            { ALT: () => this.CONSUME(tokens.PNAME_LN) },
-            { ALT: () => this.CONSUME(tokens.PNAME_NS) },
+            { ALT: () => this.CONSUME(TOKENS.PNAME_LN) },
+            { ALT: () => this.CONSUME(TOKENS.PNAME_NS) },
         ]);
 
         if (token?.image) {
@@ -472,7 +475,7 @@ export class N3Parser extends CstParser implements IParser {
                     this.namespaces[''] = '#';
                 } else {
                     const error = new Error(`Undefined prefix: ${prefix}`);
-                    (error as any).name = 'UndefinedPrefixError';
+                    (error as any).name = 'UndefinedNamespacePrefixError';
                     (error as any).token = token;
                     (error as any).stack = [...(this as any).RULE_OCCURRENCE_STACK];
                     throw error;
@@ -488,15 +491,15 @@ export class N3Parser extends CstParser implements IParser {
      */
     blankNode = this.RULE('blankNode', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.BLANK_NODE_LABEL) },
+            { ALT: () => this.CONSUME(TOKENS.BLANK_NODE_LABEL) },
             { ALT: () => this.SUBRULE(this.anon) }
         ]);
     });
 
     anon = this.RULE('anon', () => {
-        this.CONSUME1(tokens.LBRACKET);
-        this.MANY(() => this.CONSUME2(tokens.WS));
-        this.CONSUME3(tokens.RBRACKET);
+        this.CONSUME1(TOKENS.LBRACKET);
+        this.MANY(() => this.CONSUME2(TOKENS.WS));
+        this.CONSUME3(TOKENS.RBRACKET);
     });
 
     // ── Literals ───────────────────────────────────────────────────────────
@@ -514,16 +517,16 @@ export class N3Parser extends CstParser implements IParser {
 
     numericLiteral = this.RULE('numericLiteral', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.INTEGER) },
-            { ALT: () => this.CONSUME(tokens.DECIMAL) },
-            { ALT: () => this.CONSUME(tokens.DOUBLE) }
+            { ALT: () => this.CONSUME(TOKENS.INTEGER) },
+            { ALT: () => this.CONSUME(TOKENS.DECIMAL) },
+            { ALT: () => this.CONSUME(TOKENS.DOUBLE) }
         ]);
     });
 
     booleanLiteral = this.RULE('booleanLiteral', () => {
         this.OR([
-            { ALT: () => this.CONSUME(tokens.TRUE) },
-            { ALT: () => this.CONSUME(tokens.FALSE) }
+            { ALT: () => this.CONSUME(TOKENS.TRUE) },
+            { ALT: () => this.CONSUME(TOKENS.FALSE) }
         ]);
     });
 
@@ -532,7 +535,7 @@ export class N3Parser extends CstParser implements IParser {
 
         this.OPTION(() => {
             this.OR([
-                { ALT: () => this.CONSUME(tokens.LANGTAG) },
+                { ALT: () => this.CONSUME(TOKENS.LANGTAG) },
                 { ALT: () => this.SUBRULE2(this.datatype) }
             ]);
         });
@@ -540,15 +543,15 @@ export class N3Parser extends CstParser implements IParser {
 
     string = this.RULE('string', () => {
         this.OR([
-            { ALT: () => this.CONSUME1(tokens.STRING_LITERAL_QUOTE) },
-            { ALT: () => this.CONSUME2(tokens.STRING_LITERAL_SINGLE_QUOTE) },
-            { ALT: () => this.CONSUME3(tokens.STRING_LITERAL_LONG_QUOTE) },
-            { ALT: () => this.CONSUME4(tokens.STRING_LITERAL_LONG_SINGLE_QUOTE) }
+            { ALT: () => this.CONSUME1(TOKENS.STRING_LITERAL_QUOTE) },
+            { ALT: () => this.CONSUME2(TOKENS.STRING_LITERAL_SINGLE_QUOTE) },
+            { ALT: () => this.CONSUME3(TOKENS.STRING_LITERAL_LONG_QUOTE) },
+            { ALT: () => this.CONSUME4(TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE) }
         ]);
     });
 
     datatype = this.RULE('datatype', () => {
-        this.CONSUME(tokens.DCARET);
+        this.CONSUME(TOKENS.DCARET);
         this.SUBRULE(this.iri);
     });
 }
