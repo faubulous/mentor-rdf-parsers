@@ -1,5 +1,6 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
 import { tokens } from '../tokens.js';
+import { IParser } from '../syntax.js';
 
 /**
  * SPARQL 1.2 Parser
@@ -267,7 +268,7 @@ export class SparqlLexer extends Lexer {
  * A SPARQL 1.2 compliant parser.
  * Based on the SPARQL 1.2 grammar: https://www.w3.org/TR/sparql12-query/#sparqlGrammar
  */
-export class SparqlParser extends CstParser {
+export class SparqlParser extends CstParser implements IParser {
     /**
      * A map of prefixes to their namespace IRI.
      */

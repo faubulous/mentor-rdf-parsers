@@ -1,6 +1,7 @@
-import { Lexer, IToken, CstNode, TokenType } from 'chevrotain';
+import { CstNode, IToken, Lexer, TokenType } from 'chevrotain';
 import { tokens } from '../tokens.js';
 import { TurtleParserBase } from '../turtle/parser.js';
+import { IParser } from '../syntax.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
@@ -60,13 +61,30 @@ export class TrigLexer extends Lexer {
  * A W3C compliant parser for the TriG syntax.
  * https://www.w3.org/TR/trig
  */
-export class TrigParser extends TurtleParserBase {
+export class TrigParser extends TurtleParserBase implements IParser {
     constructor() {
         super(allTokens, {
             recoveryEnabled: true
         });
 
         this.performSelfAnalysis();
+    }
+
+    /**
+     * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed TriG document.
+     * @param tokens A set of tokens created by the lexer.
+     * @returns A concrete syntax tree (CST) object.
+     */
+    parse(tokens: IToken[]): CstNode {
+        this.input = tokens;
+
+        const cst = this.trigDoc();
+
+        if (this.errors.length > 0) {
+            throw new Error('Parsing errors detected:\n' + JSON.stringify(this.errors));
+        }
+
+        return cst;
     }
 
     /**

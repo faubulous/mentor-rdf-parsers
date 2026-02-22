@@ -1,5 +1,6 @@
 import { Lexer, IToken, CstNode, TokenType } from 'chevrotain';
 import { tokens } from '../tokens.js';
+import { IParser } from '../syntax.js';
 import { NTriplesParserBase } from '../ntriples/parser.js';
 
 // The order of tokens matters if multiple can match the same text
@@ -32,7 +33,7 @@ export class NQuadsLexer extends Lexer {
  * A W3C compliant parser for the N-Quads syntax.
  * https://www.w3.org/TR/n-quads
  */
-export class NQuadsParser extends NTriplesParserBase {
+export class NQuadsParser extends NTriplesParserBase implements IParser {
     constructor() {
         super(allTokens);
 

@@ -28,7 +28,7 @@ describe("N3Reader", () => {
             throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
         }
 
-        const cst = new N3Parser().parse(fileIri || 'file://test', lexResult.tokens);
+        const cst = new N3Parser().parse(lexResult.tokens);
         const reader = new N3Reader();
         return reader.visit(cst);
     }

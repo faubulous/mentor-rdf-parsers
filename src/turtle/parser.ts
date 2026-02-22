@@ -1,5 +1,6 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
 import { tokens } from '../tokens.js';
+import { IParser } from '../syntax.js';
 
 // TODO:
 // - Define 'triples' acoording to https://www.w3.org/TR/n-quads/#grammar-production-triples
@@ -468,7 +469,7 @@ export class TurtleParserBase extends CstParser {
  * A W3C compliant parser for the Turtle syntax.
  * https://www.w3.org/TR/turtle
  */
-export class TurtleParser extends TurtleParserBase {
+export class TurtleParser extends TurtleParserBase implements IParser {
 
     constructor() {
         super(allTokens, {
@@ -483,7 +484,7 @@ export class TurtleParser extends TurtleParserBase {
      * @param tokens A set of tokens created by the lexer.
      * @returns A concrete syntax tree (CST) object.
      */
-    parse(documentIri: string, tokens: IToken[]): CstNode {
+    parse(tokens: IToken[]): CstNode {
         this.input = tokens;
 
         const cst = this.turtleDoc();

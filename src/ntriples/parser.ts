@@ -1,5 +1,6 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
 import { tokens } from '../tokens.js';
+import { IParser } from '../syntax.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
@@ -99,7 +100,7 @@ export class NTriplesParserBase extends CstParser {
  * A W3C compliant parser for the N-Triples syntax.
  * https://www.w3.org/TR/n-triples
  */
-export class NTriplesParser extends NTriplesParserBase {
+export class NTriplesParser extends NTriplesParserBase implements IParser {
     constructor() {
         super(allTokens);
 

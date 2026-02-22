@@ -1,5 +1,6 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
 import { tokens } from '../tokens.js';
+import { IParser } from '../syntax.js';
 
 // N3 token order - note that longer/more specific patterns must come before shorter ones
 const allTokens: TokenType[] = [
@@ -74,7 +75,7 @@ export class N3Lexer extends Lexer {
  * formula ::= '{' formulaContent? '}'
  * formulaContent ::= n3Statement ('.' formulaContent?)? | sparqlDirective formulaContent?
  */
-export class N3Parser extends CstParser {
+export class N3Parser extends CstParser implements IParser {
     /**
      * A map of prefixes to their namespace IRI.
      */
@@ -98,7 +99,7 @@ export class N3Parser extends CstParser {
     /**
      * Parses a set of tokens into a CST.
      */
-    parse(documentIri: string, inputTokens: IToken[]): CstNode {
+    parse(inputTokens: IToken[]): CstNode {
         this.input = inputTokens;
 
         const cst = this.n3Doc();

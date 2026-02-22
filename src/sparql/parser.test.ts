@@ -568,7 +568,7 @@ describe("SparqlDocument", () => {
     });
 
     it('+ Inline: ExprTripleTerm in SELECT', () => {
-        expect(() => parse(null, 'SELECT (<<( ?s :p ?o )>> AS ?tt) WHERE { ?s :p ?o }')).not.toThrowError();
+        expect(() => parse(null, 'SELECT (<<( ?s ?p ?o )>> AS ?tt) WHERE { ?s ?p ?o }')).not.toThrowError();
     });
 
     // ==========================================

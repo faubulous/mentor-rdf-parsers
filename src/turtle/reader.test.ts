@@ -32,7 +32,7 @@ describe("TurtleReader", () => {
 
         const expected = await parseQuads(data);
 
-        const cst = new TurtleParser().parse(baseIri, lexResult.tokens);
+        const cst = new TurtleParser().parse(lexResult.tokens);
         const actual = new TurtleReader().visit(cst);
 
         return quadsMatch(actual, expected);
@@ -51,7 +51,7 @@ describe("TurtleReader", () => {
             throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
         }
 
-        const cst = new TurtleParser().parse(ttlFileIri, lexResult.tokens);
+        const cst = new TurtleParser().parse(lexResult.tokens);
         const actual = new TurtleReader().visit(cst);
         const expected = parseNTriples12(ntData);
 
