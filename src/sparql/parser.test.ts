@@ -38,12 +38,8 @@ describe("SparqlDocument", () => {
     const parse = (fileIri: string, text?: string) => {
         const data = fileIri ? getTestData(fileIri) : text;
 
-        // Per SPARQL 1.2 spec section 19.2, codepoint escape sequences are
-        // resolved before parsing by the grammar.
-        const resolved = resolveCodepointEscapes(data);
-
         const lexer = new SparqlLexer();
-        const lexResult = lexer.tokenize(resolved);
+        const lexResult = lexer.tokenize(data);
 
         if (lexResult.errors.length > 0) {
             throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));

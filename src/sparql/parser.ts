@@ -1,4 +1,4 @@
-import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
+import { Lexer, CstParser, IToken, CstNode, TokenType, ILexingResult } from 'chevrotain';
 import { TOKENS } from '../tokens.js';
 import { IParser } from '../syntax.js';
 
@@ -261,6 +261,15 @@ export function resolveCodepointEscapes(input: string): string {
 export class SparqlLexer extends Lexer {
     constructor() {
         super(allTokens);
+    }
+
+    override tokenize(text: string, initialMode?: string): ILexingResult {
+        // Per SPARQL 1.2 spec section 19.2, codepoint escape sequences 
+        // (\uXXXX and \UXXXXXXXX) are resolved before parsing by the grammar.
+        // https://www.w3.org/TR/sparql12-query/#codepointEscape
+        const resolvedText = resolveCodepointEscapes(text);
+
+        return super.tokenize(resolvedText, initialMode);
     }
 }
 

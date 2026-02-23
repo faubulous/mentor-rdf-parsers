@@ -1,13 +1,12 @@
+export { TOKENS } from './tokens.js';
+export { RdfSyntax, IParser, ILexer } from './syntax.js';
 export { N3Lexer, N3Parser } from './n3/parser.js';
 export { N3Reader } from './n3/reader.js';
 export { NQuadsLexer, NQuadsParser } from './nquads/parser.js';
 export { NQuadsReader } from './nquads/reader.js';
 export { NTriplesLexer, NTriplesParser } from './ntriples/parser.js';
 export { NTriplesReader } from './ntriples/reader.js';
-export { RdfSyntax } from './syntax.js';
-export { SparqlLexer, SparqlParser, resolveCodepointEscapes } from './sparql/parser.js';
-export { IParser, ILexer } from './syntax.js';
-export { TOKENS } from './tokens.js';
+export { SparqlLexer, SparqlParser } from './sparql/parser.js';
 export { TrigLexer, TrigParser } from './trig/parser.js';
 export { TrigReader } from './trig/reader.js';
 export { TurtleLexer, TurtleParser } from './turtle/parser.js';
