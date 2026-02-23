@@ -274,6 +274,142 @@ export class SparqlLexer extends Lexer {
 }
 
 /**
+ * Helper class for extracting variables from SPARQL query CST nodes.
+ */
+export class SparqlVariableParser {
+    /**
+     * Extracts the result variables from a SELECT query in the order they are defined.
+     * 
+     * Handles:
+     * - Simple variable projections: `SELECT ?x ?y`
+     * - Projections with AS: `SELECT (?x AS ?y)`
+     * - Aggregates with AS: `SELECT (COUNT(?x) AS ?count)`
+     * - SELECT *: returns all variables from the WHERE clause in order of first appearance
+     * 
+     * @param cst - The concrete syntax tree from parsing a SPARQL query
+     * @returns An array of variable names (without the ? or $ prefix) in projection order
+     * @throws Error if the query is not a SELECT query
+     */
+    getSelectedVariables(cst: CstNode): string[] {
+        // Navigate to selectClause: queryOrUpdate > queryBody > selectQuery > selectClause
+        const queryBody = cst.children?.queryBody?.[0] as CstNode | undefined;
+
+        if (!queryBody) {
+            throw new Error('Not a query (no queryBody found)');
+        }
+
+        const selectQuery = queryBody.children?.selectQuery?.[0] as CstNode | undefined;
+
+        if (!selectQuery) {
+            throw new Error('Not a SELECT query');
+        }
+
+        const selectClause = selectQuery.children?.selectClause?.[0] as CstNode | undefined;
+
+        if (!selectClause) {
+            throw new Error('No selectClause found');
+        }
+
+        // Handle SELECT * by extracting variables from WHERE clause
+        if (selectClause.children?.STAR) {
+            const whereClause = selectQuery.children?.whereClause?.[0] as CstNode | undefined;
+
+            return this._extractAllVariables(whereClause);
+        } else {
+            return this._extractVariablesFromSelectClause(selectClause);
+        }
+    }
+
+    /**
+     * Internal helper to extract variables from a selectClause CST node.
+     */
+    private _extractVariablesFromSelectClause(selectClause: CstNode): string[] {
+        const varNodes = selectClause.children?.var as CstNode[] | undefined;
+
+        if (!varNodes?.length) {
+            return [];
+        }
+
+        // All vars directly under selectClause are result variables
+        // (both simple projections and AS targets)
+        return varNodes
+            .map(varNode => this._getVarToken(varNode))
+            .filter((token): token is IToken => token !== undefined)
+            .sort((a, b) => a.startOffset - b.startOffset)
+            .map(token => token.image.slice(1));
+    }
+
+    /**
+     * Recursively extracts all unique variables from a CST node.
+     * Returns variables in order of first appearance.
+     */
+    private _extractAllVariables(node: CstNode | undefined): string[] {
+        if (!node) {
+            return [];
+        }
+
+        const seen = new Set<string>();
+        const result: { name: string; offset: number }[] = [];
+
+        const traverse = (n: CstNode) => {
+            // Check for var nodes
+            if (n.children?.var) {
+                for (const varNode of n.children.var as CstNode[]) {
+                    const token = this._getVarToken(varNode);
+                    if (token) {
+                        const name = token.image.slice(1);
+                        if (!seen.has(name)) {
+                            seen.add(name);
+                            result.push({ name, offset: token.startOffset });
+                        }
+                    }
+                }
+            }
+
+            // Check for direct VAR1/VAR2 tokens (in some contexts)
+            for (const key of ['VAR1', 'VAR2']) {
+                if (n.children?.[key]) {
+                    for (const token of n.children[key] as IToken[]) {
+                        const name = token.image.slice(1);
+                        if (!seen.has(name)) {
+                            seen.add(name);
+                            result.push({ name, offset: token.startOffset });
+                        }
+                    }
+                }
+            }
+
+            // Recursively traverse all child nodes
+            if (n.children) {
+                for (const key of Object.keys(n.children)) {
+                    if (key === 'var' || key === 'VAR1' || key === 'VAR2') continue;
+                    const children = n.children[key];
+                    if (Array.isArray(children)) {
+                        for (const child of children) {
+                            if (child && typeof child === 'object' && 'children' in child) {
+                                traverse(child as CstNode);
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        traverse(node);
+
+        // Sort by first appearance and return names
+        return result.sort((a, b) => a.offset - b.offset).map(v => v.name);
+    }
+
+    /**
+     * Gets the VAR1 or VAR2 token from a var CST node.
+     */
+    private _getVarToken(varNode: CstNode): IToken | undefined {
+        return (varNode.children?.VAR1?.[0] || varNode.children?.VAR2?.[0]) as IToken | undefined;
+    }
+}
+
+/**
  * A SPARQL 1.2 compliant parser.
  * Based on the SPARQL 1.2 grammar: https://www.w3.org/TR/sparql12-query/#sparqlGrammar
  */

@@ -65,9 +65,10 @@ const _SPARQL_VERSION = /VERSION\b/i;
 
 const _GRAPH = /GRAPH\b/i;
 
-// The 'a' keyword (rdf:type shorthand) must not be followed by a colon,
-// otherwise it would be a prefix like 'a:localname'
-const _A = /a(?!:)/;
+// The 'a' keyword (rdf:type shorthand) must not be followed by a colon
+// or any character that could continue a prefix name (letters, digits, underscore),
+// otherwise it would be a prefix like 'a:localname' or 'abc:'
+const _A = /a(?![A-Za-z0-9_:])/;
 
 const _EXPONENT = /[eE][+-]?\d+/;
 
@@ -426,7 +427,7 @@ export const TOKENS = {
     OPEN_TRIPLE_TERM: createToken({ name: 'OPEN_TRIPLE_TERM', label: '<<(', pattern: _OPEN_TRIPLE_TERM }),
     PNAME_LN: createToken({ name: 'PNAME_LN', pattern: _PNAME_LN }),
     PNAME_NS: createToken({ name: 'PNAME_NS', pattern: _PNAME_NS }),
-    TTL_PREFIX: createToken({ name: 'PREFIX', label: '@prefix', pattern: _PREFIX }),
+    TTL_PREFIX: createToken({ name: 'TTL_PREFIX', label: '@prefix', pattern: _PREFIX }),
     RBRACKET: createToken({ name: 'RBRACKET', label: ']', pattern: _RBRACKET }),
     RCURLY: createToken({ name: 'RCURLY', label: '}', pattern: _RCURLY }),
     RPARENT: createToken({ name: 'RPARENT', label: ')', pattern: _RPARENT }),

@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { SparqlLexer, SparqlParser, resolveCodepointEscapes } from './parser.js';
+import { SparqlLexer, SparqlParser, SparqlVariableParser, resolveCodepointEscapes } from './parser.js';
 
 /**
  * SPARQL 1.2 Parser Tests
@@ -1437,5 +1437,142 @@ describe("SparqlDocument", () => {
     it('+ defined prefix should not throw', () => {
         expect(() => parse(null, 'PREFIX ex: <http://example.org/>\nSELECT * WHERE { ex:subject ex:predicate ex:object }'))
             .not.toThrow();
+    });
+
+    it('+ parses prefix starting with "a"', () => {
+        expect(() => parse(null, 'PREFIX abc: <http://example.org/abc#>\nSELECT * WHERE { abc:subject abc:predicate abc:object }'))
+            .not.toThrow();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // parseResultVariables Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    describe('parseResultVariables', () => {
+        const getResultVariables = (query: string): string[] | null => {
+            const lexer = new SparqlLexer();
+            const lexResult = lexer.tokenize(query);
+            const parser = new SparqlParser();
+            parser.input = lexResult.tokens;
+            const cst = parser.queryOrUpdate();
+            const variableParser = new SparqlVariableParser();
+            return variableParser.getSelectedVariables(cst);
+        };
+
+        it('returns all WHERE clause variables for SELECT *', () => {
+            const result = getResultVariables('SELECT * WHERE { ?s ?p ?o }');
+            expect(result).toEqual(['s', 'p', 'o']);
+        });
+
+        it('returns unique variables for SELECT * (no duplicates)', () => {
+            const result = getResultVariables('SELECT * WHERE { ?s ?p ?o . ?s ?p2 ?o2 }');
+            expect(result).toEqual(['s', 'p', 'o', 'p2', 'o2']);
+        });
+
+        it('returns simple variables in order', () => {
+            const result = getResultVariables('SELECT ?name ?age WHERE { ?s ?p ?o }');
+            expect(result).toEqual(['name', 'age']);
+        });
+
+        it('returns single variable', () => {
+            const result = getResultVariables('SELECT ?x WHERE { ?x ?p ?o }');
+            expect(result).toEqual(['x']);
+        });
+
+        it('handles $variable syntax', () => {
+            const result = getResultVariables('SELECT $x $y WHERE { $x $p $o }');
+            expect(result).toEqual(['x', 'y']);
+        });
+
+        it('handles mixed ? and $ variable syntax', () => {
+            const result = getResultVariables('SELECT ?x $y WHERE { ?x $y ?z }');
+            expect(result).toEqual(['x', 'y']);
+        });
+
+        it('handles expression with AS', () => {
+            const result = getResultVariables('SELECT (?x AS ?y) WHERE { ?s ?p ?x }');
+            expect(result).toEqual(['y']);
+        });
+
+        it('handles COUNT aggregate with AS', () => {
+            const result = getResultVariables('SELECT (COUNT(?x) AS ?total) WHERE { ?s ?p ?x }');
+            expect(result).toEqual(['total']);
+        });
+
+        it('handles multiple aggregates with AS', () => {
+            const result = getResultVariables('SELECT (COUNT(*) AS ?total) (SUM(?val) AS ?sum) WHERE { ?s ?p ?val }');
+            expect(result).toEqual(['total', 'sum']);
+        });
+
+        it('handles mixed simple vars and aggregates', () => {
+            const result = getResultVariables('SELECT ?type (COUNT(?s) AS ?count) WHERE { ?s a ?type } GROUP BY ?type');
+            expect(result).toEqual(['type', 'count']);
+        });
+
+        it('handles multiple aggregates in order', () => {
+            const result = getResultVariables(`
+                SELECT (COUNT(*) AS ?total) (SUM(?val) AS ?sum) (AVG(?val) AS ?avg) (MIN(?val) AS ?min) (MAX(?val) AS ?max) 
+                WHERE { ?s <http://example.org/value> ?val }
+            `);
+            expect(result).toEqual(['total', 'sum', 'avg', 'min', 'max']);
+        });
+
+        it('handles SAMPLE and COUNT DISTINCT aggregates', () => {
+            const result = getResultVariables(`
+                PREFIX ex: <http://example.org/>
+                SELECT (SAMPLE(?val) AS ?sample) (COUNT(DISTINCT ?val) AS ?distinctCount) 
+                WHERE { ?s ex:value ?val }
+            `);
+            expect(result).toEqual(['sample', 'distinctCount']);
+        });
+
+        it('handles GROUP_CONCAT aggregate', () => {
+            const result = getResultVariables(`
+                SELECT ?type (GROUP_CONCAT(?name; SEPARATOR=", ") AS ?names) 
+                WHERE { ?s a ?type ; <http://example.org/name> ?name } 
+                GROUP BY ?type
+            `);
+            expect(result).toEqual(['type', 'names']);
+        });
+
+        it('handles arithmetic expression with AS', () => {
+            const result = getResultVariables('SELECT (?x * 2 AS ?doubled) WHERE { ?s ?p ?x }');
+            expect(result).toEqual(['doubled']);
+        });
+
+        it('handles string function with AS', () => {
+            const result = getResultVariables('SELECT (CONCAT(?first, " ", ?last) AS ?fullName) WHERE { ?s ?p ?first, ?last }');
+            expect(result).toEqual(['fullName']);
+        });
+
+        it('handles SELECT DISTINCT with variables', () => {
+            const result = getResultVariables('SELECT DISTINCT ?x ?y WHERE { ?x ?p ?y }');
+            expect(result).toEqual(['x', 'y']);
+        });
+
+        it('handles SELECT REDUCED with variables', () => {
+            const result = getResultVariables('SELECT REDUCED ?a ?b ?c WHERE { ?a ?b ?c }');
+            expect(result).toEqual(['a', 'b', 'c']);
+        });
+
+        it('throws error for CONSTRUCT query', () => {
+            expect(() => getResultVariables('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }'))
+                .toThrowError('Not a SELECT query');
+        });
+
+        it('throws error for ASK query', () => {
+            expect(() => getResultVariables('ASK WHERE { ?s ?p ?o }'))
+                .toThrowError('Not a SELECT query');
+        });
+
+        it('throws error for DESCRIBE query', () => {
+            expect(() => getResultVariables('DESCRIBE <http://example.org/>'))
+                .toThrowError('Not a SELECT query');
+        });
+
+        it('throws error for UPDATE query', () => {
+            expect(() => getResultVariables('INSERT DATA { <http://example.org/s> <http://example.org/p> <http://example.org/o> }'))
+                .toThrowError('Not a query (no queryBody found)');
+        });
     });
 });

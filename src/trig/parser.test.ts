@@ -1133,4 +1133,9 @@ describe("TrigDocument", () => {
         expect(() => parse('@prefix ex: <http://example.org/> .\nex:subject ex:predicate ex:object .'))
             .not.toThrow();
     });
+
+    it('+ parses prefix starting with "a"', () => {
+        expect(() => parse('@prefix abc: <http://example.org/abc#> .\nabc:subject abc:predicate abc:object .'))
+            .not.toThrow();
+    });
 });

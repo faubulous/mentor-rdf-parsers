@@ -300,4 +300,9 @@ describe("N3Document", () => {
         expect(() => parse(null, ':subject :predicate :object .'))
             .not.toThrow();
     });
+
+    it('+ parses prefix starting with "a"', () => {
+        expect(() => parse(null, '@prefix abc: <http://example.org/abc#> .\nabc:subject abc:predicate abc:object .'))
+            .not.toThrow();
+    });
 });
