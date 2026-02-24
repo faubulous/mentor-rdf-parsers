@@ -9,7 +9,7 @@ Standards-compliant, fault-tolerant parsers for RDF languages, built with [Chevr
 | **N-Triples** | ✓ | ✓ | ✓ | [RDF 1.2 N-Triples](https://www.w3.org/TR/rdf12-n-triples/) |
 | **N-Quads** | ✓ | ✓ | ✓ | [RDF 1.2 N-Quads](https://www.w3.org/TR/rdf12-n-quads/) |
 | **Turtle** | ✓ | ✓ | ✓ | [RDF 1.2 Turtle](https://www.w3.org/TR/rdf12-turtle/) |
-| **TriG** | ✓ | ✓ | — | [RDF 1.2 TriG](https://www.w3.org/TR/rdf12-trig/) |
+| **TriG** | ✓ | ✓ | ✓ | [RDF 1.2 TriG](https://www.w3.org/TR/rdf12-trig/) |
 | **N3 (Notation3)** | ✓ | ✓ | ✓ | [W3C N3](https://w3c.github.io/N3/spec/) |
 | **SPARQL 1.2** | ✓ | ✓ | — | [SPARQL 1.2 Query](https://www.w3.org/TR/sparql12-query/) |
 
@@ -85,7 +85,7 @@ const lexResult = lexer.tokenize(input);
 
 // 2. Parse into a CST
 const parser = new TurtleParser();
-const cst = parser.parse('http://example.org/', lexResult.tokens);
+const cst = parser.parse(lexResult.tokens);
 
 // 3. Read RDF/JS quads from the CST
 const reader = new TurtleReader();
@@ -119,15 +119,13 @@ const quads = new NQuadsReader().visit(cst);
 ### Parsing SPARQL 1.2
 
 ```typescript
-import { Sparql } from '@faubulous/mentor-rdf-parsers';
+import { SparqlLexer, SparqlParser } from '@faubulous/mentor-rdf-parsers';
 
 const input = 'SELECT ?name WHERE { ?person <http://example.org/name> ?name }';
 
-// Pre-process codepoint escapes (per SPARQL spec section 19.2)
-const processed = Sparql.resolveCodepointEscapes(input);
-
-const lexResult = new Sparql.SparqlLexer().tokenize(processed);
-const cst = new Sparql.SparqlParser().parse(lexResult.tokens);
+// Note: Codepoint escapes (\uXXXX, \UXXXXXXXX) are resolved automatically by SparqlLexer
+const lexResult = new SparqlLexer().tokenize(input);
+const cst = new SparqlParser().parse(lexResult.tokens);
 ```
 
 ### Parsing N3 (Notation3)
@@ -141,7 +139,7 @@ const input = `
 `;
 
 const lexResult = new N3Lexer().tokenize(input);
-const cst = new N3Parser().parse('http://example.org/', lexResult.tokens);
+const cst = new N3Parser().parse(lexResult.tokens);
 const quads = new N3Reader().visit(cst);
 ```
 
@@ -157,18 +155,20 @@ const input = `
   }
 `;
 
-const lexer = new TrigLexer();
-const lexResult = lexer.tokenize(input);
-
-const parser = new TrigParser();
-parser.input = lexResult.tokens;
-
-const cst = parser.trigDoc();
+const lexResult = new TrigLexer().tokenize(input);
+const cst = new TrigParser().parse(lexResult.tokens);
+const quads = new TrigReader().visit(cst);
 ```
 
 ## Error Handling
 
 The parsers are fault-tolerant and collect errors rather than throwing immediately. This allows you to parse invalid documents and still get a partial CST.
+
+There are three types of errors:
+
+- **Lexer errors** — Invalid tokens (malformed IRIs, illegal characters)
+- **Parser errors** — Token sequences that don't match the grammar (missing period, invalid structure)
+- **Semantic errors** — Valid syntax but invalid semantics (undefined namespace prefixes)
 
 ### Accessing Lexer Errors
 
@@ -207,10 +207,9 @@ const lexer = new TurtleLexer();
 const lexResult = lexer.tokenize(input);
 
 const parser = new TurtleParser();
-parser.input = lexResult.tokens;
 
-// Parse without throwing - use the rule method directly
-const cst = parser.turtleDoc();
+// Parse with throwOnErrors=false to collect errors instead of throwing
+const cst = parser.parse(lexResult.tokens, false);
 
 // Check for parsing errors
 if (parser.errors.length > 0) {
@@ -251,11 +250,48 @@ interface IRecognitionException {
         ruleOccurrenceStack: number[];
     };
 }
+
+// Semantic errors (e.g., UndefinedNamespacePrefixError)
+interface SemanticError {
+    name: string;        // Error type (e.g., 'UndefinedNamespacePrefixError')
+    message: string;     // Human-readable error message
+    token: IToken;       // The token where error occurred
+    ruleStack: number[]; // Grammar rules being parsed when error occurred
+}
+```
+
+### Collecting Semantic Errors
+
+Semantic errors like undefined namespace prefixes can be collected instead of thrown by passing `throwOnErrors=false` to the `parse()` method:
+
+```typescript
+import { TurtleLexer, TurtleParser } from '@faubulous/mentor-rdf-parsers';
+
+const input = `foo:subject bar:predicate baz:object .`; // No prefixes defined!
+
+const lexer = new TurtleLexer();
+const lexResult = lexer.tokenize(input);
+
+const parser = new TurtleParser();
+
+// Pass false to collect errors instead of throwing
+const cst = parser.parse(lexResult.tokens, false);
+
+// Check for semantic errors (like undefined prefixes)
+if (parser.semanticErrors.length > 0) {
+    for (const error of parser.semanticErrors) {
+        console.log(`${error.name}: ${error.message}`);
+        console.log(`  at line ${error.token.startLine}, column ${error.token.startColumn}`);
+    }
+}
+
+// CST is still available (partial result)
+console.log('CST:', cst);
 ```
 
 ### Strict Mode (Throw on Errors)
 
-If you prefer to throw on parsing errors (default behavior of `parse()` method):
+By default, the `parse()` method throws on parsing errors. Use `throwOnErrors=false` to collect errors instead:
 
 ```typescript
 import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
@@ -272,9 +308,9 @@ if (lexResult.errors.length > 0) {
 }
 
 try {
-    // parse() throws if there are parsing errors
+    // parse() throws if there are parsing or semantic errors
     const parser = new TurtleParser();
-    const cst = parser.parse('http://example.org/', lexResult.tokens);
+    const cst = parser.parse(lexResult.tokens);
     
     const reader = new TurtleReader();
     const quads = reader.visit(cst);

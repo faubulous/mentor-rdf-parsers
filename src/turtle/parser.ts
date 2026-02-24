@@ -65,6 +65,16 @@ export class TurtleParserBase extends CstParser {
      */
     namespaces: Record<string, string> = {};
 
+    /**
+     * Whether to throw errors during parsing or collect them.
+     */
+    protected _throwOnErrors: boolean = true;
+
+    /**
+     * Semantic errors collected during parsing (e.g., UndefinedNamespacePrefixError).
+     */
+    semanticErrors: any[] = [];
+
     // These are declared here but defined in derived classes
     protected subject!: ReturnType<typeof this.RULE>;
     protected object!: ReturnType<typeof this.RULE>;
@@ -162,9 +172,13 @@ export class TurtleParserBase extends CstParser {
                 const error = new Error(`Undefined prefix: ${prefix}`);
                 (error as any).name = 'UndefinedNamespacePrefixError';
                 (error as any).token = token;
-                (error as any).stack = [...(this as any).RULE_OCCURRENCE_STACK];
+                (error as any).ruleStack = [...(this as any).RULE_OCCURRENCE_STACK];
 
-                throw error;
+                if (this._throwOnErrors) {
+                    throw error;
+                } else {
+                    this.semanticErrors.push(error);
+                }
             }
         }
     });
@@ -486,6 +500,8 @@ export class TurtleParser extends TurtleParserBase implements IParser {
      * @returns A concrete syntax tree (CST) object.
      */
     parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
+        this._throwOnErrors = throwOnErrors;
+        this.semanticErrors = [];
         this.input = tokens;
 
         const cst = this.turtleDoc();

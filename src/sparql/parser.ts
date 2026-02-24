@@ -437,6 +437,16 @@ export class SparqlParser extends CstParser implements IParser {
      */
     _insideDeleteBlock: boolean = false;
 
+    /**
+     * Whether to throw errors during parsing or collect them.
+     */
+    private _throwOnErrors: boolean = true;
+
+    /**
+     * Semantic errors collected during parsing (e.g., UndefinedNamespacePrefixError).
+     */
+    semanticErrors: any[] = [];
+
     constructor() {
         super(allTokens, {
             recoveryEnabled: true
@@ -459,6 +469,8 @@ export class SparqlParser extends CstParser implements IParser {
      * @returns A concrete syntax tree (CST) object.
      */
     parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
+        this._throwOnErrors = throwOnErrors;
+        this.semanticErrors = [];
         this.input = tokens;
 
         const cst = this.queryOrUpdate();
@@ -3058,9 +3070,13 @@ export class SparqlParser extends CstParser implements IParser {
                 const error = new Error(`Undefined prefix: ${prefix}`);
                 (error as any).name = 'UndefinedNamespacePrefixError';
                 (error as any).token = token;
-                (error as any).stack = [...(this as any).RULE_OCCURRENCE_STACK];
+                (error as any).ruleStack = [...(this as any).RULE_OCCURRENCE_STACK];
 
-                throw error;
+                if (this._throwOnErrors) {
+                    throw error;
+                } else {
+                    this.semanticErrors.push(error);
+                }
             }
         }
     });

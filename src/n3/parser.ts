@@ -81,6 +81,16 @@ export class N3Parser extends CstParser implements IParser {
      */
     namespaces: Record<string, string> = {};
 
+    /**
+     * Whether to throw errors during parsing or collect them.
+     */
+    private _throwOnErrors: boolean = true;
+
+    /**
+     * Semantic errors collected during parsing (e.g., UndefinedNamespacePrefixError).
+     */
+    semanticErrors: any[] = [];
+
     constructor() {
         super(allTokens, {
             recoveryEnabled: true
@@ -103,6 +113,8 @@ export class N3Parser extends CstParser implements IParser {
      * @returns A concrete syntax tree (CST) object.
      */
     parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
+        this._throwOnErrors = throwOnErrors;
+        this.semanticErrors = [];
         this.input = tokens;
 
         const cst = this.n3Doc();
@@ -477,8 +489,13 @@ export class N3Parser extends CstParser implements IParser {
                     const error = new Error(`Undefined prefix: ${prefix}`);
                     (error as any).name = 'UndefinedNamespacePrefixError';
                     (error as any).token = token;
-                    (error as any).stack = [...(this as any).RULE_OCCURRENCE_STACK];
-                    throw error;
+                    (error as any).ruleStack = [...(this as any).RULE_OCCURRENCE_STACK];
+
+                    if (this._throwOnErrors) {
+                        throw error;
+                    } else {
+                        this.semanticErrors.push(error);
+                    }
                 }
             }
         }

@@ -49,6 +49,7 @@
     "@types/rdfjs__data-model": "^2.0.9",
     "command-line-args": "^6.0.1",
     "n3": "^1.23.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^2.1.9"
   }

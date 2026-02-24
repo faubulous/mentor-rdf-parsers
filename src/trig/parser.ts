@@ -77,6 +77,8 @@ export class TrigParser extends TurtleParserBase implements IParser {
      * @returns A concrete syntax tree (CST) object.
      */
     parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
+        this._throwOnErrors = throwOnErrors;
+        this.semanticErrors = [];
         this.input = tokens;
 
         const cst = this.trigDoc();

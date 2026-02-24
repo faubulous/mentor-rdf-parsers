@@ -1117,4 +1117,57 @@ describe("TurtleDocument", () => {
         expect(() => parse(null, '@prefix abc: <http://example.org/abc#> .\nabc:subject abc:predicate abc:object .'))
             .not.toThrow();
     });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Error Collection Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    describe('Error Collection (throwOnErrors=false)', () => {
+        const parseCollectingErrors = (text: string) => {
+            const lexResult = new TurtleLexer().tokenize(text);
+            const parser = new TurtleParser();
+            const cst = parser.parse(lexResult.tokens, false);
+            return {
+                cst: cst,
+                semanticErrors: parser.semanticErrors
+            };
+        };
+
+        it('+ collects UndefinedNamespacePrefixError instead of throwing', () => {
+            const result = parseCollectingErrors('foo:bar <http://example.org/p> <http://example.org/o> .');
+            expect(result.semanticErrors.length).toBeGreaterThan(0);
+            const error = result.semanticErrors.find((e: any) => e.name === 'UndefinedNamespacePrefixError');
+            expect(error).toBeDefined();
+            expect((error as any).message).toBe('Undefined prefix: foo');
+            expect((error as any).token.image).toBe('foo:bar');
+        });
+
+        it('+ collects multiple UndefinedNamespacePrefixErrors', () => {
+            const result = parseCollectingErrors('foo:s bar:p baz:o .');
+            const errors = result.semanticErrors.filter((e: any) => e.name === 'UndefinedNamespacePrefixError');
+            expect(errors.length).toBe(3);
+            expect(errors.map((e: any) => e.message)).toContain('Undefined prefix: foo');
+            expect(errors.map((e: any) => e.message)).toContain('Undefined prefix: bar');
+            expect(errors.map((e: any) => e.message)).toContain('Undefined prefix: baz');
+        });
+
+        it('+ collected errors have ruleStack property', () => {
+            const result = parseCollectingErrors('foo:bar <http://example.org/p> <http://example.org/o> .');
+            const error = result.semanticErrors.find((e: any) => e.name === 'UndefinedNamespacePrefixError') as any;
+            expect(error.ruleStack).toBeDefined();
+            expect(Array.isArray(error.ruleStack)).toBe(true);
+        });
+
+        it('+ returns CST even with errors when collecting', () => {
+            const result = parseCollectingErrors('foo:bar <http://example.org/p> <http://example.org/o> .');
+            expect(result.cst).toBeDefined();
+            expect(result.cst.name).toBe('turtleDoc');
+        });
+
+        it('+ no errors for valid document with error collection', () => {
+            const result = parseCollectingErrors('@prefix ex: <http://example.org/> .\nex:s ex:p ex:o .');
+            const undefinedPrefixErrors = result.semanticErrors.filter((e: any) => e.name === 'UndefinedNamespacePrefixError');
+            expect(undefinedPrefixErrors.length).toBe(0);
+        });
+    });
 });
