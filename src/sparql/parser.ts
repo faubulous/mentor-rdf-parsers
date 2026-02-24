@@ -76,6 +76,11 @@ const allTokens: TokenType[] = [
     // RDF literal keywords
     TOKENS.A,
 
+    // Prefixed names must come before keywords to allow keywords as prefix names
+    // e.g., 'data:' should be PNAME_NS, not DATA keyword + ':'
+    TOKENS.PNAME_LN,
+    TOKENS.PNAME_NS,
+
     // SPARQL aggregate keywords (longer first)
     TOKENS.GROUP_CONCAT,
 
@@ -206,8 +211,6 @@ const allTokens: TokenType[] = [
     TOKENS.GRAPH,
 
     // RDF terms
-    TOKENS.PNAME_LN,
-    TOKENS.PNAME_NS,
     TOKENS.BLANK_NODE_LABEL,
     TOKENS.LANGTAG,
 

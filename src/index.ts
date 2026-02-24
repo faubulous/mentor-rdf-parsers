@@ -1,4 +1,5 @@
 export { TOKENS } from './tokens.js';
+export { QuadInfo, TermToken } from './types.js';
 export {
     getNextToken,
     getPreviousToken,

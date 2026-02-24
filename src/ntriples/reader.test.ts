@@ -295,3 +295,65 @@ describe("NTriplesReader", () => {
         expect(matchQuads12(data)).toBe(true);
     });
 });
+
+describe("NTriplesReader.ntriplesDocInfo", () => {
+    it('returns QuadInfo with correct tokens for simple triple', () => {
+        const input = `<http://example.org/s> <http://example.org/p> <http://example.org/o> .`;
+        
+        const lexResult = new NTriplesLexer().tokenize(input);
+        const cst = new NTriplesParser().parse(lexResult.tokens);
+        const reader = new NTriplesReader();
+        const infos = reader.ntriplesDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].subject.term.value).toBe('http://example.org/s');
+        expect(infos[0].predicate.term.value).toBe('http://example.org/p');
+        expect(infos[0].object.term.value).toBe('http://example.org/o');
+        
+        // Verify tokens have position info
+        expect(infos[0].subject.token.startOffset).toBeDefined();
+        expect(infos[0].predicate.token.startOffset).toBeDefined();
+        expect(infos[0].object.token.startOffset).toBeDefined();
+    });
+
+    it('returns correct token for blank node', () => {
+        const input = `_:b1 <http://example.org/p> "value" .`;
+        
+        const lexResult = new NTriplesLexer().tokenize(input);
+        const cst = new NTriplesParser().parse(lexResult.tokens);
+        const reader = new NTriplesReader();
+        const infos = reader.ntriplesDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].subject.term.termType).toBe('BlankNode');
+        expect(infos[0].subject.token.image).toBe('_:b1');
+    });
+
+    it('returns correct token for string literal', () => {
+        const input = `<http://example.org/s> <http://example.org/p> "hello world" .`;
+        
+        const lexResult = new NTriplesLexer().tokenize(input);
+        const cst = new NTriplesParser().parse(lexResult.tokens);
+        const reader = new NTriplesReader();
+        const infos = reader.ntriplesDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].object.term.termType).toBe('Literal');
+        expect(infos[0].object.term.value).toBe('hello world');
+        expect(infos[0].object.token.image).toBe('"hello world"');
+    });
+
+    it('handles multiple triples', () => {
+        const input = `<http://example.org/s1> <http://example.org/p1> <http://example.org/o1> .
+<http://example.org/s2> <http://example.org/p2> <http://example.org/o2> .`;
+        
+        const lexResult = new NTriplesLexer().tokenize(input);
+        const cst = new NTriplesParser().parse(lexResult.tokens);
+        const reader = new NTriplesReader();
+        const infos = reader.ntriplesDocInfo(cst);
+        
+        expect(infos).toHaveLength(2);
+        expect(infos[0].subject.term.value).toBe('http://example.org/s1');
+        expect(infos[1].subject.term.value).toBe('http://example.org/s2');
+    });
+});

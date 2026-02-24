@@ -442,3 +442,105 @@ describe("TrigReader", () => {
         expect(await matchQuads('file://./tests/sole_blankNodePropertyList.trig')).toBe(true);
     });
 });
+
+describe("TrigReader.trigDocInfo", () => {
+    it('returns QuadInfo with correct tokens for simple quad in named graph', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:g { ex:s ex:p ex:o . }`;
+        
+        const lexResult = new TrigLexer().tokenize(input);
+        const cst = new TrigParser().parse(lexResult.tokens);
+        const reader = new TrigReader();
+        const infos = reader.trigDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].subject.term.value).toBe('http://example.org/s');
+        expect(infos[0].predicate.term.value).toBe('http://example.org/p');
+        expect(infos[0].object.term.value).toBe('http://example.org/o');
+        expect(infos[0].graph).toBeDefined();
+        expect(infos[0].graph!.term.value).toBe('http://example.org/g');
+        
+        // Verify tokens have position info
+        expect(infos[0].subject.token.startOffset).toBeDefined();
+        expect(infos[0].predicate.token.startOffset).toBeDefined();
+        expect(infos[0].object.token.startOffset).toBeDefined();
+        expect(infos[0].graph!.token.startOffset).toBeDefined();
+    });
+
+    it('returns QuadInfo without graph for triple in default graph', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:s ex:p ex:o .`;
+        
+        const lexResult = new TrigLexer().tokenize(input);
+        const cst = new TrigParser().parse(lexResult.tokens);
+        const reader = new TrigReader();
+        const infos = reader.trigDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].graph).toBeUndefined();
+    });
+
+    it('returns correct token for GRAPH keyword', () => {
+        const input = `@prefix ex: <http://example.org/> .
+GRAPH ex:g { ex:s ex:p ex:o . }`;
+        
+        const lexResult = new TrigLexer().tokenize(input);
+        const cst = new TrigParser().parse(lexResult.tokens);
+        const reader = new TrigReader();
+        const infos = reader.trigDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].graph).toBeDefined();
+        expect(infos[0].graph!.term.value).toBe('http://example.org/g');
+    });
+
+    it('handles multiple triples in named graph', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:g {
+    ex:s1 ex:p1 ex:o1 .
+    ex:s2 ex:p2 ex:o2 .
+}`;
+        
+        const lexResult = new TrigLexer().tokenize(input);
+        const cst = new TrigParser().parse(lexResult.tokens);
+        const reader = new TrigReader();
+        const infos = reader.trigDocInfo(cst);
+        
+        expect(infos).toHaveLength(2);
+        expect(infos[0].subject.term.value).toBe('http://example.org/s1');
+        expect(infos[1].subject.term.value).toBe('http://example.org/s2');
+        // Both should have the same graph
+        expect(infos[0].graph!.term.value).toBe(infos[1].graph!.term.value);
+    });
+
+    it('returns correct token for rdf:type shorthand (a)', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:s a ex:Class .`;
+        
+        const lexResult = new TrigLexer().tokenize(input);
+        const cst = new TrigParser().parse(lexResult.tokens);
+        const reader = new TrigReader();
+        const infos = reader.trigDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].predicate.term.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+        expect(infos[0].predicate.token.image).toBe('a');
+    });
+
+    it('returns LBRACKET token for anonymous blank node property list', () => {
+        const input = `@prefix ex: <http://example.org/> .
+[ ex:prop "value" ] ex:other "x" .`;
+        
+        const lexResult = new TrigLexer().tokenize(input);
+        const cst = new TrigParser().parse(lexResult.tokens);
+        const reader = new TrigReader();
+        const infos = reader.trigDocInfo(cst);
+        
+        // Should have quads from blank node property list
+        expect(infos.length).toBeGreaterThanOrEqual(2);
+        
+        const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
+        expect(blankNodeInfo).toBeDefined();
+        expect(blankNodeInfo!.subject.token.image).toBe('[');
+    });
+});

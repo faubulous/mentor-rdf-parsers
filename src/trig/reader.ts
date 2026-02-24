@@ -1,8 +1,9 @@
 // @ts-nocheck
 import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term, DefaultGraph } from '@rdfjs/types';
-import type { IToken } from 'chevrotain';
+import type { CstNode, IToken } from 'chevrotain';
 import { TrigParser } from './parser.js';
+import type { QuadInfo, TermToken } from '../types.js';
 
 const BaseVisitor = new TrigParser().getBaseCstVisitorConstructor();
 
@@ -87,6 +88,8 @@ interface CstContext {
     GRAPH?: IToken[];
     true?: IToken[];
     false?: IToken[];
+    LBRACKET?: IToken[];
+    LPARENT?: IToken[];
 
     // Children for nested CST nodes
     children?: CstContext;
@@ -119,6 +122,23 @@ interface ObjectListResult {
 }
 
 /**
+ * Result from parsing a predicate-object pair with token info.
+ */
+interface PredicateObjectInfoResult {
+    predicate: TermToken;
+    object: TermToken;
+    annotationCtx?: CstContext;
+}
+
+/**
+ * Result from parsing an object list item with token info.
+ */
+interface ObjectListInfoResult {
+    objectTokens: TermToken[];
+    annotationCtx?: CstContext;
+}
+
+/**
  * A visitor class that constructs RDF/JS quads from TriG syntax trees.
  * TriG extends Turtle with support for named graphs.
  */
@@ -142,6 +162,14 @@ export class TrigReader extends BaseVisitor {
         super();
 
         this.validateVisitor();
+    }
+
+    /**
+     * Extract children from a CstNode or return the context as-is.
+     * Chevrotain CST nodes have { name, children } structure.
+     */
+    protected getChildren(ctx: CstContext): CstContext {
+        return ctx.children ? ctx.children : ctx;
     }
 
     /**
@@ -188,6 +216,643 @@ export class TrigReader extends BaseVisitor {
         }
 
         return quads;
+    }
+
+    /**
+     * Parse the document and return quad information with source tokens.
+     * This is useful for IDE features that need to associate positions with triples.
+     */
+    trigDocInfo(ctx: CstNode): QuadInfo[] {
+        const context = this.getChildren(ctx);
+        const result: QuadInfo[] = [];
+        const quads: Quad[] = []; // For internal quad generation
+
+        // Collect all directives and blocks with their source offsets
+        type Item = { type: 'directive' | 'block'; node: CstContext; offset: number };
+        const items: Item[] = [];
+
+        if (context.directive) {
+            for (const directive of context.directive) {
+                items.push({
+                    type: 'directive',
+                    node: directive as CstContext,
+                    offset: this._getFirstTokenOffset(directive as CstContext)
+                });
+            }
+        }
+
+        if (context.block) {
+            for (const block of context.block) {
+                items.push({
+                    type: 'block',
+                    node: block as CstContext,
+                    offset: this._getFirstTokenOffset(block as CstContext)
+                });
+            }
+        }
+
+        // Sort by source offset to process in document order
+        items.sort((a, b) => a.offset - b.offset);
+
+        // Process in order
+        for (const item of items) {
+            if (item.type === 'directive') {
+                const dirResult = this.visit(item.node as any) as DirectiveResult;
+                this._processDirectiveResult(dirResult);
+            } else {
+                this.blockInfo(item.node, quads, result);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Process block and collect QuadInfo.
+     */
+    protected blockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): void {
+        const context = this.getChildren(ctx);
+        if (context.triplesOrGraph) {
+            this.triplesOrGraphInfo(context.triplesOrGraph[0], quads, infoResults);
+        } else if (context.GRAPH) {
+            const graphToken = this.labelOrSubjectInfo(context.labelOrSubject![0]);
+            this.currentGraph = graphToken.term as NamedNode | BlankNode;
+            this.wrappedGraphInfo(context.wrappedGraph![0], quads, infoResults, graphToken);
+        } else if (context.wrappedGraph) {
+            this.currentGraph = null;
+            this.wrappedGraphInfo(context.wrappedGraph[0], quads, infoResults, undefined);
+        } else if (context.triples2) {
+            this.currentGraph = null;
+            this.triples2Info(context.triples2[0], quads, infoResults, undefined);
+        }
+    }
+
+    /**
+     * Process triplesOrGraph and collect QuadInfo.
+     */
+    protected triplesOrGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): void {
+        const context = this.getChildren(ctx);
+        if (context.labelOrSubject) {
+            const labelOrSubjectToken = this.labelOrSubjectInfo(context.labelOrSubject[0]);
+
+            if (context.wrappedGraph) {
+                this.currentGraph = labelOrSubjectToken.term as NamedNode | BlankNode;
+                this.wrappedGraphInfo(context.wrappedGraph[0], quads, infoResults, labelOrSubjectToken);
+            } else if (context.predicateObjectList) {
+                this.currentGraph = null;
+                const subjectToken = labelOrSubjectToken;
+
+                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+                    infoResults.push({
+                        subject: subjectToken,
+                        predicate,
+                        object
+                    });
+                }
+            }
+        } else if (context.reifiedTriple) {
+            this.currentGraph = null;
+            const reifierToken = this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
+
+            if (context.predicateObjectList) {
+                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+                    infoResults.push({
+                        subject: reifierToken,
+                        predicate,
+                        object
+                    });
+                }
+            }
+        }
+    }
+
+    /**
+     * Process wrappedGraph and collect QuadInfo.
+     */
+    protected wrappedGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): void {
+        const context = this.getChildren(ctx);
+        if (context.triplesBlock) {
+            this.triplesBlockInfo(context.triplesBlock[0], quads, infoResults, graphToken);
+        }
+    }
+
+    /**
+     * Process triplesBlock and collect QuadInfo.
+     */
+    protected triplesBlockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): void {
+        const context = this.getChildren(ctx);
+        if (context.triples) {
+            this.triplesInfo(context.triples[0], quads, infoResults, graphToken);
+        }
+
+        if (context.triplesBlock) {
+            this.triplesBlockInfo(context.triplesBlock[0], quads, infoResults, graphToken);
+        }
+    }
+
+    /**
+     * Process triples and collect QuadInfo.
+     */
+    protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): void {
+        const context = this.getChildren(ctx);
+        if (context.subject) {
+            const subjectToken = this.subjectInfo(context.subject[0], quads);
+
+            if (context.predicateObjectList) {
+                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+                    const quadInfo: QuadInfo = {
+                        subject: subjectToken,
+                        predicate,
+                        object
+                    };
+                    if (graphToken) {
+                        quadInfo.graph = graphToken;
+                    }
+                    infoResults.push(quadInfo);
+                }
+            }
+        } else if (context.blankNodePropertyList) {
+            const subjectToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, graphToken);
+
+            if (context.predicateObjectList) {
+                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+                    const quadInfo: QuadInfo = {
+                        subject: subjectToken,
+                        predicate,
+                        object
+                    };
+                    if (graphToken) {
+                        quadInfo.graph = graphToken;
+                    }
+                    infoResults.push(quadInfo);
+                }
+            }
+        } else if (context.reifiedTriple) {
+            const reifierToken = this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
+
+            if (context.predicateObjectList) {
+                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+                    const quadInfo: QuadInfo = {
+                        subject: reifierToken,
+                        predicate,
+                        object
+                    };
+                    if (graphToken) {
+                        quadInfo.graph = graphToken;
+                    }
+                    infoResults.push(quadInfo);
+                }
+            }
+        }
+    }
+
+    /**
+     * Process triples2 and collect QuadInfo.
+     */
+    protected triples2Info(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): void {
+        const context = this.getChildren(ctx);
+        if (context.blankNodePropertyList) {
+            const subjectToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, graphToken);
+
+            if (context.predicateObjectList) {
+                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+                    const quadInfo: QuadInfo = {
+                        subject: subjectToken,
+                        predicate,
+                        object
+                    };
+                    if (graphToken) {
+                        quadInfo.graph = graphToken;
+                    }
+                    infoResults.push(quadInfo);
+                }
+            }
+        } else if (context.collection) {
+            const subjectToken = this.collectionInfo(context.collection[0], quads);
+
+            if (context.predicateObjectList) {
+                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+                    const quadInfo: QuadInfo = {
+                        subject: subjectToken,
+                        predicate,
+                        object
+                    };
+                    if (graphToken) {
+                        quadInfo.graph = graphToken;
+                    }
+                    infoResults.push(quadInfo);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get labelOrSubject term and token.
+     */
+    protected labelOrSubjectInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.iri) {
+            return this.iriInfo(context.iri[0]);
+        } else if (context.blankNode) {
+            return this.blankNodeInfo(context.blankNode[0]);
+        }
+        throw new Error('Invalid labelOrSubject: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get subject term and token.
+     */
+    protected subjectInfo(ctx: CstContext, quads: Quad[]): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.iri) {
+            return this.iriInfo(context.iri[0]);
+        } else if (context.blankNode) {
+            return this.blankNodeInfo(context.blankNode[0]);
+        } else if (context.blank) {
+            return this.blankInfo(context.blank[0], quads);
+        } else if (context.collection) {
+            return this.collectionInfo(context.collection[0], quads);
+        }
+        throw new Error('Invalid subject: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get blank term and token.
+     */
+    protected blankInfo(ctx: CstContext, quads: Quad[]): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.blankNode) {
+            return this.blankNodeInfo(context.blankNode[0]);
+        } else if (context.collection) {
+            return this.collectionInfo(context.collection[0], quads);
+        }
+        throw new Error('Invalid blank: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get predicate term and token.
+     */
+    protected predicateInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.iri) {
+            return this.iriInfo(context.iri[0]);
+        } else if (context.A) {
+            return {
+                term: dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                token: context.A[0]
+            };
+        }
+        throw new Error('Invalid predicate: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get object term and token.
+     */
+    protected objectInfo(ctx: CstContext, quads: Quad[]): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.iri) {
+            return this.iriInfo(context.iri[0]);
+        } else if (context.literal) {
+            return this.literalInfo(context.literal[0]);
+        } else if (context.blankNode) {
+            return this.blankNodeInfo(context.blankNode[0]);
+        } else if (context.blank) {
+            return this.blankInfo(context.blank[0], quads);
+        } else if (context.blankNodePropertyList) {
+            const infoResults: QuadInfo[] = [];
+            return this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, undefined);
+        } else if (context.collection) {
+            return this.collectionInfo(context.collection[0], quads);
+        } else if (context.tripleTerm) {
+            return this.tripleTermInfo(context.tripleTerm[0]);
+        } else if (context.reifiedTriple) {
+            const infoResults: QuadInfo[] = [];
+            return this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
+        }
+        throw new Error('Invalid object: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get IRI term and token.
+     */
+    protected iriInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.prefixedName) {
+            return this.prefixedNameInfo(context.prefixedName[0]);
+        } else if (context.IRIREF) {
+            return {
+                term: this.getNamedNode(context),
+                token: context.IRIREF[0]
+            };
+        }
+        throw new Error('Invalid IRI: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get prefixed name term and token.
+     */
+    protected prefixedNameInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        const token = context.PNAME_LN ? context.PNAME_LN[0] : context.PNAME_NS![0];
+        const pname = token.image;
+        const colonIndex = pname.indexOf(':');
+        const prefix = colonIndex > -1 ? pname.slice(0, colonIndex) : '';
+        const localName = colonIndex > -1 ? pname.slice(colonIndex + 1) : '';
+
+        const namespaceIri = this.namespaces[prefix];
+
+        if (!namespaceIri) {
+            throw new Error(`Undefined prefix: ${prefix}`);
+        }
+
+        const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
+
+        return {
+            term: dataFactory.namedNode(namespaceIri.value + unescapedLocalName),
+            token
+        };
+    }
+
+    /**
+     * Get blank node term and token.
+     */
+    protected blankNodeInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.BLANK_NODE_LABEL) {
+            return {
+                term: dataFactory.blankNode(context.BLANK_NODE_LABEL[0].image),
+                token: context.BLANK_NODE_LABEL[0]
+            };
+        } else if (context.anon) {
+            const anonCtx = context.anon[0];
+            const token = this.findFirstToken(anonCtx);
+            return {
+                term: dataFactory.blankNode(),
+                token: token!
+            };
+        }
+        throw new Error('Invalid blank node: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get blank node property list info.
+     */
+    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): TermToken {
+        const context = this.getChildren(ctx);
+        const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
+        const subject = dataFactory.blankNode();
+        const subjectToken: TermToken = { term: subject, token };
+
+        if (context.predicateObjectList) {
+            for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+                this._emitQuad(quads, subject, predicate.term as NamedNode, object.term);
+                const quadInfo: QuadInfo = {
+                    subject: subjectToken,
+                    predicate,
+                    object
+                };
+                if (graphToken) {
+                    quadInfo.graph = graphToken;
+                }
+                infoResults.push(quadInfo);
+            }
+        }
+
+        return subjectToken;
+    }
+
+    /**
+     * Get literal term and token.
+     */
+    protected literalInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.stringLiteral) {
+            return this.stringLiteralInfo(context.stringLiteral[0]);
+        } else if (context.numericLiteral) {
+            return this.numericLiteralInfo(context.numericLiteral[0]);
+        } else if (context.booleanLiteral) {
+            return this.booleanLiteralInfo(context.booleanLiteral[0]);
+        }
+        throw new Error('Invalid literal: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get string literal term and token.
+     */
+    protected stringLiteralInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        const stringCtx = context.string![0];
+        const token = this.findStringToken(stringCtx)!;
+        const value = this.visit(stringCtx as any) as string;
+
+        let literal: Literal;
+        if (context.datatype) {
+            const datatype = this.visit(context.datatype[0] as any) as NamedNode;
+            literal = dataFactory.literal(value, datatype);
+        } else if (context.LANGTAG) {
+            const langtag = context.LANGTAG[0].image.slice(1);
+            literal = dataFactory.literal(value, langtag);
+        } else {
+            literal = dataFactory.literal(value);
+        }
+
+        return { term: literal, token };
+    }
+
+    /**
+     * Get numeric literal term and token.
+     */
+    protected numericLiteralInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.INTEGER) {
+            return {
+                term: dataFactory.literal(context.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
+                token: context.INTEGER[0]
+            };
+        } else if (context.DECIMAL) {
+            return {
+                term: dataFactory.literal(context.DECIMAL[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal')),
+                token: context.DECIMAL[0]
+            };
+        } else if (context.DOUBLE) {
+            return {
+                term: dataFactory.literal(context.DOUBLE[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double')),
+                token: context.DOUBLE[0]
+            };
+        }
+        throw new Error('Invalid numeric literal: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get boolean literal term and token.
+     */
+    protected booleanLiteralInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.true) {
+            return {
+                term: dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                token: context.true[0]
+            };
+        } else if (context.false) {
+            return {
+                term: dataFactory.literal('false', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                token: context.false[0]
+            };
+        }
+        throw new Error('Invalid boolean literal: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get collection info.
+     */
+    protected collectionInfo(ctx: CstContext, quads: Quad[]): TermToken {
+        const context = this.getChildren(ctx);
+        const token = context.LPARENT ? context.LPARENT[0] : this.findFirstToken(context)!;
+        const nil = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+        const rest = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+        const first = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+
+        const objectNodes = context.object ?? [];
+
+        if (objectNodes.length === 0) {
+            return { term: nil, token };
+        }
+
+        let head = dataFactory.blankNode();
+        let current = head;
+
+        for (let i = 0; i < objectNodes.length; i++) {
+            const elements = this.visit(objectNodes[i], quads as any) as Term[];
+            const element = Array.isArray(elements) ? elements[0] : elements;
+
+            this._emitQuad(quads, current, first, element);
+
+            if (i < objectNodes.length - 1) {
+                const next = dataFactory.blankNode();
+                this._emitQuad(quads, current, rest, next);
+                current = next;
+            } else {
+                this._emitQuad(quads, current, rest, nil);
+            }
+        }
+
+        return { term: head, token };
+    }
+
+    /**
+     * Get triple term info.
+     */
+    protected tripleTermInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        const token = this.findFirstToken(context)!;
+        const subject = this.visit(context.ttSubject![0] as any) as NamedNode | BlankNode;
+        const predicate = this.visit(context.predicate![0] as any) as NamedNode;
+        const object = this.visit(context.ttObject![0] as any) as Term;
+
+        return {
+            term: dataFactory.quad(subject, predicate, object),
+            token
+        };
+    }
+
+    /**
+     * Get reified triple info.
+     */
+    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+        const context = this.getChildren(ctx);
+        const token = this.findFirstToken(context)!;
+        const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+
+        const subject = this.visit(context.rtSubject![0], quads as any) as NamedNode | BlankNode;
+        const predicate = this.visit(context.predicate![0] as any) as NamedNode;
+        const object = this.visit(context.rtObject![0], quads as any) as Term;
+
+        let reifierNode: NamedNode | BlankNode;
+        if (context.reifier) {
+            reifierNode = this.visit(context.reifier[0] as any) as NamedNode | BlankNode;
+        } else {
+            reifierNode = dataFactory.blankNode();
+        }
+
+        const tripleTerm = dataFactory.quad(subject, predicate, object);
+        this._emitQuad(quads, reifierNode, rdfReifies, tripleTerm);
+
+        return { term: reifierNode, token };
+    }
+
+    /**
+     * Process predicate-object list and return info with tokens.
+     */
+    protected predicateObjectListInfo(ctx: CstContext, quads: Quad[]): PredicateObjectInfoResult[] {
+        const context = this.getChildren(ctx);
+        const result: PredicateObjectInfoResult[] = [];
+
+        if (!context.predicate) {
+            throw new Error('Invalid predicateObjectList: ' + JSON.stringify(context));
+        }
+
+        for (let i = 0; i < context.predicate.length; i++) {
+            const predicate = this.predicateInfo(context.predicate[i]);
+
+            for (let { objectTokens, annotationCtx } of this.objectListInfo(context.objectList![i], quads)) {
+                for (let objectToken of objectTokens) {
+                    result.push({ predicate, object: objectToken, annotationCtx });
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Process object list and return info with tokens.
+     */
+    protected objectListInfo(ctx: CstContext, quads: Quad[]): ObjectListInfoResult[] {
+        const context = this.getChildren(ctx);
+        const results: ObjectListInfoResult[] = [];
+
+        for (let i = 0; i < context.object!.length; i++) {
+            const objectToken = this.objectInfo(context.object![i], quads);
+            const annotationCtx = context.annotation?.[i];
+
+            results.push({ objectTokens: [objectToken], annotationCtx });
+        }
+
+        return results;
+    }
+
+    /**
+     * Find the first token in a CST context.
+     */
+    protected findFirstToken(ctx: CstContext): IToken | undefined {
+        const context = this.getChildren(ctx);
+        for (const key in context) {
+            if (key === 'children') continue;
+            const value = context[key];
+            if (Array.isArray(value) && value.length > 0) {
+                const first = value[0];
+                if (typeof (first as IToken).startOffset === 'number') {
+                    return first as IToken;
+                }
+                if ((first as CstContext).children || typeof first === 'object') {
+                    const token = this.findFirstToken(first as CstContext);
+                    if (token) return token;
+                }
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Find the string token in a string context.
+     */
+    protected findStringToken(ctx: CstContext): IToken | undefined {
+        const context = this.getChildren(ctx);
+        if (context.STRING_LITERAL_QUOTE) return context.STRING_LITERAL_QUOTE[0];
+        if (context.STRING_LITERAL_SINGLE_QUOTE) return context.STRING_LITERAL_SINGLE_QUOTE[0];
+        if (context.STRING_LITERAL_LONG_QUOTE) return context.STRING_LITERAL_LONG_QUOTE[0];
+        if (context.STRING_LITERAL_LONG_SINGLE_QUOTE) return context.STRING_LITERAL_LONG_SINGLE_QUOTE[0];
+        return undefined;
     }
 
     /**

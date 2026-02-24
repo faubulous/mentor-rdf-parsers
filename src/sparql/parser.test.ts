@@ -1445,6 +1445,82 @@ describe("SparqlDocument", () => {
     });
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Keyword-as-prefix-name tests
+    // ─────────────────────────────────────────────────────────────────────────
+    // SPARQL keywords can be used as prefix names when followed by a colon.
+    // This tests that the lexer correctly tokenizes e.g. "data:" as PNAME_NS
+    // rather than as keyword DATA + colon.
+
+    it('+ parses "data:" as prefix name (DATA is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX data: <http://example.org/data#>\nSELECT * WHERE { data:subject data:predicate data:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "select:" as prefix name (SELECT is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX select: <http://example.org/select#>\nSELECT * WHERE { select:subject select:predicate select:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "where:" as prefix name (WHERE is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX where: <http://example.org/where#>\nSELECT * WHERE { where:subject where:predicate where:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "filter:" as prefix name (FILTER is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX filter: <http://example.org/filter#>\nSELECT * WHERE { filter:subject filter:predicate filter:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "optional:" as prefix name (OPTIONAL is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX optional: <http://example.org/optional#>\nSELECT * WHERE { optional:subject optional:predicate optional:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "union:" as prefix name (UNION is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX union: <http://example.org/union#>\nSELECT * WHERE { union:subject union:predicate union:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "graph:" as prefix name (GRAPH is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX graph: <http://example.org/graph#>\nSELECT * WHERE { graph:subject graph:predicate graph:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "bind:" as prefix name (BIND is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX bind: <http://example.org/bind#>\nSELECT * WHERE { bind:subject bind:predicate bind:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "insert:" as prefix name (INSERT is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX insert: <http://example.org/insert#>\nSELECT * WHERE { insert:subject insert:predicate insert:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "delete:" as prefix name (DELETE is a SPARQL keyword)', () => {
+        expect(() => parse(null, 'PREFIX delete: <http://example.org/delete#>\nSELECT * WHERE { delete:subject delete:predicate delete:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "str:" as prefix name (STR is a SPARQL built-in)', () => {
+        expect(() => parse(null, 'PREFIX str: <http://example.org/str#>\nSELECT * WHERE { str:subject str:predicate str:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses "count:" as prefix name (COUNT is a SPARQL aggregate)', () => {
+        expect(() => parse(null, 'PREFIX count: <http://example.org/count#>\nSELECT * WHERE { count:subject count:predicate count:object }'))
+            .not.toThrow();
+    });
+
+    it('+ parses multiple keyword prefixes in same query', () => {
+        expect(() => parse(null, `
+            PREFIX data: <http://example.org/data#>
+            PREFIX select: <http://example.org/select#>
+            PREFIX where: <http://example.org/where#>
+            SELECT * WHERE { data:s select:p where:o }
+        `)).not.toThrow();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
     // parseResultVariables Tests
     // ─────────────────────────────────────────────────────────────────────────
 

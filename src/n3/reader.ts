@@ -1,8 +1,9 @@
 // @ts-nocheck
 import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term, Variable } from '@rdfjs/types';
-import type { IToken } from 'chevrotain';
+import type { CstNode, IToken } from 'chevrotain';
 import { N3Parser } from './parser.js';
+import type { QuadInfo, TermToken } from '../types.js';
 
 const BaseVisitor = new N3Parser().getBaseCstVisitorConstructor();
 
@@ -98,6 +99,9 @@ interface CstContext {
     // Boolean tokens
     true?: IToken[];
     false?: IToken[];
+    LBRACKET?: IToken[];
+    LPARENT?: IToken[];
+    LCURLY?: IToken[];
 
     // Children for nested CST nodes
     children?: CstContext;
@@ -126,6 +130,23 @@ interface VerbResult {
 interface PredicateObjectResult {
     predicate: Term;
     object: Term;
+    inversePredicate?: boolean;
+}
+
+/**
+ * Result from parsing a verb with token info.
+ */
+interface VerbInfoResult {
+    predicate: TermToken;
+    inversePredicate?: boolean;
+}
+
+/**
+ * Result from parsing a predicate-object pair with token info.
+ */
+interface PredicateObjectInfoResult {
+    predicate: TermToken;
+    object: TermToken;
     inversePredicate?: boolean;
 }
 
@@ -162,6 +183,14 @@ export class N3Reader extends BaseVisitor {
         this.validateVisitor();
     }
 
+    /**
+     * Helper to extract children from a CstNode.
+     * Chevrotain's parser.parse() returns { name, children } but visitor methods expect children directly.
+     */
+    protected getChildren(ctx: CstContext): CstContext {
+        return ctx.children ? ctx.children : ctx;
+    }
+
     // ── Top-level ──────────────────────────────────────────────────────────
 
     n3Doc(ctx: CstContext): Quad[] {
@@ -182,6 +211,535 @@ export class N3Reader extends BaseVisitor {
         }
 
         return quads;
+    }
+
+    /**
+     * Parse the document and return quad information with source tokens.
+     * This is useful for IDE features that need to associate positions with triples.
+     */
+    n3DocInfo(ctx: CstNode): QuadInfo[] {
+        const context = this.getChildren(ctx);
+        const result: QuadInfo[] = [];
+        const quads: Quad[] = []; // For internal quad generation
+
+        // Process sparql directives
+        if (context.sparqlDirective) {
+            for (const directive of context.sparqlDirective) {
+                this._processDirectiveResult(this.visit(directive as any) as DirectiveResult);
+            }
+        }
+
+        // Process n3Statements
+        if (context.n3Statement) {
+            for (const stmt of context.n3Statement) {
+                this.n3StatementInfo(stmt, quads, result);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Process n3Statement and collect QuadInfo.
+     */
+    protected n3StatementInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): void {
+        const context = this.getChildren(ctx);
+        if (context.n3Directive) {
+            const res = this.visit(context.n3Directive[0] as any) as DirectiveResult;
+            this._processDirectiveResult(res);
+        } else if (context.triples) {
+            this.triplesInfo(context.triples[0], quads, infoResults);
+        }
+    }
+
+    /**
+     * Process triples and collect QuadInfo.
+     */
+    protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): void {
+        const context = this.getChildren(ctx);
+        // Collect nested triples in a local array first, so we can add main triples before them
+        const nestedInfoResults: QuadInfo[] = [];
+        const subjectToken = this.subjectInfo(context.subject![0], quads, nestedInfoResults);
+
+        if (context.predicateObjectList) {
+            for (const { predicate, object, inversePredicate } of this.predicateObjectListInfo(context.predicateObjectList[0], quads, nestedInfoResults)) {
+                if (inversePredicate) {
+                    // For `<- pred`, the object becomes the subject and vice versa
+                    infoResults.push({
+                        subject: object,
+                        predicate,
+                        object: subjectToken
+                    });
+                } else {
+                    infoResults.push({
+                        subject: subjectToken,
+                        predicate,
+                        object
+                    });
+                }
+            }
+        }
+        
+        // Append nested triples after main triples
+        infoResults.push(...nestedInfoResults);
+    }
+
+    /**
+     * Get subject term and token.
+     */
+    protected subjectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+        const context = this.getChildren(ctx);
+        return this.expressionInfo(context.expression![0], quads, infoResults);
+    }
+
+    /**
+     * Get expression term and token.
+     */
+    protected expressionInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+        const context = this.getChildren(ctx);
+        return this.pathInfo(context.path![0], quads, infoResults);
+    }
+
+    /**
+     * Get path term and token.
+     */
+    protected pathInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+        const context = this.getChildren(ctx);
+        let nodeToken = this.pathItemInfo(context.pathItem![0], quads, infoResults);
+
+        // Handle path operators: ! (forward) and ^ (reverse)
+        if (context.EXCL && context.path) {
+            const property = this.visit(context.path[0], quads as any) as NamedNode;
+            const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+            quads.push(dataFactory.quad(nodeToken.term as NamedNode | BlankNode, property, blank));
+            // Keep the original token but update the term
+            return { term: blank, token: nodeToken.token };
+        } else if (context.CARET && context.path) {
+            const property = this.visit(context.path[0], quads as any) as NamedNode;
+            const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+            quads.push(dataFactory.quad(blank, property, nodeToken.term as NamedNode | BlankNode | Literal));
+            return { term: blank, token: nodeToken.token };
+        }
+
+        return nodeToken;
+    }
+
+    /**
+     * Get pathItem term and token.
+     */
+    protected pathItemInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.formula) {
+            return this.formulaInfo(context.formula[0], quads, infoResults);
+        } else if (context.collection) {
+            return this.collectionInfo(context.collection[0], quads);
+        } else if (context.blankNodePropertyList) {
+            return this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults);
+        } else if (context.quickVar) {
+            return this.quickVarInfo(context.quickVar[0]);
+        } else if (context.iri) {
+            return this.iriInfo(context.iri[0]);
+        } else if (context.blankNode) {
+            return this.blankNodeInfo(context.blankNode[0]);
+        } else if (context.literal) {
+            return this.literalInfo(context.literal[0]);
+        }
+
+        throw new Error('Invalid pathItem: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Process predicate-object list and return info with tokens.
+     */
+    protected predicateObjectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): PredicateObjectInfoResult[] {
+        const context = this.getChildren(ctx);
+        const result: PredicateObjectInfoResult[] = [];
+
+        if (!context.verb) return result;
+
+        for (let i = 0; i < context.verb.length; i++) {
+            const verbResult = this.verbInfo(context.verb[i], quads, infoResults);
+
+            if (context.objectList && context.objectList[i]) {
+                const objectTokens = this.objectListInfo(context.objectList[i], quads, infoResults);
+
+                for (const objToken of objectTokens) {
+                    result.push({
+                        predicate: verbResult.predicate,
+                        object: objToken,
+                        inversePredicate: verbResult.inversePredicate || false
+                    });
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Get verb term and token.
+     */
+    protected verbInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): VerbInfoResult {
+        const context = this.getChildren(ctx);
+        if (context.A) {
+            return {
+                predicate: { term: RDF_TYPE, token: context.A[0] }
+            };
+        } else if (context.EQUALS_SIGN) {
+            return {
+                predicate: { term: OWL_SAME_AS, token: context.EQUALS_SIGN[0] }
+            };
+        } else if (context.IMPLIES) {
+            return {
+                predicate: { term: LOG_IMPLIES, token: context.IMPLIES[0] }
+            };
+        } else if (context.IMPLIED_BY) {
+            return {
+                predicate: { term: LOG_IMPLIES, token: context.IMPLIED_BY[0] },
+                inversePredicate: true
+            };
+        } else if (context.HAS) {
+            const predToken = this.expressionInfo(context.expression![0], quads, infoResults);
+            return { predicate: predToken };
+        } else if (context.IS) {
+            const predToken = this.expressionInfo(context.expression![0], quads, infoResults);
+            return { predicate: predToken, inversePredicate: true };
+        } else if (context.predicate) {
+            return this.predicateInfoN3(context.predicate[0], quads, infoResults);
+        }
+
+        throw new Error('Invalid verb: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get predicate term and token for N3.
+     */
+    protected predicateInfoN3(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): VerbInfoResult {
+        const context = this.getChildren(ctx);
+        if (context.INVERSE_OF) {
+            const predToken = this.expressionInfo(context.expression![0], quads, infoResults);
+            return { predicate: predToken, inversePredicate: true };
+        }
+        const predToken = this.expressionInfo(context.expression![0], quads, infoResults);
+        return { predicate: predToken };
+    }
+
+    /**
+     * Process object list and return info with tokens.
+     */
+    protected objectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken[] {
+        const context = this.getChildren(ctx);
+        const results: TermToken[] = [];
+
+        if (context.object) {
+            for (const obj of context.object) {
+                results.push(this.objectInfo(obj, quads, infoResults));
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Get object term and token.
+     */
+    protected objectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+        const context = this.getChildren(ctx);
+        return this.expressionInfo(context.expression![0], quads, infoResults);
+    }
+
+    /**
+     * Get IRI term and token.
+     */
+    protected iriInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.prefixedName) {
+            return this.prefixedNameInfo(context.prefixedName[0]);
+        } else if (context.IRIREF) {
+            return {
+                term: this.getNamedNode(context),
+                token: context.IRIREF[0]
+            };
+        }
+        throw new Error('Invalid IRI: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get prefixed name term and token.
+     */
+    protected prefixedNameInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        const token = context.PNAME_LN ? context.PNAME_LN[0] : context.PNAME_NS![0];
+        const pname = token.image;
+        const colonIndex = pname.indexOf(':');
+        const prefix = colonIndex > -1 ? pname.slice(0, colonIndex) : '';
+        const localName = colonIndex > -1 ? pname.slice(colonIndex + 1) : '';
+
+        let namespaceIri = this.namespaces[prefix];
+
+        if (!namespaceIri) {
+            if (prefix === '') {
+                namespaceIri = dataFactory.namedNode('#');
+                this.namespaces[''] = namespaceIri;
+            } else {
+                throw new Error(`Undefined prefix: ${prefix}`);
+            }
+        }
+
+        const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
+
+        return {
+            term: dataFactory.namedNode(namespaceIri.value + unescapedLocalName),
+            token
+        };
+    }
+
+    /**
+     * Get blank node term and token.
+     */
+    protected blankNodeInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.BLANK_NODE_LABEL) {
+            return {
+                term: dataFactory.blankNode(context.BLANK_NODE_LABEL[0].image),
+                token: context.BLANK_NODE_LABEL[0]
+            };
+        } else if (context.anon) {
+            const anonCtx = context.anon[0];
+            const token = this.findFirstToken(anonCtx);
+            return {
+                term: dataFactory.blankNode(),
+                token: token!
+            };
+        }
+        throw new Error('Invalid blank node: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get blank node property list info.
+     */
+    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+        const context = this.getChildren(ctx);
+        const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
+        const subject = dataFactory.blankNode();
+        const subjectToken: TermToken = { term: subject, token };
+
+        if (context.predicateObjectList) {
+            for (const { predicate, object, inversePredicate } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+                if (inversePredicate) {
+                    quads.push(dataFactory.quad(object.term as NamedNode | BlankNode, predicate.term as NamedNode, subject));
+                    infoResults.push({
+                        subject: object,
+                        predicate,
+                        object: subjectToken
+                    });
+                } else {
+                    quads.push(dataFactory.quad(subject, predicate.term as NamedNode, object.term as NamedNode | BlankNode | Literal));
+                    infoResults.push({
+                        subject: subjectToken,
+                        predicate,
+                        object
+                    });
+                }
+            }
+        }
+
+        return subjectToken;
+    }
+
+    /**
+     * Get literal term and token.
+     */
+    protected literalInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.stringLiteral) {
+            return this.stringLiteralInfo(context.stringLiteral[0]);
+        } else if (context.numericLiteral) {
+            return this.numericLiteralInfo(context.numericLiteral[0]);
+        } else if (context.booleanLiteral) {
+            return this.booleanLiteralInfo(context.booleanLiteral[0]);
+        }
+        throw new Error('Invalid literal: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get string literal term and token.
+     */
+    protected stringLiteralInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        const stringCtx = context.string![0];
+        const token = this.findStringToken(stringCtx)!;
+        const value = this.visit(stringCtx as any) as string;
+
+        let literal: Literal;
+        if (context.datatype) {
+            const datatype = this.visit(context.datatype[0] as any) as NamedNode;
+            literal = dataFactory.literal(value, datatype);
+        } else if (context.LANGTAG) {
+            const langtag = context.LANGTAG[0].image.slice(1);
+            literal = dataFactory.literal(value, langtag);
+        } else {
+            literal = dataFactory.literal(value);
+        }
+
+        return { term: literal, token };
+    }
+
+    /**
+     * Get numeric literal term and token.
+     */
+    protected numericLiteralInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.INTEGER) {
+            return {
+                term: dataFactory.literal(context.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
+                token: context.INTEGER[0]
+            };
+        } else if (context.DECIMAL) {
+            return {
+                term: dataFactory.literal(context.DECIMAL[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal')),
+                token: context.DECIMAL[0]
+            };
+        } else if (context.DOUBLE) {
+            return {
+                term: dataFactory.literal(context.DOUBLE[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double')),
+                token: context.DOUBLE[0]
+            };
+        }
+        throw new Error('Invalid numeric literal: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get boolean literal term and token.
+     */
+    protected booleanLiteralInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.true) {
+            return {
+                term: dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                token: context.true[0]
+            };
+        } else if (context.false) {
+            return {
+                term: dataFactory.literal('false', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                token: context.false[0]
+            };
+        }
+        throw new Error('Invalid boolean literal: ' + JSON.stringify(context));
+    }
+
+    /**
+     * Get collection info.
+     */
+    protected collectionInfo(ctx: CstContext, quads: Quad[]): TermToken {
+        const context = this.getChildren(ctx);
+        const token = context.LPARENT ? context.LPARENT[0] : this.findFirstToken(context)!;
+        const objectNodes = context.object ?? [];
+
+        if (objectNodes.length === 0) {
+            return { term: RDF_NIL, token };
+        }
+
+        let head = dataFactory.blankNode();
+        let current: BlankNode = head;
+
+        for (let i = 0; i < objectNodes.length; i++) {
+            const element = this.visit(objectNodes[i], quads as any) as Term;
+
+            quads.push(dataFactory.quad(current, RDF_FIRST, element as NamedNode | BlankNode | Literal));
+
+            if (i < objectNodes.length - 1) {
+                const next = dataFactory.blankNode();
+                quads.push(dataFactory.quad(current, RDF_REST, next));
+                current = next;
+            } else {
+                quads.push(dataFactory.quad(current, RDF_REST, RDF_NIL));
+            }
+        }
+
+        return { term: head, token };
+    }
+
+    /**
+     * Get formula info.
+     */
+    protected formulaInfo(ctx: CstContext, parentQuads: Quad[], infoResults: QuadInfo[]): TermToken {
+        const context = this.getChildren(ctx);
+        const token = context.LCURLY ? context.LCURLY[0] : this.findFirstToken(context)!;
+        const formulaQuads: Quad[] = [];
+
+        if (context.formulaContent) {
+            // Process formula content and collect QuadInfo
+            this.formulaContentInfo(context.formulaContent[0], formulaQuads, infoResults);
+        }
+
+        const graphNode = dataFactory.blankNode();
+
+        for (const q of formulaQuads) {
+            parentQuads.push(dataFactory.quad(q.subject, q.predicate, q.object, graphNode));
+        }
+
+        return { term: graphNode, token };
+    }
+
+    /**
+     * Process formula content and collect QuadInfo.
+     */
+    protected formulaContentInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): void {
+        const context = this.getChildren(ctx);
+        
+        // Process n3Statements within formula
+        if (context.n3Statement) {
+            for (const stmt of context.n3Statement) {
+                this.n3StatementInfo(stmt, quads, infoResults);
+            }
+        }
+    }
+
+    /**
+     * Get quick variable info.
+     */
+    protected quickVarInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        const token = context.QUICK_VAR![0];
+        const name = token.image.slice(1);
+        return {
+            term: dataFactory.variable(name),
+            token
+        };
+    }
+
+    /**
+     * Find the first token in a CST context.
+     */
+    protected findFirstToken(ctx: CstContext): IToken | undefined {
+        for (const key in ctx) {
+            if (key === 'children') continue;
+            const value = ctx[key];
+            if (Array.isArray(value) && value.length > 0) {
+                const first = value[0];
+                if (typeof (first as IToken).startOffset === 'number') {
+                    return first as IToken;
+                }
+                if ((first as CstContext).children || typeof first === 'object') {
+                    const token = this.findFirstToken(first as CstContext);
+                    if (token) return token;
+                }
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Find the string token in a string context.
+     */
+    protected findStringToken(ctx: CstContext): IToken | undefined {
+        const context = this.getChildren(ctx);
+        if (context.STRING_LITERAL_QUOTE) return context.STRING_LITERAL_QUOTE[0];
+        if (context.STRING_LITERAL_SINGLE_QUOTE) return context.STRING_LITERAL_SINGLE_QUOTE[0];
+        if (context.STRING_LITERAL_LONG_QUOTE) return context.STRING_LITERAL_LONG_QUOTE[0];
+        if (context.STRING_LITERAL_LONG_SINGLE_QUOTE) return context.STRING_LITERAL_LONG_SINGLE_QUOTE[0];
+        return undefined;
     }
 
     n3Statement(ctx: CstContext, quads: Quad[]): void {

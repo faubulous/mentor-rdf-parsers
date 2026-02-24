@@ -1,12 +1,14 @@
 // @ts-nocheck
 import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
+import type { CstNode, IToken } from 'chevrotain';
 import { NTriplesParser } from './parser.js';
+import type { QuadInfo, TermToken } from '../types.js';
 
 const BaseVisitor = new NTriplesParser().getBaseCstVisitorConstructor();
 
 interface CstContext {
-    [key: string]: CstContext[] | { image: string }[] | undefined;
+    [key: string]: CstContext[] | IToken[] | undefined;
     triple?: CstContext[];
     subject?: CstContext[];
     predicate?: CstContext[];
@@ -14,10 +16,10 @@ interface CstContext {
     literal?: CstContext[];
     datatype?: CstContext[];
     tripleTerm?: CstContext[];
-    IRIREF_ABS?: { image: string }[];
-    BLANK_NODE_LABEL?: { image: string }[];
-    STRING_LITERAL_QUOTE?: { image: string }[];
-    LANGTAG?: { image: string }[];
+    IRIREF_ABS?: IToken[];
+    BLANK_NODE_LABEL?: IToken[];
+    STRING_LITERAL_QUOTE?: IToken[];
+    LANGTAG?: IToken[];
 }
 
 /**
@@ -29,6 +31,13 @@ export class NTriplesReader extends BaseVisitor {
         super();
 
         this.validateVisitor();
+    }
+
+    /**
+     * Extract children from a CstNode or return the context as-is.
+     */
+    protected getChildren(ctx: CstContext): CstContext {
+        return ctx.children ? ctx.children : ctx;
     }
 
     ntriplesDoc(ctx: CstContext): Quad[] {
@@ -45,6 +54,156 @@ export class NTriplesReader extends BaseVisitor {
         }
 
         return quads;
+    }
+
+    /**
+     * Parse the document and return quad information with source tokens.
+     * This is useful for IDE features that need to associate positions with triples.
+     */
+    ntriplesDocInfo(ctx: CstNode): QuadInfo[] {
+        const context = this.getChildren(ctx);
+        const result: QuadInfo[] = [];
+
+        if (context.triple) {
+            for (const tripleCtx of context.triple) {
+                const info = this.tripleInfo(tripleCtx);
+                if (info) {
+                    result.push(info);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Get triple info with tokens.
+     */
+    protected tripleInfo(ctx: CstContext): QuadInfo | undefined {
+        const context = this.getChildren(ctx);
+        const subject = this.subjectInfo(context.subject![0]);
+        const predicate = this.predicateInfo(context.predicate![0]);
+        const object = this.objectInfo(context.object![0]);
+
+        return { subject, predicate, object };
+    }
+
+    /**
+     * Get subject term and token.
+     */
+    protected subjectInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.IRIREF_ABS) {
+            return {
+                term: this.getNamedNode(context),
+                token: context.IRIREF_ABS[0]
+            };
+        } else if (context.BLANK_NODE_LABEL) {
+            return {
+                term: this.getBlankNode(context),
+                token: context.BLANK_NODE_LABEL[0]
+            };
+        }
+        throw new Error('Invalid subject');
+    }
+
+    /**
+     * Get predicate term and token.
+     */
+    protected predicateInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.IRIREF_ABS) {
+            return {
+                term: this.getNamedNode(context),
+                token: context.IRIREF_ABS[0]
+            };
+        }
+        throw new Error('Invalid predicate: ' + context);
+    }
+
+    /**
+     * Get object term and token.
+     */
+    protected objectInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        if (context.IRIREF_ABS) {
+            return {
+                term: this.getNamedNode(context),
+                token: context.IRIREF_ABS[0]
+            };
+        } else if (context.BLANK_NODE_LABEL) {
+            return {
+                term: this.getBlankNode(context),
+                token: context.BLANK_NODE_LABEL[0]
+            };
+        } else if (context.literal) {
+            return this.literalInfo(context.literal[0]);
+        } else if (context.tripleTerm) {
+            return this.tripleTermInfo(context.tripleTerm[0]);
+        }
+        throw new Error('Invalid object');
+    }
+
+    /**
+     * Get literal term and token.
+     */
+    protected literalInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        const token = context.STRING_LITERAL_QUOTE![0];
+        const value = this.getLiteralValue(context);
+
+        let literal: Literal;
+        if (context.datatype) {
+            const datatypeNode = this.visit(context.datatype[0]) as NamedNode;
+            literal = dataFactory.literal(value, datatypeNode);
+        } else if (context.LANGTAG) {
+            const langtag = context.LANGTAG[0].image.slice(1).toLowerCase();
+            literal = dataFactory.literal(value, langtag);
+        } else {
+            literal = dataFactory.literal(value);
+        }
+
+        return { term: literal, token };
+    }
+
+    /**
+     * Get triple term info.
+     */
+    protected tripleTermInfo(ctx: CstContext): TermToken {
+        const context = this.getChildren(ctx);
+        const subject = this.visit(context.subject![0]) as NamedNode | BlankNode;
+        const predicate = this.visit(context.predicate![0]) as NamedNode;
+        const object = this.visit(context.object![0]) as Term;
+
+        // Find the first token (should be OPEN_TRIPLE_TERM)
+        const token = this.findFirstToken(context);
+
+        return {
+            term: dataFactory.quad(subject, predicate, object),
+            token: token!
+        };
+    }
+
+    /**
+     * Find the first token in a CST context.
+     */
+    protected findFirstToken(ctx: CstContext): IToken | undefined {
+        const context = this.getChildren(ctx);
+        for (const key in context) {
+            if (key === 'children') continue;
+            const value = context[key];
+            if (Array.isArray(value) && value.length > 0) {
+                const first = value[0];
+                if (typeof (first as IToken).startOffset === 'number') {
+                    return first as IToken;
+                }
+                if (typeof first === 'object') {
+                    const token = this.findFirstToken(first as CstContext);
+                    if (token) return token;
+                }
+            }
+        }
+        return undefined;
     }
 
     versionDirective(_ctx: CstContext): undefined {

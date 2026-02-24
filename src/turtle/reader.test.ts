@@ -575,3 +575,162 @@ describe("TurtleReader", () => {
         )).toBe(true);
     });
 });
+
+describe("TurtleReader.turtleDocInfo", () => {
+    it('returns QuadInfo with correct tokens for simple triple', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:subject ex:predicate ex:object .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].subject.term.value).toBe('http://example.org/subject');
+        expect(infos[0].predicate.term.value).toBe('http://example.org/predicate');
+        expect(infos[0].object.term.value).toBe('http://example.org/object');
+        
+        // Verify tokens have position info
+        expect(infos[0].subject.token.startOffset).toBeDefined();
+        expect(infos[0].predicate.token.startOffset).toBeDefined();
+        expect(infos[0].object.token.startOffset).toBeDefined();
+    });
+
+    it('returns correct token for rdf:type shorthand (a)', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:subject a ex:Class .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].predicate.term.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+        expect(infos[0].predicate.token.image).toBe('a');
+    });
+
+    it('returns correct token for blank node with identifier', () => {
+        const input = `@prefix ex: <http://example.org/> .
+_:b1 ex:predicate "value" .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].subject.term.termType).toBe('BlankNode');
+        expect(infos[0].subject.token.image).toBe('_:b1');
+    });
+
+    it('returns LBRACKET token for anonymous blank node property list', () => {
+        const input = `@prefix ex: <http://example.org/> .
+[ ex:prop "value" ] ex:other "x" .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        // Should have 2 quads: internal blank node property and outer triple
+        expect(infos.length).toBeGreaterThanOrEqual(2);
+        
+        // The blank node subject should have '[' as token
+        const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
+        expect(blankNodeInfo).toBeDefined();
+        expect(blankNodeInfo!.subject.token.image).toBe('[');
+    });
+
+    it('returns correct token for string literal', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:s ex:p "hello world" .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].object.term.termType).toBe('Literal');
+        expect(infos[0].object.term.value).toBe('hello world');
+        expect(infos[0].object.token.image).toBe('"hello world"');
+    });
+
+    it('returns correct token for numeric literal', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:s ex:p 42 .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].object.term.value).toBe('42');
+        expect(infos[0].object.token.image).toBe('42');
+    });
+
+    it('handles multiple triples', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:s1 ex:p1 ex:o1 .
+ex:s2 ex:p2 ex:o2 .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        expect(infos).toHaveLength(2);
+        expect(infos[0].subject.term.value).toBe('http://example.org/s1');
+        expect(infos[1].subject.term.value).toBe('http://example.org/s2');
+    });
+
+    it('handles predicate-object list', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:s ex:p1 ex:o1 ; ex:p2 ex:o2 .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        expect(infos).toHaveLength(2);
+        // Both quads share the same subject
+        expect(infos[0].subject.term.value).toBe(infos[1].subject.term.value);
+        expect(infos[0].predicate.term.value).toBe('http://example.org/p1');
+        expect(infos[1].predicate.term.value).toBe('http://example.org/p2');
+    });
+
+    it('handles object list', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:s ex:p ex:o1, ex:o2 .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        expect(infos).toHaveLength(2);
+        // Both quads share same subject and predicate
+        expect(infos[0].subject.term.value).toBe(infos[1].subject.term.value);
+        expect(infos[0].predicate.term.value).toBe(infos[1].predicate.term.value);
+        expect(infos[0].object.term.value).toBe('http://example.org/o1');
+        expect(infos[1].object.term.value).toBe('http://example.org/o2');
+    });
+
+    it('returns IRIREF token for full IRI', () => {
+        const input = `<http://example.org/s> <http://example.org/p> <http://example.org/o> .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].subject.token.image).toBe('<http://example.org/s>');
+        expect(infos[0].predicate.token.image).toBe('<http://example.org/p>');
+        expect(infos[0].object.token.image).toBe('<http://example.org/o>');
+    });
+});
