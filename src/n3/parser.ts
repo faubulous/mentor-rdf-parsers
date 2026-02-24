@@ -494,7 +494,7 @@ export class N3Parser extends CstParser implements IParser {
                     if (this._throwOnErrors) {
                         throw error;
                     } else {
-                        this.semanticErrors.push(error);
+                        this.semanticErrors.push(error as ISemanticError);
                     }
                 }
             }
