@@ -47,10 +47,40 @@ export interface IParser {
     errors: IRecognitionException[];
 
     /**
+     * An array of recognition exceptions that occurred during semantic analysis. This can be used to identify and handle any semantic errors in the input document, such as undefined prefixes or invalid IRIs.
+     */
+    semanticErrors: ISemanticError[];
+
+    /**
      * Parses a set of tokens created by the lexer into a concrete syntax tree (CST) representing the parsed document.
      * @param tokens A set of tokens created by the lexer.
      * @param throwOnErrors Whether to throw an error if any parsing errors are detected. Defaults to `true`.
      * @returns A concrete syntax tree (CST) object.
      */
     parse(inputTokens: IToken[], throwOnErrors?: boolean): CstNode;
+}
+
+/**
+ * An interface representing a semantic error that can occur during parsing. This includes the name of the error, a human-readable message describing the error, and the token that caused the error. This can be used to identify and handle semantic errors in the input document, such as undefined prefixes or invalid IRIs.
+ */
+export interface ISemanticError extends Error {
+    /**
+     * The name of the error, which can be used to identify the type of semantic error that occurred. This can be useful for handling different types of errors in different ways, or for providing more specific error messages to users.
+     */
+    name: string;
+
+    /**
+     * A human-readable message describing the error, which can be used to provide more information about the nature of the error and how to fix it. This can be useful for debugging and for providing feedback to users about issues in their input documents.
+     */
+    message: string;
+
+    /**
+     * The token that caused the error, which can be used to identify the specific location in the input document where the error occurred. This can be useful for debugging and for providing feedback to users about issues in their input documents.
+     */
+    token: IToken;
+
+    /**
+     * The stack of grammar rules that were being parsed when the error occurred. This can be useful for debugging and understanding the context in which the error happened.
+     */
+    ruleStack?: any[];
 }

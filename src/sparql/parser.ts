@@ -1,6 +1,6 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType, ILexingResult } from 'chevrotain';
 import { TOKENS } from '../tokens.js';
-import { IParser } from '../syntax.js';
+import { IParser, ISemanticError } from '../syntax.js';
 
 /**
  * SPARQL 1.2 Parser
