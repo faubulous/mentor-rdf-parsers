@@ -502,6 +502,7 @@ export class TurtleParser extends TurtleParserBase implements IParser {
     parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
         this._throwOnErrors = throwOnErrors;
         this.semanticErrors = [];
+        this.namespaces = {};
         this.input = tokens;
 
         const cst = this.turtleDoc();

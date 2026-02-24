@@ -1119,6 +1119,53 @@ describe("TurtleDocument", () => {
     });
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Namespace Reset Tests (Bug: namespaces not reset between parse calls)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    describe('Namespace Reset Between Parse Calls', () => {
+        it('- should detect undefined prefix when parsing multiple times (bug replication)', () => {
+            const lexer = new TurtleLexer();
+            const parser = new TurtleParser();
+
+            // First parse: valid document WITH prefix definition
+            const doc1 = '@prefix ex: <http://example.org/> .\nex:s ex:p ex:o .';
+            const lexResult1 = lexer.tokenize(doc1);
+            parser.parse(lexResult1.tokens, true); // This should succeed
+
+            // Second parse: document that USES the prefix but does NOT define it
+            const doc2 = 'ex:s ex:p ex:o .';
+            const lexResult2 = lexer.tokenize(doc2);
+
+            // This SHOULD throw an error because 'ex' prefix is not defined in doc2
+            // But if namespaces are not reset, it will NOT throw (BUG!)
+            expect(() => parser.parse(lexResult2.tokens, true))
+                .toThrowError('Undefined prefix: ex');
+        });
+
+        it('- should detect undefined prefix in error collection mode when parsing multiple times', () => {
+            const lexer = new TurtleLexer();
+            const parser = new TurtleParser();
+
+            // First parse: valid document WITH prefix definition
+            const doc1 = '@prefix foo: <http://example.org/foo#> .\nfoo:s foo:p foo:o .';
+            const lexResult1 = lexer.tokenize(doc1);
+            parser.parse(lexResult1.tokens, false);
+            expect(parser.semanticErrors.length).toBe(0);
+
+            // Second parse: document that USES the prefix but does NOT define it
+            const doc2 = 'foo:s foo:p foo:o .';
+            const lexResult2 = lexer.tokenize(doc2);
+            parser.parse(lexResult2.tokens, false);
+
+            // This SHOULD have semantic errors because 'foo' prefix is not defined in doc2
+            const undefinedPrefixErrors = parser.semanticErrors.filter(
+                (e: any) => e.name === 'UndefinedNamespacePrefixError'
+            );
+            expect(undefinedPrefixErrors.length).toBeGreaterThan(0);
+        });
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Error Collection Tests
     // ─────────────────────────────────────────────────────────────────────────
 

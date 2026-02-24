@@ -115,6 +115,7 @@ export class N3Parser extends CstParser implements IParser {
     parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
         this._throwOnErrors = throwOnErrors;
         this.semanticErrors = [];
+        this.namespaces = {};
         this.input = tokens;
 
         const cst = this.n3Doc();
