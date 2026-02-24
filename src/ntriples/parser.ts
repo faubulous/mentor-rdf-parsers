@@ -1,6 +1,6 @@
-import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
+import { Lexer, CstParser, IToken, CstNode, TokenType, IRecognitionException } from 'chevrotain';
 import { TOKENS } from '../tokens.js';
-import { IParser, ISemanticError } from '../syntax.js';
+import { IParser } from '../syntax.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
@@ -32,7 +32,7 @@ export class NTriplesLexer extends Lexer {
  * Base class for parsers of the N-Triples syntax.
  */
 export class NTriplesParserBase extends CstParser {
-    readonly semanticErrors: ISemanticError[] = [];
+    readonly semanticErrors: IRecognitionException[] = [];
     
     constructor(tokenVocabulary: TokenType[] = allTokens, config?: object) {
         super(tokenVocabulary, config);

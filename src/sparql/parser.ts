@@ -1,6 +1,6 @@
-import { Lexer, CstParser, IToken, CstNode, TokenType, ILexingResult } from 'chevrotain';
+import { Lexer, CstParser, IToken, CstNode, TokenType, ILexingResult, IRecognitionException } from 'chevrotain';
 import { TOKENS } from '../tokens.js';
-import { IParser, ISemanticError } from '../syntax.js';
+import { IParser } from '../syntax.js';
 
 /**
  * SPARQL 1.2 Parser
@@ -445,7 +445,7 @@ export class SparqlParser extends CstParser implements IParser {
     /**
      * Semantic errors collected during parsing (e.g., UndefinedNamespacePrefixError).
      */
-    semanticErrors: any[] = [];
+    semanticErrors: IRecognitionException[] = [];
 
     constructor() {
         super(allTokens, {
@@ -3075,7 +3075,7 @@ export class SparqlParser extends CstParser implements IParser {
                 if (this._throwOnErrors) {
                     throw error;
                 } else {
-                    this.semanticErrors.push(error);
+                    this.semanticErrors.push(error as IRecognitionException);
                 }
             }
         }

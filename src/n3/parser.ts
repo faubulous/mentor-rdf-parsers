@@ -1,6 +1,6 @@
-import { Lexer, CstParser, IToken, CstNode, TokenType } from 'chevrotain';
+import { Lexer, CstParser, IToken, CstNode, TokenType, IRecognitionException } from 'chevrotain';
 import { TOKENS } from '../tokens.js';
-import { IParser, ISemanticError } from '../syntax.js';
+import { IParser } from '../syntax.js';
 
 // N3 token order - note that longer/more specific patterns must come before shorter ones
 const allTokens: TokenType[] = [
@@ -89,7 +89,7 @@ export class N3Parser extends CstParser implements IParser {
     /**
      * Semantic errors collected during parsing (e.g., UndefinedNamespacePrefixError).
      */
-    semanticErrors: ISemanticError[] = [];
+    semanticErrors: IRecognitionException[] = [];
 
     constructor() {
         super(allTokens, {
@@ -494,7 +494,7 @@ export class N3Parser extends CstParser implements IParser {
                     if (this._throwOnErrors) {
                         throw error;
                     } else {
-                        this.semanticErrors.push(error as ISemanticError);
+                        this.semanticErrors.push(error as IRecognitionException);
                     }
                 }
             }
