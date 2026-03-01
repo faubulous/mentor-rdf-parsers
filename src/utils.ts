@@ -1,5 +1,65 @@
 import { IToken } from "chevrotain";
-import { TOKENS } from "./index.js";
+import { TOKENS } from "./tokens.js";
+
+/**
+ * Token names that can generate blank nodes during parsing.
+ * These tokens will receive pre-assigned blank node IDs.
+ */
+export const BLANK_NODE_TOKEN_NAMES = new Set([
+    'LBRACKET',      // Blank node property lists and anonymous blank nodes
+    'LPARENT',       // Collections (list head)
+    'OPEN_ANNOTATION', // Annotation blocks {| ... |}
+    'TILDE',         // Anonymous reifier marker ~
+    'OPEN_REIFIED_TRIPLE', // Anonymous reified triples <<
+    'LCURLY',        // Formulas in N3 syntax { ... }
+]);
+
+/**
+ * A function that generates a blank node ID.
+ * @param counter The current counter value (incremented for each call).
+ * @param token The token for which the ID is being generated.
+ * @returns The blank node ID string (without the _: prefix).
+ */
+export type BlankNodeIdGenerator = (counter: number, token: IToken) => string;
+
+/**
+ * The default blank node ID generator.
+ * Generates IDs in the format 'b0', 'b1', 'b2', etc.
+ */
+export const defaultBlankNodeIdGenerator: BlankNodeIdGenerator = (counter: number) => `b${counter}`;
+
+/**
+ * Assigns pre-generated blank node IDs to tokens that can generate blank nodes.
+ * The IDs are stored in the token's payload field as { blankNodeId: string }.
+ * 
+ * @param tokens The array of tokens to process.
+ * @param generator Optional custom ID generator function. Defaults to generating 'b0', 'b1', etc.
+ * @returns The same array of tokens with blank node IDs assigned.
+ */
+export function assignBlankNodeIds(
+    tokens: IToken[],
+    generator: BlankNodeIdGenerator = defaultBlankNodeIdGenerator
+): IToken[] {
+    let counter = 0;
+
+    for (const token of tokens) {
+        if (BLANK_NODE_TOKEN_NAMES.has(token.tokenType.name)) {
+            const id = generator(counter++, token);
+            token.payload = { ...token.payload, blankNodeId: id };
+        }
+    }
+
+    return tokens;
+}
+
+/**
+ * Gets the pre-assigned blank node ID from a token's payload.
+ * @param token The token to get the ID from.
+ * @returns The blank node ID string, or undefined if not assigned.
+ */
+export function getBlankNodeIdFromToken(token: IToken): string | undefined {
+    return token.payload?.blankNodeId;
+}
 
 /**
  * Get the next token.

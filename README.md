@@ -42,6 +42,18 @@ The parsers produce Chevrotain CST nodes, giving you full access to every token 
 
 Reader classes traverse the CST and produce [RDF/JS](https://rdf.js.org/data-model-spec/)-compliant Quad objects (via `@rdfjs/data-model`). Available for N-Triples, N-Quads, Turtle, and N3.
 
+### Blank Node ID Pre-assignment
+
+All lexers automatically assign stable identifiers to tokens that produce blank nodes during parsing. This enables mapping blank node identifiers back to their source positions in the document — essential for IDE features like "go to definition" and symbol tracking, even for documents that don't produce triples (like SPARQL queries).
+
+Blank node IDs are assigned to:
+- `LBRACKET` (`[`) — anonymous blank nodes
+- `LPARENT` (`(`) — collection heads
+- `OPEN_REIFIED_TRIPLE` (`<<`) — anonymous reifiers
+- `OPEN_ANNOTATION` (`{|`) — annotation blank nodes
+- `LCURLY` (`{`) — N3 formulas
+- `TILDE` (`~`) — N3 quick variables
+
 ## Installation
 
 ```bash
@@ -158,6 +170,62 @@ const input = `
 const lexResult = new TrigLexer().tokenize(input);
 const cst = new TrigParser().parse(lexResult.tokens);
 const quads = new TrigReader().visit(cst);
+```
+
+### Blank Node ID Pre-assignment
+
+Lexers automatically assign stable IDs to blank node-producing tokens, stored in `token.payload.blankNodeId`. These IDs are used by readers when creating blank nodes in the resulting quads.
+
+```typescript
+import { TurtleLexer, TurtleParser, TurtleReader, getBlankNodeIdFromToken } from '@faubulous/mentor-rdf-parsers';
+
+const input = `
+  @prefix ex: <http://example.org/> .
+  [ ex:name "Alice" ] ex:knows [ ex:name "Bob" ] .
+`;
+
+// Lexer assigns IDs to LBRACKET tokens
+const lexer = new TurtleLexer();
+const lexResult = lexer.tokenize(input);
+
+// Find blank node tokens and their pre-assigned IDs
+const blankNodeTokens = lexResult.tokens.filter(t => t.tokenType.name === 'LBRACKET');
+for (const token of blankNodeTokens) {
+    console.log(`Token at offset ${token.startOffset}: ${getBlankNodeIdFromToken(token)}`);
+    // Output: "Token at offset 37: _:b0"
+    //         "Token at offset 62: _:b1"
+}
+
+// Reader uses these pre-assigned IDs
+const cst = new TurtleParser().parse(lexResult.tokens);
+const quads = new TurtleReader().visit(cst);
+
+// Blank nodes in quads match the token IDs
+const firstBlankNode = quads[0].subject;
+console.log(firstBlankNode.value); // "b0"
+```
+
+#### Custom ID Generator
+
+You can provide a custom ID generator function to the lexer:
+
+```typescript
+import { TurtleLexer } from '@faubulous/mentor-rdf-parsers';
+
+// Custom format: "node-0", "node-1", etc.
+const lexer = new TurtleLexer((counter) => `node-${counter}`);
+const lexResult = lexer.tokenize('[] a <http://example.org/Thing> .');
+
+// First blank node token gets ID "node-0"
+```
+
+#### Disabling ID Assignment
+
+Pass `null` to disable automatic ID assignment:
+
+```typescript
+const lexer = new TurtleLexer(null);
+// Tokens will not have blankNodeId in their payload
 ```
 
 ## Error Handling
@@ -325,7 +393,7 @@ try {
 npm test
 ```
 
-The test suite includes over 1,200 tests covering all supported languages, including the official W3C conformance test suites.
+The test suite includes over 1,500 tests covering all supported languages, including the official W3C conformance test suites.
 
 ## License
 

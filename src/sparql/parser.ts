@@ -1,6 +1,7 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType, ILexingResult, IRecognitionException } from 'chevrotain';
 import { TOKENS } from '../tokens.js';
-import { IParser } from '../syntax.js';
+import { IParser, ILexer } from '../syntax.js';
+import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
 /**
  * SPARQL 1.2 Parser
@@ -261,9 +262,17 @@ export function resolveCodepointEscapes(input: string): string {
 /**
  * A SPARQL 1.2 compliant lexer.
  */
-export class SparqlLexer extends Lexer {
-    constructor() {
+export class SparqlLexer extends Lexer implements ILexer {
+    /**
+     * Optional blank node ID generator function.
+     * When set or undefined, the lexer will automatically assign blank node IDs to tokens.
+     * Set to null to disable automatic blank node ID assignment.
+     */
+    blankNodeIdGenerator?: BlankNodeIdGenerator | null;
+
+    constructor(blankNodeIdGenerator?: BlankNodeIdGenerator | null) {
         super(allTokens);
+        this.blankNodeIdGenerator = blankNodeIdGenerator;
     }
 
     override tokenize(text: string, initialMode?: string): ILexingResult {
@@ -272,7 +281,14 @@ export class SparqlLexer extends Lexer {
         // https://www.w3.org/TR/sparql12-query/#codepointEscape
         const resolvedText = resolveCodepointEscapes(text);
 
-        return super.tokenize(resolvedText, initialMode);
+        const result = super.tokenize(resolvedText, initialMode);
+
+        // Unless explicitly disabled (null), assign blank node IDs
+        if (this.blankNodeIdGenerator !== null) {
+            assignBlankNodeIds(result.tokens, this.blankNodeIdGenerator ?? defaultBlankNodeIdGenerator);
+        }
+
+        return result;
     }
 }
 

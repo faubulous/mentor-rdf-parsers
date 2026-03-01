@@ -1,6 +1,7 @@
-import { Lexer, CstParser, IToken, CstNode, TokenType, IRecognitionException } from 'chevrotain';
+import { Lexer, CstParser, IToken, CstNode, TokenType, IRecognitionException, ILexingResult } from 'chevrotain';
 import { TOKENS } from '../tokens.js';
-import { IParser } from '../syntax.js';
+import { IParser, ILexer } from '../syntax.js';
+import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
@@ -22,9 +23,31 @@ const allTokens: TokenType[] = [
 /**
  * A W3C compliant lexer for the N-Triples syntax.
  */
-export class NTriplesLexer extends Lexer {
-    constructor() {
+export class NTriplesLexer extends Lexer implements ILexer {
+    /**
+     * Optional blank node ID generator function.
+     * When set or undefined, the lexer will automatically assign blank node IDs to tokens.
+     * Set to null to disable automatic blank node ID assignment.
+     */
+    blankNodeIdGenerator?: BlankNodeIdGenerator | null;
+
+    constructor(blankNodeIdGenerator?: BlankNodeIdGenerator | null) {
         super(allTokens);
+        this.blankNodeIdGenerator = blankNodeIdGenerator;
+    }
+
+    /**
+     * Tokenizes a string input and optionally assigns blank node IDs to relevant tokens.
+     */
+    tokenize(text: string, initialMode?: string): ILexingResult {
+        const result = super.tokenize(text, initialMode);
+
+        // Unless explicitly disabled (null), assign blank node IDs
+        if (this.blankNodeIdGenerator !== null) {
+            assignBlankNodeIds(result.tokens, this.blankNodeIdGenerator ?? defaultBlankNodeIdGenerator);
+        }
+
+        return result;
     }
 }
 

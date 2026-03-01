@@ -1,6 +1,7 @@
 import { IToken } from 'chevrotain';
 import { TurtleLexer } from './turtle/parser.js';
 import { SparqlLexer } from './sparql/parser.js';
+import { N3Lexer } from './n3/parser.js';
 import {
     getNextToken,
     getPreviousToken,
@@ -9,7 +10,9 @@ import {
     getTokenAtOffset,
     isVariableToken,
     isUpperCaseToken,
-    getPrefixFromToken
+    getPrefixFromToken,
+    getBlankNodeIdFromToken,
+    BLANK_NODE_TOKEN_NAMES
 } from './utils.js';
 
 describe('Utils', () => {
@@ -310,6 +313,130 @@ describe('Utils', () => {
             const pnameLn = tokens.find(t => t.tokenType.name === 'PNAME_LN');
             expect(pnameLn).toBeDefined();
             expect(getPrefixFromToken(pnameLn!)).toBe('schema-org');
+        });
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Blank Node ID Assignment Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    describe('assignBlankNodeIds', () => {
+        it('assigns IDs to LBRACKET tokens for anonymous blank nodes', () => {
+            const tokens = tokenize('[] a <http://example.org/Thing> .');
+            // Tokens should already have IDs assigned by lexer
+            const lbracket = tokens.find(t => t.tokenType.name === 'LBRACKET');
+            expect(lbracket).toBeDefined();
+            expect(getBlankNodeIdFromToken(lbracket!)).toBe('b0');
+        });
+
+        it('assigns IDs to LPARENT tokens for collections', () => {
+            const tokens = tokenize('<http://example.org/s> <http://example.org/p> (1 2 3) .');
+            const lparent = tokens.find(t => t.tokenType.name === 'LPARENT');
+            expect(lparent).toBeDefined();
+            expect(getBlankNodeIdFromToken(lparent!)).toBe('b0');
+        });
+
+        it('assigns sequential IDs to multiple blank node tokens', () => {
+            const tokens = tokenize('[ a <http://example.org/A> ] [ a <http://example.org/B> ] .');
+            const lbrackets = tokens.filter(t => t.tokenType.name === 'LBRACKET');
+            expect(lbrackets).toHaveLength(2);
+            expect(getBlankNodeIdFromToken(lbrackets[0])).toBe('b0');
+            expect(getBlankNodeIdFromToken(lbrackets[1])).toBe('b1');
+        });
+
+        it('assigns IDs to blank nodes in nested structures', () => {
+            const tokens = tokenize('[ <http://example.org/p> (1 [ <http://example.org/q> 2 ] 3) ] .');
+            const lbrackets = tokens.filter(t => t.tokenType.name === 'LBRACKET');
+            const lparents = tokens.filter(t => t.tokenType.name === 'LPARENT');
+            expect(lbrackets).toHaveLength(2);
+            expect(lparents).toHaveLength(1);
+            // The IDs should be sequential based on document order
+            const allBlankNodeTokens = tokens.filter(t => BLANK_NODE_TOKEN_NAMES.has(t.tokenType.name));
+            expect(allBlankNodeTokens.map(t => getBlankNodeIdFromToken(t))).toEqual(['b0', 'b1', 'b2']);
+        });
+
+        it('does not assign IDs to non-blank-node tokens', () => {
+            const tokens = tokenize('<http://example.org/s> <http://example.org/p> <http://example.org/o> .');
+            const hasBlankNodeId = tokens.some(t => getBlankNodeIdFromToken(t) !== undefined);
+            expect(hasBlankNodeId).toBe(false);
+        });
+
+        it('supports custom ID generator function', () => {
+            const lexer = new TurtleLexer((counter) => `custom-${counter}`);
+            const result = lexer.tokenize('[] a <http://example.org/Thing> .');
+            const lbracket = result.tokens.find(t => t.tokenType.name === 'LBRACKET');
+            expect(getBlankNodeIdFromToken(lbracket!)).toBe('custom-0');
+        });
+
+        it('can disable ID assignment with null generator', () => {
+            const lexer = new TurtleLexer(null);
+            const result = lexer.tokenize('[] a <http://example.org/Thing> .');
+            const lbracket = result.tokens.find(t => t.tokenType.name === 'LBRACKET');
+            expect(getBlankNodeIdFromToken(lbracket!)).toBeUndefined();
+        });
+    });
+
+    describe('getBlankNodeIdFromToken', () => {
+        it('returns undefined for tokens without blank node IDs', () => {
+            const tokens = tokenize('<http://example.org/s>');
+            expect(getBlankNodeIdFromToken(tokens[0])).toBeUndefined();
+        });
+
+        it('returns the blank node ID from token payload', () => {
+            const token: IToken = {
+                tokenType: { name: 'TEST' } as any,
+                image: 'test',
+                startOffset: 0,
+                endOffset: 3,
+                payload: { blankNodeId: '_:test123' }
+            } as IToken;
+            expect(getBlankNodeIdFromToken(token)).toBe('_:test123');
+        });
+    });
+
+    describe('SPARQL blank node ID assignment', () => {
+        it('assigns IDs to LBRACKET tokens in SPARQL queries', () => {
+            const sparqlLexer = new SparqlLexer();
+            const result = sparqlLexer.tokenize('SELECT * WHERE { [] a ?type }');
+            const lbracket = result.tokens.find(t => t.tokenType.name === 'LBRACKET');
+            expect(lbracket).toBeDefined();
+            // Note: LCURLY also gets an ID (b0) because it's in BLANK_NODE_TOKEN_NAMES
+            // for N3 formula support, so LBRACKET gets b1
+            const id = getBlankNodeIdFromToken(lbracket!);
+            expect(id).toBeDefined();
+            expect(id?.startsWith('b')).toBe(true);
+        });
+
+        it('assigns IDs to multiple blank node tokens in SPARQL', () => {
+            const sparqlLexer = new SparqlLexer();
+            const result = sparqlLexer.tokenize('SELECT * WHERE { [ a ?type ] . [ a ?other ] }');
+            const lbrackets = result.tokens.filter(t => t.tokenType.name === 'LBRACKET');
+            expect(lbrackets).toHaveLength(2);
+            // Both LBRACKET tokens should have sequential IDs
+            const id0 = getBlankNodeIdFromToken(lbrackets[0]);
+            const id1 = getBlankNodeIdFromToken(lbrackets[1]);
+            expect(id0).toBeDefined();
+            expect(id1).toBeDefined();
+            expect(id0).not.toBe(id1);
+        });
+    });
+
+    describe('N3 blank node ID assignment', () => {
+        it('assigns IDs to LCURLY tokens for formulas', () => {
+            const lexer = new N3Lexer();
+            const result = lexer.tokenize('{ <http://example.org/s> <http://example.org/p> <http://example.org/o> }');
+            const lcurly = result.tokens.find(t => t.tokenType.name === 'LCURLY');
+            expect(lcurly).toBeDefined();
+            expect(getBlankNodeIdFromToken(lcurly!)).toBe('b0');
+        });
+
+        it('assigns sequential IDs to nested formulas', () => {
+            const lexer = new N3Lexer();
+            const result = lexer.tokenize('{ { <http://example.org/s> <http://example.org/p> <http://example.org/o> } a <http://example.org/Formula> }');
+            const lcurlys = result.tokens.filter(t => t.tokenType.name === 'LCURLY');
+            expect(lcurlys).toHaveLength(2);
+            expect(getBlankNodeIdFromToken(lcurlys[0])).toBe('b0');
+            expect(getBlankNodeIdFromToken(lcurlys[1])).toBe('b1');
         });
     });
 });

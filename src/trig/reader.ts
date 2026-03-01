@@ -4,6 +4,7 @@ import type { Quad, NamedNode, BlankNode, Literal, Term, DefaultGraph } from '@r
 import type { CstNode, IToken } from 'chevrotain';
 import { TrigParser } from './parser.js';
 import type { QuadInfo, TermToken } from '../types.js';
+import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new TrigParser().getBaseCstVisitorConstructor();
 
@@ -586,8 +587,10 @@ export class TrigReader extends BaseVisitor {
         } else if (context.anon) {
             const anonCtx = context.anon[0];
             const token = this.findFirstToken(anonCtx);
+            // Use pre-assigned ID from LBRACKET token
+            const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
             return {
-                term: dataFactory.blankNode(),
+                term: dataFactory.blankNode(blankNodeId),
                 token: token!
             };
         }
@@ -600,7 +603,9 @@ export class TrigReader extends BaseVisitor {
     protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): TermToken {
         const context = this.getChildren(ctx);
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
-        const subject = dataFactory.blankNode();
+        // Use pre-assigned ID from LBRACKET token
+        const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
+        const subject = dataFactory.blankNode(blankNodeId);
         const subjectToken: TermToken = { term: subject, token };
 
         if (context.predicateObjectList) {
@@ -718,7 +723,9 @@ export class TrigReader extends BaseVisitor {
             return { term: nil, token };
         }
 
-        let head = dataFactory.blankNode();
+        // Use pre-assigned ID from LPARENT token for the head blank node
+        const baseId = token ? getBlankNodeIdFromToken(token) : undefined;
+        let head = dataFactory.blankNode(baseId);
         let current = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
@@ -728,7 +735,9 @@ export class TrigReader extends BaseVisitor {
             this._emitQuad(quads, current, first, element);
 
             if (i < objectNodes.length - 1) {
-                const next = dataFactory.blankNode();
+                // Derive rest node IDs from base ID
+                const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
+                const next = dataFactory.blankNode(restId);
                 this._emitQuad(quads, current, rest, next);
                 current = next;
             } else {
@@ -771,7 +780,10 @@ export class TrigReader extends BaseVisitor {
         if (context.reifier) {
             reifierNode = this.visit(context.reifier[0] as any) as NamedNode | BlankNode;
         } else {
-            reifierNode = dataFactory.blankNode();
+            // Use pre-assigned ID from OPEN_REIFIED_TRIPLE token for anonymous reifier
+            const openReifiedTripleToken = context.OPEN_REIFIED_TRIPLE?.[0];
+            const blankNodeId = openReifiedTripleToken ? getBlankNodeIdFromToken(openReifiedTripleToken) : undefined;
+            reifierNode = dataFactory.blankNode(blankNodeId);
         }
 
         const tripleTerm = dataFactory.quad(subject, predicate, object);
@@ -1124,7 +1136,10 @@ export class TrigReader extends BaseVisitor {
             return nil;
         }
 
-        let head = dataFactory.blankNode();
+        // Use pre-assigned ID from LPARENT token for the head blank node
+        const lparentToken = ctx.LPARENT?.[0];
+        const baseId = lparentToken ? getBlankNodeIdFromToken(lparentToken) : undefined;
+        let head = dataFactory.blankNode(baseId);
         let current = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
@@ -1134,7 +1149,9 @@ export class TrigReader extends BaseVisitor {
             this._emitQuad(quads, current, first, element);
 
             if (i < objectNodes.length - 1) {
-                const next = dataFactory.blankNode();
+                // Derive rest node IDs from base ID
+                const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
+                const next = dataFactory.blankNode(restId);
 
                 this._emitQuad(quads, current, rest, next);
 
@@ -1250,7 +1267,10 @@ export class TrigReader extends BaseVisitor {
     }
 
     anon(ctx: CstContext): BlankNode {
-        return dataFactory.blankNode();
+        // Use pre-assigned ID from LBRACKET token
+        const lbracketToken = ctx.LBRACKET?.[0];
+        const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
+        return dataFactory.blankNode(blankNodeId);
     }
 
     numericLiteral(ctx: CstContext): Literal {
@@ -1385,7 +1405,10 @@ export class TrigReader extends BaseVisitor {
         if (ctx.reifier) {
             reifierNode = this.visit(ctx.reifier[0] as any) as NamedNode | BlankNode;
         } else {
-            reifierNode = dataFactory.blankNode();
+            // Use pre-assigned ID from OPEN_REIFIED_TRIPLE token for anonymous reifier
+            const openReifiedTripleToken = ctx.OPEN_REIFIED_TRIPLE?.[0];
+            const blankNodeId = openReifiedTripleToken ? getBlankNodeIdFromToken(openReifiedTripleToken) : undefined;
+            reifierNode = dataFactory.blankNode(blankNodeId);
         }
 
         const tripleTerm = dataFactory.quad(subject, predicate, object);
@@ -1453,7 +1476,10 @@ export class TrigReader extends BaseVisitor {
         } else if (ctx.blankNode) {
             return this.visit(ctx.blankNode[0] as any) as BlankNode;
         } else {
-            return dataFactory.blankNode();
+            // Use pre-assigned ID from TILDE token for anonymous reifier
+            const tildeToken = ctx.TILDE?.[0];
+            const blankNodeId = tildeToken ? getBlankNodeIdFromToken(tildeToken) : undefined;
+            return dataFactory.blankNode(blankNodeId);
         }
     }
 
@@ -1529,7 +1555,11 @@ export class TrigReader extends BaseVisitor {
                     reifierTerm = lastReifier;
                     lastReifier = null;
                 } else {
-                    reifierTerm = dataFactory.blankNode();
+                    // Use pre-assigned ID from OPEN_ANNOTATION token for anonymous reifier
+                    const annotationBlockContext = item.ctx?.children;
+                    const openAnnotationToken = annotationBlockContext?.OPEN_ANNOTATION?.[0];
+                    const blankNodeId = openAnnotationToken ? getBlankNodeIdFromToken(openAnnotationToken) : undefined;
+                    reifierTerm = dataFactory.blankNode(blankNodeId);
                     this._emitQuad(quads, reifierTerm, rdfReifies, tripleTerm);
                 }
 
@@ -1578,7 +1608,10 @@ export class TrigReader extends BaseVisitor {
 
             return dataFactory.blankNode(value);
         } else {
-            return dataFactory.blankNode();
+            // Use pre-assigned ID from LBRACKET token
+            const lbracketToken = ctx.LBRACKET?.[0];
+            const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
+            return dataFactory.blankNode(blankNodeId);
         }
     }
 }

@@ -1,4 +1,5 @@
 import { CstNode, ILexingResult, IRecognitionException, IToken } from "chevrotain";
+import { BlankNodeIdGenerator } from "./utils.js";
 
 /**
  * Enumerates the RDF syntaxes supported by the Mentor RDF Parsers library.
@@ -20,9 +21,21 @@ export enum RdfSyntax {
  */
 export interface ILexer {
     /**
+     * Optional blank node ID generator function.
+     * When set, the lexer will automatically assign blank node IDs to tokens
+     * that can generate blank nodes (LBRACKET, LPARENT, OPEN_ANNOTATION, TILDE).
+     * When undefined, blank node IDs will be automatically assigned using the default generator.
+     * Set to null to disable automatic blank node ID assignment.
+     */
+    blankNodeIdGenerator?: BlankNodeIdGenerator | null;
+
+    /**
      * Tokenizes a string input according to the lexer's defined tokens and modes, returning an object 
      * containing the resulting tokens and any lexing errors. Note that this can be called repeatedly 
      * on different strings as this method does not modify the state of the Lexer.
+     * 
+     * When blankNodeIdGenerator is set (or undefined for default), tokens that can generate blank nodes
+     * will have pre-assigned IDs stored in their payload.blankNodeId field.
      *
      * @param text - The string to lex
      * @param [initialMode] - The initial Lexer Mode to start with, by default this will be 

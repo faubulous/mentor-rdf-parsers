@@ -734,3 +734,93 @@ ex:s ex:p ex:o1, ex:o2 .`;
         expect(infos[0].object.token.image).toBe('<http://example.org/o>');
     });
 });
+describe("TurtleReader - Blank Node ID Pre-assignment", () => {
+    it('anonymous blank nodes use pre-assigned IDs from token payload', () => {
+        const input = `@prefix ex: <http://example.org/> .
+[ ex:prop "value" ] .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        // Find the blank node subject
+        const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
+        expect(blankNodeInfo).toBeDefined();
+        
+        // The blank node ID should match the pre-assigned ID from the LBRACKET token
+        const lbracketToken = lexResult.tokens.find(t => t.tokenType.name === 'LBRACKET');
+        expect(lbracketToken).toBeDefined();
+        expect(lbracketToken!.payload?.blankNodeId).toBeDefined();
+        expect(blankNodeInfo!.subject.term.value).toBe(lbracketToken!.payload.blankNodeId);
+    });
+
+    it('collection blank node IDs are derived from LPARENT token payload', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:s ex:p (1 2) .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const quads = reader.visit(cst);
+        
+        // Find the LPARENT token
+        const lparentToken = lexResult.tokens.find(t => t.tokenType.name === 'LPARENT');
+        expect(lparentToken).toBeDefined();
+        expect(lparentToken!.payload?.blankNodeId).toBeDefined();
+        
+        // The first blank node in the collection should use the pre-assigned ID
+        const collectionHead = quads.find(q =>
+            q.predicate.value === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#first'
+        )?.subject;
+        expect(collectionHead).toBeDefined();
+        expect(collectionHead!.termType).toBe('BlankNode');
+        expect(collectionHead!.value).toBe(lparentToken!.payload.blankNodeId);
+    });
+
+    it('multiple anonymous blank nodes get distinct IDs from tokens', () => {
+        const input = `@prefix ex: <http://example.org/> .
+[ ex:p1 "a" ] . [ ex:p2 "b" ] .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        // Get all the LBRACKET tokens
+        const lbracketTokens = lexResult.tokens.filter(t => t.tokenType.name === 'LBRACKET');
+        expect(lbracketTokens).toHaveLength(2);
+        
+        // Find the blank node subjects
+        const blankNodeInfos = infos.filter(i => i.subject.term.termType === 'BlankNode');
+        const blankNodeValues = new Set(blankNodeInfos.map(i => i.subject.term.value));
+        
+        // Should have 2 distinct blank node IDs
+        expect(blankNodeValues.size).toBe(2);
+        
+        // All blank node IDs should match their corresponding token payloads
+        for (const lbracket of lbracketTokens) {
+            expect(lbracket.payload?.blankNodeId).toBeDefined();
+            expect(blankNodeValues.has(lbracket.payload.blankNodeId)).toBe(true);
+        }
+    });
+
+    it('custom ID generator affects blank node values', () => {
+        const input = `@prefix ex: <http://example.org/> .
+[ ex:prop "value" ] .`;
+        
+        // Use custom ID generator
+        const lexer = new TurtleLexer((counter) => `my-custom-${counter}`);
+        const lexResult = lexer.tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfo(cst);
+        
+        // Find the blank node subject
+        const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
+        expect(blankNodeInfo).toBeDefined();
+        
+        // The blank node ID should use the custom format
+        expect(blankNodeInfo!.subject.term.value).toBe('my-custom-0');
+    });
+});

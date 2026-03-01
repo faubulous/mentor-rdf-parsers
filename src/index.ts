@@ -7,7 +7,12 @@ export {
     getLastTokenOfType,
     getTokenAtOffset,
     isVariableToken,
-    isUpperCaseToken
+    isUpperCaseToken,
+    assignBlankNodeIds,
+    getBlankNodeIdFromToken,
+    defaultBlankNodeIdGenerator,
+    BLANK_NODE_TOKEN_NAMES,
+    type BlankNodeIdGenerator,
 } from './utils.js';
 export { RdfSyntax, IParser, ILexer } from './syntax.js';
 export { N3Lexer, N3Parser } from './n3/parser.js';

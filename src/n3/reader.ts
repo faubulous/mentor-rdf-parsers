@@ -4,6 +4,7 @@ import type { Quad, NamedNode, BlankNode, Literal, Term, Variable } from '@rdfjs
 import type { CstNode, IToken } from 'chevrotain';
 import { N3Parser } from './parser.js';
 import type { QuadInfo, TermToken } from '../types.js';
+import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new N3Parser().getBaseCstVisitorConstructor();
 
@@ -507,8 +508,10 @@ export class N3Reader extends BaseVisitor {
         } else if (context.anon) {
             const anonCtx = context.anon[0];
             const token = this.findFirstToken(anonCtx);
+            // Use pre-assigned ID from LBRACKET token
+            const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
             return {
-                term: dataFactory.blankNode(),
+                term: dataFactory.blankNode(blankNodeId),
                 token: token!
             };
         }
@@ -521,7 +524,9 @@ export class N3Reader extends BaseVisitor {
     protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
         const context = this.getChildren(ctx);
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
-        const subject = dataFactory.blankNode();
+        // Use pre-assigned ID from LBRACKET token
+        const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
+        const subject = dataFactory.blankNode(blankNodeId);
         const subjectToken: TermToken = { term: subject, token };
 
         if (context.predicateObjectList) {
@@ -640,7 +645,9 @@ export class N3Reader extends BaseVisitor {
             return { term: RDF_NIL, token };
         }
 
-        let head = dataFactory.blankNode();
+        // Use pre-assigned ID from LPARENT token for the head blank node
+        const baseId = token ? getBlankNodeIdFromToken(token) : undefined;
+        let head = dataFactory.blankNode(baseId);
         let current: BlankNode = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
@@ -649,7 +656,9 @@ export class N3Reader extends BaseVisitor {
             quads.push(dataFactory.quad(current, RDF_FIRST, element as NamedNode | BlankNode | Literal));
 
             if (i < objectNodes.length - 1) {
-                const next = dataFactory.blankNode();
+                // Derive rest node IDs from base ID
+                const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
+                const next = dataFactory.blankNode(restId);
                 quads.push(dataFactory.quad(current, RDF_REST, next));
                 current = next;
             } else {
@@ -673,7 +682,9 @@ export class N3Reader extends BaseVisitor {
             this.formulaContentInfo(context.formulaContent[0], formulaQuads, infoResults);
         }
 
-        const graphNode = dataFactory.blankNode();
+        // Use pre-assigned ID from LCURLY token for formula blank node
+        const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
+        const graphNode = dataFactory.blankNode(blankNodeId);
 
         for (const q of formulaQuads) {
             parentQuads.push(dataFactory.quad(q.subject, q.predicate, q.object, graphNode));
@@ -972,7 +983,10 @@ export class N3Reader extends BaseVisitor {
 
         // In N3, a formula is a graph term represented as a blank node.
         // The triples within the formula belong to that graph.
-        const graphNode = dataFactory.blankNode();
+        // Use pre-assigned ID from LCURLY token for formula blank node
+        const lcurlyToken = ctx.LCURLY?.[0];
+        const blankNodeId = lcurlyToken ? getBlankNodeIdFromToken(lcurlyToken) : undefined;
+        const graphNode = dataFactory.blankNode(blankNodeId);
 
         // Push formula quads into the parent quads with the graph node
         for (const q of formulaQuads) {
@@ -1017,7 +1031,10 @@ export class N3Reader extends BaseVisitor {
             return RDF_NIL;
         }
 
-        let head = dataFactory.blankNode();
+        // Use pre-assigned ID from LPARENT token for the head blank node
+        const lparentToken = ctx.LPARENT?.[0];
+        const baseId = lparentToken ? getBlankNodeIdFromToken(lparentToken) : undefined;
+        let head = dataFactory.blankNode(baseId);
         let current: BlankNode = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
@@ -1026,7 +1043,9 @@ export class N3Reader extends BaseVisitor {
             quads.push(dataFactory.quad(current, RDF_FIRST, element as NamedNode | BlankNode | Literal));
 
             if (i < objectNodes.length - 1) {
-                const next = dataFactory.blankNode();
+                // Derive rest node IDs from base ID
+                const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
+                const next = dataFactory.blankNode(restId);
                 quads.push(dataFactory.quad(current, RDF_REST, next));
                 current = next;
             } else {
@@ -1040,7 +1059,10 @@ export class N3Reader extends BaseVisitor {
     // ── Blank Node Property List ───────────────────────────────────────────
 
     blankNodePropertyList(ctx: CstContext, quads: Quad[]): BlankNode {
-        const subject = dataFactory.blankNode();
+        // Use pre-assigned ID from LBRACKET token
+        const lbracketToken = ctx.LBRACKET?.[0];
+        const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
+        const subject = dataFactory.blankNode(blankNodeId);
 
         if (ctx.predicateObjectList) {
             for (const { predicate, object, inversePredicate } of this.visit(ctx.predicateObjectList[0], quads as any) as PredicateObjectResult[]) {
@@ -1104,7 +1126,10 @@ export class N3Reader extends BaseVisitor {
     }
 
     anon(ctx: CstContext): BlankNode {
-        return dataFactory.blankNode();
+        // Use pre-assigned ID from LBRACKET token
+        const lbracketToken = ctx.LBRACKET?.[0];
+        const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
+        return dataFactory.blankNode(blankNodeId);
     }
 
     // ── Literals ───────────────────────────────────────────────────────────
@@ -1240,7 +1265,10 @@ export class N3Reader extends BaseVisitor {
             const value = ctx.BLANK_NODE_LABEL[0].image;
             return dataFactory.blankNode(value);
         } else {
-            return dataFactory.blankNode();
+            // Use pre-assigned ID from LBRACKET token
+            const lbracketToken = ctx.LBRACKET?.[0];
+            const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
+            return dataFactory.blankNode(blankNodeId);
         }
     }
 }

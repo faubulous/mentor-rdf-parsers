@@ -4,6 +4,7 @@ import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TurtleParser } from './parser.js';
 import type { QuadInfo, TermToken } from '../types.js';
+import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new TurtleParser().getBaseCstVisitorConstructor();
 
@@ -397,7 +398,9 @@ export class TurtleReader extends BaseVisitor {
         const context = this.getChildren(ctx);
         // The LBRACKET token marks the start of this blank node
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
-        const subject = dataFactory.blankNode();
+        // Use pre-assigned ID from LBRACKET token payload if available
+        const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
+        const subject = dataFactory.blankNode(blankNodeId);
         const subjectToken: TermToken = { term: subject, token };
 
         if (context.predicateObjectList) {
@@ -511,7 +514,9 @@ export class TurtleReader extends BaseVisitor {
             return { term: nil, token };
         }
 
-        let head = dataFactory.blankNode();
+        // Use pre-assigned ID from LPARENT token for the head node
+        const headBlankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
+        let head = dataFactory.blankNode(headBlankNodeId);
         let current = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
@@ -564,7 +569,10 @@ export class TurtleReader extends BaseVisitor {
         if (context.reifier) {
             reifierNode = this.visit(context.reifier[0] as any) as NamedNode | BlankNode;
         } else {
-            reifierNode = dataFactory.blankNode();
+            // Use pre-assigned ID from OPEN_REIFIED_TRIPLE token for anonymous reifier
+            const openReifiedTripleToken = context.OPEN_REIFIED_TRIPLE?.[0];
+            const blankNodeId = openReifiedTripleToken ? getBlankNodeIdFromToken(openReifiedTripleToken) : undefined;
+            reifierNode = dataFactory.blankNode(blankNodeId);
         }
 
         const tripleTerm = dataFactory.quad(subject, predicate, object);
@@ -758,7 +766,10 @@ export class TurtleReader extends BaseVisitor {
             return nil;
         }
 
-        let head = dataFactory.blankNode();
+        // Use pre-assigned ID from LPARENT token for the head blank node
+        const lparentToken = ctx.LPARENT?.[0];
+        const baseId = lparentToken ? getBlankNodeIdFromToken(lparentToken) : undefined;
+        let head = dataFactory.blankNode(baseId);
         let current = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
@@ -769,7 +780,9 @@ export class TurtleReader extends BaseVisitor {
             quads.push(dataFactory.quad(current, first, element));
 
             if (i < objectNodes.length - 1) {
-                const next = dataFactory.blankNode();
+                // Derive rest node IDs from base ID
+                const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
+                const next = dataFactory.blankNode(restId);
 
                 quads.push(dataFactory.quad(current, rest, next));
 
@@ -889,7 +902,10 @@ export class TurtleReader extends BaseVisitor {
     }
 
     anon(ctx: CstContext): BlankNode {
-        return dataFactory.blankNode();
+        // Use pre-assigned ID from LBRACKET token
+        const lbracketToken = ctx.LBRACKET?.[0];
+        const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
+        return dataFactory.blankNode(blankNodeId);
     }
 
     numericLiteral(ctx: CstContext): Literal {
@@ -1112,7 +1128,10 @@ export class TurtleReader extends BaseVisitor {
         } else if (ctx.blankNode) {
             return this.visit(ctx.blankNode[0] as any) as BlankNode;
         } else {
-            return dataFactory.blankNode();
+            // Use pre-assigned ID from TILDE token for anonymous reifier
+            const tildeToken = ctx.TILDE?.[0];
+            const blankNodeId = tildeToken ? getBlankNodeIdFromToken(tildeToken) : undefined;
+            return dataFactory.blankNode(blankNodeId);
         }
     }
 
@@ -1263,7 +1282,10 @@ export class TurtleReader extends BaseVisitor {
 
             return dataFactory.blankNode(value);
         } else {
-            return dataFactory.blankNode();
+            // Use pre-assigned ID from LBRACKET token
+            const lbracketToken = ctx.LBRACKET?.[0];
+            const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
+            return dataFactory.blankNode(blankNodeId);
         }
     }
 }
