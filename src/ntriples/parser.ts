@@ -1,23 +1,23 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType, IRecognitionException, ILexingResult } from 'chevrotain';
-import { TOKENS } from '../tokens.js';
+import { DocumentToken } from '../tokens.js';
 import { IParser, ILexer } from '../syntax.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
-    TOKENS.WS,
-    TOKENS.PERIOD,
-    TOKENS.OPEN_TRIPLE_TERM,
-    TOKENS.CLOSE_TRIPLE_TERM,
-    TOKENS.OPEN_REIFIED_TRIPLE,
-    TOKENS.CLOSE_REIFIED_TRIPLE,
-    TOKENS.IRIREF_ABS,
-    TOKENS.BLANK_NODE_LABEL,
-    TOKENS.STRING_LITERAL_QUOTE,
-    TOKENS.DCARET,
-    TOKENS.LANGTAG,
-    TOKENS.SPARQL_VERSION,
-    TOKENS.COMMENT
+    DocumentToken.WS,
+    DocumentToken.PERIOD,
+    DocumentToken.OPEN_TRIPLE_TERM,
+    DocumentToken.CLOSE_TRIPLE_TERM,
+    DocumentToken.OPEN_REIFIED_TRIPLE,
+    DocumentToken.CLOSE_REIFIED_TRIPLE,
+    DocumentToken.IRIREF_ABS,
+    DocumentToken.BLANK_NODE_LABEL,
+    DocumentToken.STRING_LITERAL_QUOTE,
+    DocumentToken.DCARET,
+    DocumentToken.LANGTAG,
+    DocumentToken.SPARQL_VERSION,
+    DocumentToken.COMMENT
 ];
 
 /**
@@ -66,8 +66,8 @@ export class NTriplesParserBase extends CstParser {
     */
     subject = this.RULE('subject', () => {
         this.OR([
-            { ALT: () => this.CONSUME(TOKENS.IRIREF_ABS) },
-            { ALT: () => this.CONSUME(TOKENS.BLANK_NODE_LABEL) }
+            { ALT: () => this.CONSUME(DocumentToken.IRIREF_ABS) },
+            { ALT: () => this.CONSUME(DocumentToken.BLANK_NODE_LABEL) }
         ]);
     });
 
@@ -75,7 +75,7 @@ export class NTriplesParserBase extends CstParser {
      * https://www.w3.org/TR/n-triples/#grammar-production-predicate
      */
     predicate = this.RULE('predicate', () => {
-        this.CONSUME(TOKENS.IRIREF_ABS);
+        this.CONSUME(DocumentToken.IRIREF_ABS);
     });
 
     /**
@@ -83,8 +83,8 @@ export class NTriplesParserBase extends CstParser {
      */
     object = this.RULE('object', () => {
         this.OR([
-            { ALT: () => this.CONSUME(TOKENS.IRIREF_ABS) },
-            { ALT: () => this.CONSUME(TOKENS.BLANK_NODE_LABEL) },
+            { ALT: () => this.CONSUME(DocumentToken.IRIREF_ABS) },
+            { ALT: () => this.CONSUME(DocumentToken.BLANK_NODE_LABEL) },
             { ALT: () => this.SUBRULE(this.literal) },
             { ALT: () => this.SUBRULE(this.tripleTerm) },
         ]);
@@ -94,18 +94,18 @@ export class NTriplesParserBase extends CstParser {
      * https://www.w3.org/TR/rdf12-n-triples/#grammar-production-literal
      */
     literal = this.RULE('literal', () => {
-        this.CONSUME(TOKENS.STRING_LITERAL_QUOTE);
+        this.CONSUME(DocumentToken.STRING_LITERAL_QUOTE);
         this.OPTION(() => {
             this.OR([
                 { ALT: () => this.SUBRULE(this.datatype) },
-                { ALT: () => this.CONSUME(TOKENS.LANGTAG) }
+                { ALT: () => this.CONSUME(DocumentToken.LANGTAG) }
             ]);
         });
     });
 
     datatype = this.RULE('datatype', () => {
-        this.CONSUME(TOKENS.DCARET);
-        this.CONSUME(TOKENS.IRIREF_ABS);
+        this.CONSUME(DocumentToken.DCARET);
+        this.CONSUME(DocumentToken.IRIREF_ABS);
     });
 
     /**
@@ -113,11 +113,11 @@ export class NTriplesParserBase extends CstParser {
      * tripleTerm ::= '<<(' subject predicate object ')>>'
      */
     tripleTerm = this.RULE('tripleTerm', () => {
-        this.CONSUME(TOKENS.OPEN_TRIPLE_TERM);
+        this.CONSUME(DocumentToken.OPEN_TRIPLE_TERM);
         this.SUBRULE(this.subject);
         this.SUBRULE(this.predicate);
         this.SUBRULE(this.object);
-        this.CONSUME(TOKENS.CLOSE_TRIPLE_TERM);
+        this.CONSUME(DocumentToken.CLOSE_TRIPLE_TERM);
     });
 }
 
@@ -169,7 +169,7 @@ export class NTriplesParser extends NTriplesParserBase implements IParser {
         this.SUBRULE(this.subject);
         this.SUBRULE1(this.predicate);
         this.SUBRULE2(this.object);
-        this.CONSUME(TOKENS.PERIOD);
+        this.CONSUME(DocumentToken.PERIOD);
     });
 
     /**
@@ -177,7 +177,7 @@ export class NTriplesParser extends NTriplesParserBase implements IParser {
      * versionDirective ::= 'VERSION' versionSpecifier
      */
     versionDirective = this.RULE('versionDirective', () => {
-        this.CONSUME(TOKENS.SPARQL_VERSION);
-        this.CONSUME(TOKENS.STRING_LITERAL_QUOTE);
+        this.CONSUME(DocumentToken.SPARQL_VERSION);
+        this.CONSUME(DocumentToken.STRING_LITERAL_QUOTE);
     });
 }

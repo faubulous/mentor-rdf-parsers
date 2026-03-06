@@ -1,5 +1,5 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType, ILexingResult } from 'chevrotain';
-import { TOKENS } from '../tokens.js';
+import { DocumentToken } from '../tokens.js';
 import { IParser, ILexer } from '../syntax.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
@@ -8,44 +8,44 @@ import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator }
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
-    TOKENS.WS,
-    TOKENS.COMMA,
-    TOKENS.SEMICOLON,
-    TOKENS.DCARET,
-    TOKENS.LBRACKET,
-    TOKENS.RBRACKET,
-    TOKENS.OPEN_ANNOTATION,
-    TOKENS.CLOSE_ANNOTATION,
-    TOKENS.OPEN_TRIPLE_TERM,
-    TOKENS.CLOSE_TRIPLE_TERM,
-    TOKENS.OPEN_REIFIED_TRIPLE,
-    TOKENS.CLOSE_REIFIED_TRIPLE,
-    TOKENS.TILDE,
-    TOKENS.LPARENT,
-    TOKENS.RPARENT,
-    TOKENS.A,
-    TOKENS.TRUE,
-    TOKENS.FALSE,
-    TOKENS.VERSION,
-    TOKENS.TTL_PREFIX,
-    TOKENS.TTL_BASE,
-    TOKENS.SPARQL_VERSION,
-    TOKENS.PREFIX,
-    TOKENS.BASE,
-    TOKENS.PNAME_LN,
-    TOKENS.PNAME_NS,
-    TOKENS.BLANK_NODE_LABEL,
-    TOKENS.LANGTAG,
-    TOKENS.DOUBLE,
-    TOKENS.DECIMAL,
-    TOKENS.INTEGER,
-    TOKENS.PERIOD,
-    TOKENS.IRIREF,
-    TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE,
-    TOKENS.STRING_LITERAL_LONG_QUOTE,
-    TOKENS.STRING_LITERAL_SINGLE_QUOTE,
-    TOKENS.STRING_LITERAL_QUOTE,
-    TOKENS.COMMENT,
+    DocumentToken.WS,
+    DocumentToken.COMMA,
+    DocumentToken.SEMICOLON,
+    DocumentToken.DCARET,
+    DocumentToken.LBRACKET,
+    DocumentToken.RBRACKET,
+    DocumentToken.OPEN_ANNOTATION,
+    DocumentToken.CLOSE_ANNOTATION,
+    DocumentToken.OPEN_TRIPLE_TERM,
+    DocumentToken.CLOSE_TRIPLE_TERM,
+    DocumentToken.OPEN_REIFIED_TRIPLE,
+    DocumentToken.CLOSE_REIFIED_TRIPLE,
+    DocumentToken.TILDE,
+    DocumentToken.LPARENT,
+    DocumentToken.RPARENT,
+    DocumentToken.A,
+    DocumentToken.TRUE,
+    DocumentToken.FALSE,
+    DocumentToken.VERSION,
+    DocumentToken.TTL_PREFIX,
+    DocumentToken.TTL_BASE,
+    DocumentToken.SPARQL_VERSION,
+    DocumentToken.PREFIX,
+    DocumentToken.BASE,
+    DocumentToken.PNAME_LN,
+    DocumentToken.PNAME_NS,
+    DocumentToken.BLANK_NODE_LABEL,
+    DocumentToken.LANGTAG,
+    DocumentToken.DOUBLE,
+    DocumentToken.DECIMAL,
+    DocumentToken.INTEGER,
+    DocumentToken.PERIOD,
+    DocumentToken.IRIREF,
+    DocumentToken.STRING_LITERAL_LONG_SINGLE_QUOTE,
+    DocumentToken.STRING_LITERAL_LONG_QUOTE,
+    DocumentToken.STRING_LITERAL_SINGLE_QUOTE,
+    DocumentToken.STRING_LITERAL_QUOTE,
+    DocumentToken.COMMENT,
 ];
 
 /**
@@ -154,7 +154,7 @@ export class TurtleParserBase extends CstParser {
     predicate = this.RULE('predicate', () => {
         this.OR([
             { ALT: () => this.SUBRULE(this.iri) },
-            { ALT: () => this.CONSUME(TOKENS.A) }
+            { ALT: () => this.CONSUME(DocumentToken.A) }
         ]);
     });
 
@@ -163,7 +163,7 @@ export class TurtleParserBase extends CstParser {
      */
     iri = this.RULE('iri', () => {
         this.OR([
-            { ALT: () => this.CONSUME(TOKENS.IRIREF) },
+            { ALT: () => this.CONSUME(DocumentToken.IRIREF) },
             { ALT: () => this.SUBRULE(this.prefixedName) }
         ]);
     });
@@ -173,7 +173,7 @@ export class TurtleParserBase extends CstParser {
      */
     blankNode = this.RULE('blankNode', () => {
         this.OR([
-            { ALT: () => this.CONSUME(TOKENS.BLANK_NODE_LABEL) },
+            { ALT: () => this.CONSUME(DocumentToken.BLANK_NODE_LABEL) },
             { ALT: () => this.SUBRULE(this.anon) }
         ]);
     });
@@ -183,8 +183,8 @@ export class TurtleParserBase extends CstParser {
      */
     prefixedName = this.RULE('prefixedName', () => {
         const token = this.OR([
-            { ALT: () => this.CONSUME(TOKENS.PNAME_LN) },
-            { ALT: () => this.CONSUME(TOKENS.PNAME_NS) },
+            { ALT: () => this.CONSUME(DocumentToken.PNAME_LN) },
+            { ALT: () => this.CONSUME(DocumentToken.PNAME_NS) },
         ]);
 
         if (token?.image) {
@@ -210,10 +210,10 @@ export class TurtleParserBase extends CstParser {
      * https://www.w3.org/TR/turtle/#grammar-production-prefixID
      */
     prefix = this.RULE('prefix', () => {
-        this.CONSUME(TOKENS.TTL_PREFIX);
-        const prefix = this.CONSUME(TOKENS.PNAME_NS);
-        const iri = this.CONSUME(TOKENS.IRIREF);
-        this.CONSUME(TOKENS.PERIOD);
+        this.CONSUME(DocumentToken.TTL_PREFIX);
+        const prefix = this.CONSUME(DocumentToken.PNAME_NS);
+        const iri = this.CONSUME(DocumentToken.IRIREF);
+        this.CONSUME(DocumentToken.PERIOD);
 
         this.registerNamespace(prefix, iri);
     });
@@ -222,18 +222,18 @@ export class TurtleParserBase extends CstParser {
      * https://www.w3.org/TR/turtle/#grammar-production-base
      */
     base = this.RULE('base', () => {
-        this.CONSUME(TOKENS.TTL_BASE);
-        this.CONSUME(TOKENS.IRIREF);
-        this.CONSUME(TOKENS.PERIOD);
+        this.CONSUME(DocumentToken.TTL_BASE);
+        this.CONSUME(DocumentToken.IRIREF);
+        this.CONSUME(DocumentToken.PERIOD);
     });
 
     /**
      * https://www.w3.org/TR/turtle/#grammar-production-sparqlPrefix
      */
     sparqlPrefix = this.RULE('sparqlPrefix', () => {
-        this.CONSUME(TOKENS.PREFIX);
-        const prefix = this.CONSUME(TOKENS.PNAME_NS);
-        const iri = this.CONSUME(TOKENS.IRIREF);
+        this.CONSUME(DocumentToken.PREFIX);
+        const prefix = this.CONSUME(DocumentToken.PNAME_NS);
+        const iri = this.CONSUME(DocumentToken.IRIREF);
 
         this.registerNamespace(prefix, iri);
     });
@@ -242,8 +242,8 @@ export class TurtleParserBase extends CstParser {
      * https://www.w3.org/TR/rdf12-turtle/#grammar-production-sparqlBase
      */
     sparqlBase = this.RULE('sparqlBase', () => {
-        this.CONSUME(TOKENS.BASE);
-        this.CONSUME(TOKENS.IRIREF);
+        this.CONSUME(DocumentToken.BASE);
+        this.CONSUME(DocumentToken.IRIREF);
     });
 
     /**
@@ -251,9 +251,9 @@ export class TurtleParserBase extends CstParser {
      * version ::= '@version' VersionSpecifier '.'
      */
     version = this.RULE('version', () => {
-        this.CONSUME(TOKENS.VERSION);
+        this.CONSUME(DocumentToken.VERSION);
         this.SUBRULE(this.versionSpecifier);
-        this.CONSUME(TOKENS.PERIOD);
+        this.CONSUME(DocumentToken.PERIOD);
     });
 
     /**
@@ -261,7 +261,7 @@ export class TurtleParserBase extends CstParser {
      * sparqlVersion ::= "VERSION" VersionSpecifier
      */
     sparqlVersion = this.RULE('sparqlVersion', () => {
-        this.CONSUME(TOKENS.SPARQL_VERSION);
+        this.CONSUME(DocumentToken.SPARQL_VERSION);
         this.SUBRULE(this.versionSpecifier);
     });
 
@@ -271,8 +271,8 @@ export class TurtleParserBase extends CstParser {
      */
     versionSpecifier = this.RULE('versionSpecifier', () => {
         this.OR([
-            { ALT: () => this.CONSUME(TOKENS.STRING_LITERAL_QUOTE) },
-            { ALT: () => this.CONSUME(TOKENS.STRING_LITERAL_SINGLE_QUOTE) }
+            { ALT: () => this.CONSUME(DocumentToken.STRING_LITERAL_QUOTE) },
+            { ALT: () => this.CONSUME(DocumentToken.STRING_LITERAL_SINGLE_QUOTE) }
         ]);
     });
 
@@ -281,12 +281,12 @@ export class TurtleParserBase extends CstParser {
      * reifiedTriple ::= '<<' rtSubject verb rtObject reifier? '>>'
      */
     reifiedTriple = this.RULE('reifiedTriple', () => {
-        this.CONSUME(TOKENS.OPEN_REIFIED_TRIPLE);
+        this.CONSUME(DocumentToken.OPEN_REIFIED_TRIPLE);
         this.SUBRULE(this.rtSubject);
         this.SUBRULE(this.predicate);
         this.SUBRULE(this.rtObject);
         this.OPTION(() => this.SUBRULE(this.reifier));
-        this.CONSUME(TOKENS.CLOSE_REIFIED_TRIPLE);
+        this.CONSUME(DocumentToken.CLOSE_REIFIED_TRIPLE);
     });
 
     /**
@@ -320,11 +320,11 @@ export class TurtleParserBase extends CstParser {
      * tripleTerm ::= '<<(' ttSubject verb ttObject ')>>'
      */
     tripleTerm = this.RULE('tripleTerm', () => {
-        this.CONSUME(TOKENS.OPEN_TRIPLE_TERM);
+        this.CONSUME(DocumentToken.OPEN_TRIPLE_TERM);
         this.SUBRULE(this.ttSubject);
         this.SUBRULE(this.predicate);
         this.SUBRULE(this.ttObject);
-        this.CONSUME(TOKENS.CLOSE_TRIPLE_TERM);
+        this.CONSUME(DocumentToken.CLOSE_TRIPLE_TERM);
     });
 
     /**
@@ -356,7 +356,7 @@ export class TurtleParserBase extends CstParser {
      * reifier ::= '~' (iri | BlankNode)?
      */
     reifier = this.RULE('reifier', () => {
-        this.CONSUME(TOKENS.TILDE);
+        this.CONSUME(DocumentToken.TILDE);
         this.OPTION(() => {
             this.OR([
                 { ALT: () => this.SUBRULE(this.iri) },
@@ -383,18 +383,18 @@ export class TurtleParserBase extends CstParser {
      * annotationBlock ::= '{|' predicateObjectList '|}'
      */
     annotationBlock = this.RULE('annotationBlock', () => {
-        this.CONSUME(TOKENS.OPEN_ANNOTATION);
+        this.CONSUME(DocumentToken.OPEN_ANNOTATION);
         this.SUBRULE(this.predicateObjectList);
-        this.CONSUME(TOKENS.CLOSE_ANNOTATION);
+        this.CONSUME(DocumentToken.CLOSE_ANNOTATION);
     });
 
     /**
      * https://www.w3.org/TR/turtle/#grammar-production-collection
      */
     collection = this.RULE('collection', () => {
-        this.CONSUME(TOKENS.LPARENT);
+        this.CONSUME(DocumentToken.LPARENT);
         this.MANY(() => this.SUBRULE(this.object));
-        this.CONSUME(TOKENS.RPARENT);
+        this.CONSUME(DocumentToken.RPARENT);
     });
 
     /**
@@ -405,7 +405,7 @@ export class TurtleParserBase extends CstParser {
         this.SUBRULE2(this.objectList);
 
         this.MANY(() => {
-            this.CONSUME(TOKENS.SEMICOLON);
+            this.CONSUME(DocumentToken.SEMICOLON);
 
             this.OPTION(() => {
                 this.SUBRULE3(this.predicate);
@@ -423,7 +423,7 @@ export class TurtleParserBase extends CstParser {
         this.SUBRULE1(this.annotation);
 
         this.MANY(() => {
-            this.CONSUME(TOKENS.COMMA);
+            this.CONSUME(DocumentToken.COMMA);
             this.SUBRULE2(this.object);
             this.SUBRULE2(this.annotation);
         });
@@ -433,21 +433,21 @@ export class TurtleParserBase extends CstParser {
      * https://www.w3.org/TR/turtle/#grammar-production-blankNodePropertyList
      */
     blankNodePropertyList = this.RULE('blankNodePropertyList', () => {
-        this.CONSUME1(TOKENS.LBRACKET);
+        this.CONSUME1(DocumentToken.LBRACKET);
 
         this.SUBRULE(this.predicateObjectList);
 
-        this.CONSUME2(TOKENS.RBRACKET);
+        this.CONSUME2(DocumentToken.RBRACKET);
     });
 
     anon = this.RULE('anon', () => {
-        this.CONSUME1(TOKENS.LBRACKET);
+        this.CONSUME1(DocumentToken.LBRACKET);
 
         this.MANY(() => {
-            this.CONSUME2(TOKENS.WS);
+            this.CONSUME2(DocumentToken.WS);
         });
 
-        this.CONSUME3(TOKENS.RBRACKET);
+        this.CONSUME3(DocumentToken.RBRACKET);
     });
 
     /**
@@ -463,16 +463,16 @@ export class TurtleParserBase extends CstParser {
 
     numericLiteral = this.RULE('numericLiteral', () => {
         this.OR([
-            { ALT: () => this.CONSUME(TOKENS.INTEGER) },
-            { ALT: () => this.CONSUME(TOKENS.DECIMAL) },
-            { ALT: () => this.CONSUME(TOKENS.DOUBLE) }
+            { ALT: () => this.CONSUME(DocumentToken.INTEGER) },
+            { ALT: () => this.CONSUME(DocumentToken.DECIMAL) },
+            { ALT: () => this.CONSUME(DocumentToken.DOUBLE) }
         ]);
     });
 
     booleanLiteral = this.RULE('booleanLiteral', () => {
         this.OR([
-            { ALT: () => this.CONSUME(TOKENS.TRUE) },
-            { ALT: () => this.CONSUME(TOKENS.FALSE) }
+            { ALT: () => this.CONSUME(DocumentToken.TRUE) },
+            { ALT: () => this.CONSUME(DocumentToken.FALSE) }
         ]);
     });
 
@@ -481,7 +481,7 @@ export class TurtleParserBase extends CstParser {
 
         this.OPTION(() => {
             this.OR([
-                { ALT: () => this.CONSUME(TOKENS.LANGTAG) },
+                { ALT: () => this.CONSUME(DocumentToken.LANGTAG) },
                 { ALT: () => this.SUBRULE2(this.datatype) }
             ]);
         });
@@ -489,15 +489,15 @@ export class TurtleParserBase extends CstParser {
 
     string = this.RULE('string', () => {
         this.OR([
-            { ALT: () => this.CONSUME1(TOKENS.STRING_LITERAL_QUOTE) },
-            { ALT: () => this.CONSUME2(TOKENS.STRING_LITERAL_SINGLE_QUOTE) },
-            { ALT: () => this.CONSUME3(TOKENS.STRING_LITERAL_LONG_QUOTE) },
-            { ALT: () => this.CONSUME4(TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE) }
+            { ALT: () => this.CONSUME1(DocumentToken.STRING_LITERAL_QUOTE) },
+            { ALT: () => this.CONSUME2(DocumentToken.STRING_LITERAL_SINGLE_QUOTE) },
+            { ALT: () => this.CONSUME3(DocumentToken.STRING_LITERAL_LONG_QUOTE) },
+            { ALT: () => this.CONSUME4(DocumentToken.STRING_LITERAL_LONG_SINGLE_QUOTE) }
         ]);
     });
 
     datatype = this.RULE('datatype', () => {
-        this.CONSUME(TOKENS.DCARET);
+        this.CONSUME(DocumentToken.DCARET);
         this.SUBRULE(this.iri);
     });
 }
@@ -547,7 +547,7 @@ export class TurtleParser extends TurtleParserBase implements IParser {
                 {
                     ALT: () => {
                         this.SUBRULE(this.triples);
-                        this.CONSUME(TOKENS.PERIOD);
+                        this.CONSUME(DocumentToken.PERIOD);
                     }
                 }
             ]);

@@ -1,52 +1,52 @@
 import { CstNode, IToken, Lexer, TokenType, ILexingResult } from 'chevrotain';
-import { TOKENS } from '../tokens.js';
+import { DocumentToken } from '../tokens.js';
 import { TurtleParserBase } from '../turtle/parser.js';
 import { IParser, ILexer } from '../syntax.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
-    TOKENS.WS,
-    TOKENS.COMMA,
-    TOKENS.SEMICOLON,
-    TOKENS.DCARET,
-    TOKENS.LBRACKET,
-    TOKENS.RBRACKET,
-    TOKENS.OPEN_ANNOTATION,
-    TOKENS.CLOSE_ANNOTATION,
-    TOKENS.OPEN_TRIPLE_TERM,
-    TOKENS.CLOSE_TRIPLE_TERM,
-    TOKENS.OPEN_REIFIED_TRIPLE,
-    TOKENS.CLOSE_REIFIED_TRIPLE,
-    TOKENS.TILDE,
-    TOKENS.LPARENT,
-    TOKENS.RPARENT,
-    TOKENS.LCURLY,
-    TOKENS.RCURLY,
-    TOKENS.A,
-    TOKENS.TRUE,
-    TOKENS.FALSE,
-    TOKENS.VERSION,
-    TOKENS.TTL_PREFIX,
-    TOKENS.TTL_BASE,
-    TOKENS.SPARQL_VERSION,
-    TOKENS.PREFIX,
-    TOKENS.BASE,
-    TOKENS.GRAPH,
-    TOKENS.PNAME_LN,
-    TOKENS.PNAME_NS,
-    TOKENS.BLANK_NODE_LABEL,
-    TOKENS.LANGTAG,
-    TOKENS.DOUBLE,
-    TOKENS.DECIMAL,
-    TOKENS.INTEGER,
-    TOKENS.PERIOD,
-    TOKENS.IRIREF,
-    TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE,
-    TOKENS.STRING_LITERAL_LONG_QUOTE,
-    TOKENS.STRING_LITERAL_SINGLE_QUOTE,
-    TOKENS.STRING_LITERAL_QUOTE,
-    TOKENS.COMMENT,
+    DocumentToken.WS,
+    DocumentToken.COMMA,
+    DocumentToken.SEMICOLON,
+    DocumentToken.DCARET,
+    DocumentToken.LBRACKET,
+    DocumentToken.RBRACKET,
+    DocumentToken.OPEN_ANNOTATION,
+    DocumentToken.CLOSE_ANNOTATION,
+    DocumentToken.OPEN_TRIPLE_TERM,
+    DocumentToken.CLOSE_TRIPLE_TERM,
+    DocumentToken.OPEN_REIFIED_TRIPLE,
+    DocumentToken.CLOSE_REIFIED_TRIPLE,
+    DocumentToken.TILDE,
+    DocumentToken.LPARENT,
+    DocumentToken.RPARENT,
+    DocumentToken.LCURLY,
+    DocumentToken.RCURLY,
+    DocumentToken.A,
+    DocumentToken.TRUE,
+    DocumentToken.FALSE,
+    DocumentToken.VERSION,
+    DocumentToken.TTL_PREFIX,
+    DocumentToken.TTL_BASE,
+    DocumentToken.SPARQL_VERSION,
+    DocumentToken.PREFIX,
+    DocumentToken.BASE,
+    DocumentToken.GRAPH,
+    DocumentToken.PNAME_LN,
+    DocumentToken.PNAME_NS,
+    DocumentToken.BLANK_NODE_LABEL,
+    DocumentToken.LANGTAG,
+    DocumentToken.DOUBLE,
+    DocumentToken.DECIMAL,
+    DocumentToken.INTEGER,
+    DocumentToken.PERIOD,
+    DocumentToken.IRIREF,
+    DocumentToken.STRING_LITERAL_LONG_SINGLE_QUOTE,
+    DocumentToken.STRING_LITERAL_LONG_QUOTE,
+    DocumentToken.STRING_LITERAL_SINGLE_QUOTE,
+    DocumentToken.STRING_LITERAL_QUOTE,
+    DocumentToken.COMMENT,
 ];
 
 /**
@@ -136,7 +136,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
             { ALT: () => { this.SUBRULE3(this.triples2) } },
             {
                 ALT: () => {
-                    this.CONSUME(TOKENS.GRAPH);
+                    this.CONSUME(DocumentToken.GRAPH);
                     this.SUBRULE4(this.labelOrSubject);
                     this.SUBRULE5(this.wrappedGraph);
                 }
@@ -148,9 +148,9 @@ export class TrigParser extends TurtleParserBase implements IParser {
      * https://www.w3.org/TR/rdf12-trig/#grammar-production-wrappedGraph
      */
     wrappedGraph = this.RULE('wrappedGraph', () => {
-        this.CONSUME(TOKENS.LCURLY);
+        this.CONSUME(DocumentToken.LCURLY);
         this.OPTION(() => { this.SUBRULE(this.triplesBlock) });
-        this.CONSUME(TOKENS.RCURLY);
+        this.CONSUME(DocumentToken.RCURLY);
     });
 
     /**
@@ -166,7 +166,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
                         {
                             ALT: () => {
                                 this.SUBRULE(this.predicateObjectList);
-                                this.CONSUME(TOKENS.PERIOD);
+                                this.CONSUME(DocumentToken.PERIOD);
                             }
                         }
                     ]);
@@ -176,7 +176,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
                 ALT: () => {
                     this.SUBRULE(this.reifiedTriple);
                     this.OPTION(() => { this.SUBRULE2(this.predicateObjectList) });
-                    this.CONSUME2(TOKENS.PERIOD);
+                    this.CONSUME2(DocumentToken.PERIOD);
                 }
             }
         ]);
@@ -189,7 +189,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
         this.SUBRULE(this.triples);
 
         this.OPTION(() => {
-            this.CONSUME(TOKENS.PERIOD);
+            this.CONSUME(DocumentToken.PERIOD);
 
             this.OPTION1(() => {
                 this.SUBRULE1(this.triplesBlock);
@@ -216,7 +216,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
             }
         ]);
 
-        this.CONSUME(TOKENS.PERIOD);
+        this.CONSUME(DocumentToken.PERIOD);
     });
 
     /**

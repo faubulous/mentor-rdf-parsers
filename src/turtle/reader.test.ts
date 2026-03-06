@@ -424,6 +424,14 @@ describe("TurtleReader", () => {
         )).toBe(true);
     });
 
+    // RDF 1.2 Syntax Tests: Basic
+    it('+ RDF 1.2: syntax basic with asserted and reified triple (syntax-basic-01)', () => {
+        expect(matchQuads12(
+            'file://./tests/rdf12/syntax/turtle12-syntax-basic-01.ttl',
+            'file://./tests/rdf12/syntax/turtle12-syntax-basic-01.nt'
+        )).toBe(true);
+    });
+
     // RDF 1.2 Evaluation Tests: Blank Nodes
     it('+ RDF 1.2: eval blank node subject in reified triple (bnode-01)', () => {
         expect(matchQuads12(
