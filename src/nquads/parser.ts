@@ -1,24 +1,24 @@
 import { Lexer, IToken, CstNode, TokenType, ILexingResult } from 'chevrotain';
-import { DocumentToken } from '../tokens.js';
+import { RdfToken } from '../tokens.js';
 import { IParser, ILexer } from '../syntax.js';
 import { NTriplesParserBase } from '../ntriples/parser.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
 // The order of tokens matters if multiple can match the same text
 const allTokens: TokenType[] = [
-    DocumentToken.WS,
-    DocumentToken.PERIOD,
-    DocumentToken.OPEN_TRIPLE_TERM,
-    DocumentToken.CLOSE_TRIPLE_TERM,
-    DocumentToken.OPEN_REIFIED_TRIPLE,
-    DocumentToken.CLOSE_REIFIED_TRIPLE,
-    DocumentToken.IRIREF_ABS,
-    DocumentToken.BLANK_NODE_LABEL,
-    DocumentToken.STRING_LITERAL_QUOTE,
-    DocumentToken.DCARET,
-    DocumentToken.LANGTAG,
-    DocumentToken.SPARQL_VERSION,
-    DocumentToken.COMMENT,
+    RdfToken.WS,
+    RdfToken.PERIOD,
+    RdfToken.OPEN_TRIPLE_TERM,
+    RdfToken.CLOSE_TRIPLE_TERM,
+    RdfToken.OPEN_REIFIED_TRIPLE,
+    RdfToken.CLOSE_REIFIED_TRIPLE,
+    RdfToken.IRIREF_ABS,
+    RdfToken.BLANK_NODE_LABEL,
+    RdfToken.STRING_LITERAL_QUOTE,
+    RdfToken.DCARET,
+    RdfToken.LANGTAG,
+    RdfToken.SPARQL_VERSION,
+    RdfToken.COMMENT,
 ];
 
 /**
@@ -102,7 +102,7 @@ export class NQuadsParser extends NTriplesParserBase implements IParser {
         this.SUBRULE2(this.predicate);
         this.SUBRULE3(this.object);
         this.OPTION1(() => this.SUBRULE4(this.graphLabel));
-        this.CONSUME(DocumentToken.PERIOD);
+        this.CONSUME(RdfToken.PERIOD);
     });
 
     /**
@@ -110,8 +110,8 @@ export class NQuadsParser extends NTriplesParserBase implements IParser {
      */
     graphLabel = this.RULE('graphLabel', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.IRIREF_ABS) },
-            { ALT: () => this.CONSUME(DocumentToken.BLANK_NODE_LABEL) }
+            { ALT: () => this.CONSUME(RdfToken.IRIREF_ABS) },
+            { ALT: () => this.CONSUME(RdfToken.BLANK_NODE_LABEL) }
         ]);
     });
 
@@ -120,7 +120,7 @@ export class NQuadsParser extends NTriplesParserBase implements IParser {
      * versionDirective ::= 'VERSION' versionSpecifier
      */
     versionDirective = this.RULE('versionDirective', () => {
-        this.CONSUME(DocumentToken.SPARQL_VERSION);
-        this.CONSUME(DocumentToken.STRING_LITERAL_QUOTE);
+        this.CONSUME(RdfToken.SPARQL_VERSION);
+        this.CONSUME(RdfToken.STRING_LITERAL_QUOTE);
     });
 }

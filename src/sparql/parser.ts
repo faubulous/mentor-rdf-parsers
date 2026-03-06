@@ -1,5 +1,5 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType, ILexingResult, IRecognitionException } from 'chevrotain';
-import { DocumentToken } from '../tokens.js';
+import { RdfToken } from '../tokens.js';
 import { IParser, ILexer } from '../syntax.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
@@ -21,216 +21,216 @@ import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator }
 
 // SPARQL token order - longer/more specific patterns must come before shorter ones
 const allTokens: TokenType[] = [
-    DocumentToken.WS,
-    DocumentToken.COMMENT,
+    RdfToken.WS,
+    RdfToken.COMMENT,
 
     // Multi-char operators/punctuation (before single-char)
-    DocumentToken.DCARET,         // ^^ before CARET
-    DocumentToken.CARET,          // ^ (inverse path)
-    DocumentToken.AND,            // &&
-    DocumentToken.OR,             // || before PIPE |
-    DocumentToken.NEQ,            // != before BANG !
-    DocumentToken.LTE,            // <= before LT <
-    DocumentToken.GTE,            // >= before GT >
-    DocumentToken.OPEN_ANNOTATION,    // {| before LCURLY {
-    DocumentToken.CLOSE_ANNOTATION,   // |} before PIPE |
-    DocumentToken.OPEN_TRIPLE_TERM,   // <<( before OPEN_REIFIED_TRIPLE <<
-    DocumentToken.CLOSE_TRIPLE_TERM,  // )>> before RPARENT )
-    DocumentToken.OPEN_REIFIED_TRIPLE, // <<
-    DocumentToken.CLOSE_REIFIED_TRIPLE, // >>
+    RdfToken.DCARET,         // ^^ before CARET
+    RdfToken.CARET,          // ^ (inverse path)
+    RdfToken.AND,            // &&
+    RdfToken.OR,             // || before PIPE |
+    RdfToken.NEQ,            // != before BANG !
+    RdfToken.LTE,            // <= before LT <
+    RdfToken.GTE,            // >= before GT >
+    RdfToken.OPEN_ANNOTATION,    // {| before LCURLY {
+    RdfToken.CLOSE_ANNOTATION,   // |} before PIPE |
+    RdfToken.OPEN_TRIPLE_TERM,   // <<( before OPEN_REIFIED_TRIPLE <<
+    RdfToken.CLOSE_TRIPLE_TERM,  // )>> before RPARENT )
+    RdfToken.OPEN_REIFIED_TRIPLE, // <<
+    RdfToken.CLOSE_REIFIED_TRIPLE, // >>
 
     // Punctuation
-    DocumentToken.TILDE,
-    DocumentToken.COMMA,
-    DocumentToken.SEMICOLON,
-    DocumentToken.PERIOD,
-    DocumentToken.LBRACKET,
-    DocumentToken.RBRACKET,
-    DocumentToken.NIL,            // () before LPARENT ( and RPARENT )
-    DocumentToken.LPARENT,
-    DocumentToken.RPARENT,
-    DocumentToken.LCURLY,
-    DocumentToken.RCURLY,
+    RdfToken.TILDE,
+    RdfToken.COMMA,
+    RdfToken.SEMICOLON,
+    RdfToken.PERIOD,
+    RdfToken.LBRACKET,
+    RdfToken.RBRACKET,
+    RdfToken.NIL,            // () before LPARENT ( and RPARENT )
+    RdfToken.LPARENT,
+    RdfToken.RPARENT,
+    RdfToken.LCURLY,
+    RdfToken.RCURLY,
 
     // SPARQL variables (before QUESTION_MARK to avoid ?name → ? + name)
-    DocumentToken.VAR1,
-    DocumentToken.VAR2,
+    RdfToken.VAR1,
+    RdfToken.VAR2,
 
     // IRIs must come before LT/GT to avoid <http://...> being split into < + http: + ...
-    DocumentToken.IRIREF,
+    RdfToken.IRIREF,
 
-    DocumentToken.STAR,
-    DocumentToken.SLASH,
-    DocumentToken.PIPE,
-    DocumentToken.PLUS_SIGN,
-    DocumentToken.MINUS_SIGN,
-    DocumentToken.BANG,
-    DocumentToken.EQ,
-    DocumentToken.LT,
-    DocumentToken.GT,
-    DocumentToken.QUESTION_MARK,
+    RdfToken.STAR,
+    RdfToken.SLASH,
+    RdfToken.PIPE,
+    RdfToken.PLUS_SIGN,
+    RdfToken.MINUS_SIGN,
+    RdfToken.BANG,
+    RdfToken.EQ,
+    RdfToken.LT,
+    RdfToken.GT,
+    RdfToken.QUESTION_MARK,
 
     // Boolean literals
-    DocumentToken.TRUE,
-    DocumentToken.FALSE,
+    RdfToken.TRUE,
+    RdfToken.FALSE,
 
     // RDF literal keywords
-    DocumentToken.A,
+    RdfToken.A,
 
     // Prefixed names must come before keywords to allow keywords as prefix names
     // e.g., 'data:' should be PNAME_NS, not DATA keyword + ':'
-    DocumentToken.PNAME_LN,
-    DocumentToken.PNAME_NS,
+    RdfToken.PNAME_LN,
+    RdfToken.PNAME_NS,
 
     // SPARQL aggregate keywords (longer first)
-    DocumentToken.GROUP_CONCAT,
+    RdfToken.GROUP_CONCAT,
 
     // SPARQL built-in functions (longer/more specific first)
-    DocumentToken.ENCODE_FOR_URI,
-    DocumentToken.LANGMATCHES,
-    DocumentToken.LANGDIR,
-    DocumentToken.STRLANGDIR,
-    DocumentToken.STRLANG,
-    DocumentToken.STRSTARTS,
-    DocumentToken.STRENDS,
-    DocumentToken.STRBEFORE,
-    DocumentToken.STRAFTER,
-    DocumentToken.STRLEN,
-    DocumentToken.STRUUID,
-    DocumentToken.STRDT,
-    DocumentToken.STR,
-    DocumentToken.LANG_KW,
-    DocumentToken.DATATYPE,
-    DocumentToken.BOUND,
-    DocumentToken.IRI_KW,
-    DocumentToken.URI_KW,
-    DocumentToken.BNODE_KW,
-    DocumentToken.RAND,
-    DocumentToken.ABS_KW,
-    DocumentToken.CEIL,
-    DocumentToken.FLOOR,
-    DocumentToken.ROUND,
-    DocumentToken.CONCAT,
-    DocumentToken.UCASE,
-    DocumentToken.LCASE,
-    DocumentToken.CONTAINS,
-    DocumentToken.YEAR,
-    DocumentToken.MONTH,
-    DocumentToken.DAY,
-    DocumentToken.HOURS,
-    DocumentToken.MINUTES,
-    DocumentToken.SECONDS,
-    DocumentToken.TIMEZONE,
-    DocumentToken.TZ_KW,
-    DocumentToken.NOW,
-    DocumentToken.UUID_KW,
-    DocumentToken.MD5,
-    DocumentToken.SHA256,
-    DocumentToken.SHA384,
-    DocumentToken.SHA512,
-    DocumentToken.SHA1,
-    DocumentToken.COALESCE,
-    DocumentToken.IF_KW,
-    DocumentToken.SAMETERM,
-    DocumentToken.ISIRI,
-    DocumentToken.ISURI,
-    DocumentToken.ISBLANK,
-    DocumentToken.ISLITERAL,
-    DocumentToken.ISNUMERIC,
-    DocumentToken.ISTRIPLE,
-    DocumentToken.TRIPLE_KW,
-    DocumentToken.SUBJECT_KW,
-    DocumentToken.PREDICATE_KW,
-    DocumentToken.OBJECT_KW,
-    DocumentToken.HASLANGDIR,
-    DocumentToken.HASLANG,
-    DocumentToken.REGEX,
-    DocumentToken.SUBSTR,
-    DocumentToken.REPLACE_KW,
+    RdfToken.ENCODE_FOR_URI,
+    RdfToken.LANGMATCHES,
+    RdfToken.LANGDIR,
+    RdfToken.STRLANGDIR,
+    RdfToken.STRLANG,
+    RdfToken.STRSTARTS,
+    RdfToken.STRENDS,
+    RdfToken.STRBEFORE,
+    RdfToken.STRAFTER,
+    RdfToken.STRLEN,
+    RdfToken.STRUUID,
+    RdfToken.STRDT,
+    RdfToken.STR,
+    RdfToken.LANG_KW,
+    RdfToken.DATATYPE,
+    RdfToken.BOUND,
+    RdfToken.IRI_KW,
+    RdfToken.URI_KW,
+    RdfToken.BNODE_KW,
+    RdfToken.RAND,
+    RdfToken.ABS_KW,
+    RdfToken.CEIL,
+    RdfToken.FLOOR,
+    RdfToken.ROUND,
+    RdfToken.CONCAT,
+    RdfToken.UCASE,
+    RdfToken.LCASE,
+    RdfToken.CONTAINS,
+    RdfToken.YEAR,
+    RdfToken.MONTH,
+    RdfToken.DAY,
+    RdfToken.HOURS,
+    RdfToken.MINUTES,
+    RdfToken.SECONDS,
+    RdfToken.TIMEZONE,
+    RdfToken.TZ_KW,
+    RdfToken.NOW,
+    RdfToken.UUID_KW,
+    RdfToken.MD5,
+    RdfToken.SHA256,
+    RdfToken.SHA384,
+    RdfToken.SHA512,
+    RdfToken.SHA1,
+    RdfToken.COALESCE,
+    RdfToken.IF_KW,
+    RdfToken.SAMETERM,
+    RdfToken.ISIRI,
+    RdfToken.ISURI,
+    RdfToken.ISBLANK,
+    RdfToken.ISLITERAL,
+    RdfToken.ISNUMERIC,
+    RdfToken.ISTRIPLE,
+    RdfToken.TRIPLE_KW,
+    RdfToken.SUBJECT_KW,
+    RdfToken.PREDICATE_KW,
+    RdfToken.OBJECT_KW,
+    RdfToken.HASLANGDIR,
+    RdfToken.HASLANG,
+    RdfToken.REGEX,
+    RdfToken.SUBSTR,
+    RdfToken.REPLACE_KW,
 
     // SPARQL aggregate keywords
-    DocumentToken.COUNT,
-    DocumentToken.SAMPLE,
-    DocumentToken.SUM,
-    DocumentToken.MIN_KW,
-    DocumentToken.MAX_KW,
-    DocumentToken.AVG,
-    DocumentToken.SEPARATOR,
+    RdfToken.COUNT,
+    RdfToken.SAMPLE,
+    RdfToken.SUM,
+    RdfToken.MIN_KW,
+    RdfToken.MAX_KW,
+    RdfToken.AVG,
+    RdfToken.SEPARATOR,
 
     // SPARQL keywords (longer first)
-    DocumentToken.CONSTRUCT,
-    DocumentToken.DESCRIBE,
-    DocumentToken.DISTINCT,
-    DocumentToken.OPTIONAL_KW,
-    DocumentToken.REDUCED,
-    DocumentToken.SELECT,
-    DocumentToken.SERVICE,
-    DocumentToken.DEFAULT_KW,
-    DocumentToken.DELETE_KW,
-    DocumentToken.EXISTS,
-    DocumentToken.FILTER,
-    DocumentToken.HAVING,
-    DocumentToken.INSERT,
-    DocumentToken.OFFSET,
-    DocumentToken.SILENT,
-    DocumentToken.VALUES,
-    DocumentToken.CREATE_KW,
-    DocumentToken.MINUS_KW,
-    DocumentToken.NAMED,
-    DocumentToken.ORDER,
-    DocumentToken.CLEAR,
-    DocumentToken.GROUP,
-    DocumentToken.LIMIT,
-    DocumentToken.UNION,
-    DocumentToken.UNDEF,
-    DocumentToken.USING,
-    DocumentToken.WHERE,
-    DocumentToken.WITH_KW,
-    DocumentToken.BIND_KW,
-    DocumentToken.COPY,
-    DocumentToken.DATA,
-    DocumentToken.DROP,
-    DocumentToken.FROM,
-    DocumentToken.INTO,
-    DocumentToken.LOAD,
-    DocumentToken.MOVE,
-    DocumentToken.ADD_KW,
-    DocumentToken.ALL_KW,
-    DocumentToken.ASC_KW,
-    DocumentToken.ASK,
-    DocumentToken.DESC_KW,
-    DocumentToken.NOT,
-    DocumentToken.AS_KW,
-    DocumentToken.BY,
-    DocumentToken.IN_KW,
-    DocumentToken.TO,
+    RdfToken.CONSTRUCT,
+    RdfToken.DESCRIBE,
+    RdfToken.DISTINCT,
+    RdfToken.OPTIONAL_KW,
+    RdfToken.REDUCED,
+    RdfToken.SELECT,
+    RdfToken.SERVICE,
+    RdfToken.DEFAULT_KW,
+    RdfToken.DELETE_KW,
+    RdfToken.EXISTS,
+    RdfToken.FILTER,
+    RdfToken.HAVING,
+    RdfToken.INSERT,
+    RdfToken.OFFSET,
+    RdfToken.SILENT,
+    RdfToken.VALUES,
+    RdfToken.CREATE_KW,
+    RdfToken.MINUS_KW,
+    RdfToken.NAMED,
+    RdfToken.ORDER,
+    RdfToken.CLEAR,
+    RdfToken.GROUP,
+    RdfToken.LIMIT,
+    RdfToken.UNION,
+    RdfToken.UNDEF,
+    RdfToken.USING,
+    RdfToken.WHERE,
+    RdfToken.WITH_KW,
+    RdfToken.BIND_KW,
+    RdfToken.COPY,
+    RdfToken.DATA,
+    RdfToken.DROP,
+    RdfToken.FROM,
+    RdfToken.INTO,
+    RdfToken.LOAD,
+    RdfToken.MOVE,
+    RdfToken.ADD_KW,
+    RdfToken.ALL_KW,
+    RdfToken.ASC_KW,
+    RdfToken.ASK,
+    RdfToken.DESC_KW,
+    RdfToken.NOT,
+    RdfToken.AS_KW,
+    RdfToken.BY,
+    RdfToken.IN_KW,
+    RdfToken.TO,
 
     // Directives
-    DocumentToken.SPARQL_VERSION,
-    DocumentToken.PREFIX,
-    DocumentToken.BASE,
-    DocumentToken.GRAPH,
+    RdfToken.SPARQL_VERSION,
+    RdfToken.PREFIX,
+    RdfToken.BASE,
+    RdfToken.GRAPH,
 
     // RDF terms
-    DocumentToken.BLANK_NODE_LABEL,
-    DocumentToken.LANGTAG,
+    RdfToken.BLANK_NODE_LABEL,
+    RdfToken.LANGTAG,
 
     // Numeric literals (more specific first)
-    DocumentToken.DOUBLE_POSITIVE,
-    DocumentToken.DECIMAL_POSITIVE,
-    DocumentToken.INTEGER_POSITIVE,
-    DocumentToken.DOUBLE_NEGATIVE,
-    DocumentToken.DECIMAL_NEGATIVE,
-    DocumentToken.INTEGER_NEGATIVE,
-    DocumentToken.DOUBLE,
-    DocumentToken.DECIMAL,
-    DocumentToken.INTEGER,
+    RdfToken.DOUBLE_POSITIVE,
+    RdfToken.DECIMAL_POSITIVE,
+    RdfToken.INTEGER_POSITIVE,
+    RdfToken.DOUBLE_NEGATIVE,
+    RdfToken.DECIMAL_NEGATIVE,
+    RdfToken.INTEGER_NEGATIVE,
+    RdfToken.DOUBLE,
+    RdfToken.DECIMAL,
+    RdfToken.INTEGER,
 
     // String literals (long before short)
-    DocumentToken.STRING_LITERAL_LONG_SINGLE_QUOTE,
-    DocumentToken.STRING_LITERAL_LONG_QUOTE,
-    DocumentToken.STRING_LITERAL_SINGLE_QUOTE,
-    DocumentToken.STRING_LITERAL_QUOTE,
+    RdfToken.STRING_LITERAL_LONG_SINGLE_QUOTE,
+    RdfToken.STRING_LITERAL_LONG_QUOTE,
+    RdfToken.STRING_LITERAL_SINGLE_QUOTE,
+    RdfToken.STRING_LITERAL_QUOTE,
 ];
 
 /**
@@ -561,17 +561,17 @@ export class SparqlParser extends CstParser implements IParser {
      * [5] BaseDecl ::= 'BASE' IRIREF
      */
     baseDecl = this.RULE('baseDecl', () => {
-        this.CONSUME(DocumentToken.BASE);
-        this.CONSUME(DocumentToken.IRIREF);
+        this.CONSUME(RdfToken.BASE);
+        this.CONSUME(RdfToken.IRIREF);
     });
 
     /**
      * [6] PrefixDecl ::= 'PREFIX' PNAME_NS IRIREF
      */
     prefixDecl = this.RULE('prefixDecl', () => {
-        this.CONSUME(DocumentToken.PREFIX);
-        const prefix = this.CONSUME(DocumentToken.PNAME_NS);
-        const iri = this.CONSUME(DocumentToken.IRIREF);
+        this.CONSUME(RdfToken.PREFIX);
+        const prefix = this.CONSUME(RdfToken.PNAME_NS);
+        const iri = this.CONSUME(RdfToken.IRIREF);
         this.registerNamespace(prefix, iri);
     });
 
@@ -579,7 +579,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [7] VersionDecl ::= 'VERSION' VersionSpecifier
      */
     versionDecl = this.RULE('versionDecl', () => {
-        this.CONSUME(DocumentToken.SPARQL_VERSION);
+        this.CONSUME(RdfToken.SPARQL_VERSION);
         this.SUBRULE(this.versionSpecifier);
     });
 
@@ -588,8 +588,8 @@ export class SparqlParser extends CstParser implements IParser {
      */
     versionSpecifier = this.RULE('versionSpecifier', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.STRING_LITERAL_QUOTE) },
-            { ALT: () => this.CONSUME(DocumentToken.STRING_LITERAL_SINGLE_QUOTE) }
+            { ALT: () => this.CONSUME(RdfToken.STRING_LITERAL_QUOTE) },
+            { ALT: () => this.CONSUME(RdfToken.STRING_LITERAL_SINGLE_QUOTE) }
         ]);
     });
 
@@ -617,11 +617,11 @@ export class SparqlParser extends CstParser implements IParser {
      * [11] SelectClause ::= 'SELECT' ('DISTINCT' | 'REDUCED')? ((Var | ('(' Expression 'AS' Var ')'))+ | '*')
      */
     selectClause = this.RULE('selectClause', () => {
-        this.CONSUME(DocumentToken.SELECT);
+        this.CONSUME(RdfToken.SELECT);
         this.OPTION(() => {
             this.OR1([
-                { ALT: () => this.CONSUME(DocumentToken.DISTINCT) },
-                { ALT: () => this.CONSUME(DocumentToken.REDUCED) }
+                { ALT: () => this.CONSUME(RdfToken.DISTINCT) },
+                { ALT: () => this.CONSUME(RdfToken.REDUCED) }
             ]);
         });
         this.OR2([
@@ -632,18 +632,18 @@ export class SparqlParser extends CstParser implements IParser {
                             { ALT: () => this.SUBRULE(this.var) },
                             {
                                 ALT: () => {
-                                    this.CONSUME(DocumentToken.LPARENT);
+                                    this.CONSUME(RdfToken.LPARENT);
                                     this.SUBRULE(this.expression);
-                                    this.CONSUME(DocumentToken.AS_KW);
+                                    this.CONSUME(RdfToken.AS_KW);
                                     this.SUBRULE2(this.var);
-                                    this.CONSUME(DocumentToken.RPARENT);
+                                    this.CONSUME(RdfToken.RPARENT);
                                 }
                             }
                         ]);
                     });
                 }
             },
-            { ALT: () => this.CONSUME(DocumentToken.STAR) }
+            { ALT: () => this.CONSUME(RdfToken.STAR) }
         ]);
     });
 
@@ -652,7 +652,7 @@ export class SparqlParser extends CstParser implements IParser {
      *                       | DatasetClause* 'WHERE' '{' TriplesTemplate? '}' SolutionModifier)
      */
     constructQuery = this.RULE('constructQuery', () => {
-        this.CONSUME(DocumentToken.CONSTRUCT);
+        this.CONSUME(RdfToken.CONSTRUCT);
         this.OR([
             {
                 ALT: () => {
@@ -665,10 +665,10 @@ export class SparqlParser extends CstParser implements IParser {
             {
                 ALT: () => {
                     this.MANY2(() => this.SUBRULE2(this.datasetClause));
-                    this.CONSUME(DocumentToken.WHERE);
-                    this.CONSUME(DocumentToken.LCURLY);
+                    this.CONSUME(RdfToken.WHERE);
+                    this.CONSUME(RdfToken.LCURLY);
                     this.OPTION(() => this.SUBRULE(this.triplesTemplate));
-                    this.CONSUME(DocumentToken.RCURLY);
+                    this.CONSUME(RdfToken.RCURLY);
                     this.SUBRULE2(this.solutionModifier);
                 }
             }
@@ -679,10 +679,10 @@ export class SparqlParser extends CstParser implements IParser {
      * [13] DescribeQuery ::= 'DESCRIBE' (VarOrIri+ | '*') DatasetClause* WhereClause? SolutionModifier
      */
     describeQuery = this.RULE('describeQuery', () => {
-        this.CONSUME(DocumentToken.DESCRIBE);
+        this.CONSUME(RdfToken.DESCRIBE);
         this.OR([
             { ALT: () => this.AT_LEAST_ONE(() => this.SUBRULE(this.varOrIri)) },
-            { ALT: () => this.CONSUME(DocumentToken.STAR) }
+            { ALT: () => this.CONSUME(RdfToken.STAR) }
         ]);
         this.MANY(() => this.SUBRULE(this.datasetClause));
         this.OPTION(() => this.SUBRULE(this.whereClause));
@@ -693,7 +693,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [14] AskQuery ::= 'ASK' DatasetClause* WhereClause SolutionModifier
      */
     askQuery = this.RULE('askQuery', () => {
-        this.CONSUME(DocumentToken.ASK);
+        this.CONSUME(RdfToken.ASK);
         this.MANY(() => this.SUBRULE(this.datasetClause));
         this.SUBRULE(this.whereClause);
         this.SUBRULE(this.solutionModifier);
@@ -703,7 +703,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [15] DatasetClause ::= 'FROM' (DefaultGraphClause | NamedGraphClause)
      */
     datasetClause = this.RULE('datasetClause', () => {
-        this.CONSUME(DocumentToken.FROM);
+        this.CONSUME(RdfToken.FROM);
         this.OR([
             { ALT: () => this.SUBRULE(this.defaultGraphClause) },
             { ALT: () => this.SUBRULE(this.namedGraphClause) }
@@ -721,7 +721,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [17] NamedGraphClause ::= 'NAMED' SourceSelector
      */
     namedGraphClause = this.RULE('namedGraphClause', () => {
-        this.CONSUME(DocumentToken.NAMED);
+        this.CONSUME(RdfToken.NAMED);
         this.SUBRULE(this.sourceSelector);
     });
 
@@ -736,7 +736,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [19] WhereClause ::= 'WHERE'? GroupGraphPattern
      */
     whereClause = this.RULE('whereClause', () => {
-        this.OPTION(() => this.CONSUME(DocumentToken.WHERE));
+        this.OPTION(() => this.CONSUME(RdfToken.WHERE));
         this.SUBRULE(this.groupGraphPattern);
     });
 
@@ -754,8 +754,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [21] GroupClause ::= 'GROUP' 'BY' GroupCondition+
      */
     groupClause = this.RULE('groupClause', () => {
-        this.CONSUME(DocumentToken.GROUP);
-        this.CONSUME(DocumentToken.BY);
+        this.CONSUME(RdfToken.GROUP);
+        this.CONSUME(RdfToken.BY);
         this.AT_LEAST_ONE(() => this.SUBRULE(this.groupCondition));
     });
 
@@ -768,13 +768,13 @@ export class SparqlParser extends CstParser implements IParser {
             { ALT: () => this.SUBRULE(this.functionCall) },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.LPARENT);
                     this.SUBRULE(this.expression);
                     this.OPTION(() => {
-                        this.CONSUME(DocumentToken.AS_KW);
+                        this.CONSUME(RdfToken.AS_KW);
                         this.SUBRULE(this.var);
                     });
-                    this.CONSUME(DocumentToken.RPARENT);
+                    this.CONSUME(RdfToken.RPARENT);
                 }
             },
             { ALT: () => this.SUBRULE2(this.var) }
@@ -785,7 +785,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [23] HavingClause ::= 'HAVING' HavingCondition+
      */
     havingClause = this.RULE('havingClause', () => {
-        this.CONSUME(DocumentToken.HAVING);
+        this.CONSUME(RdfToken.HAVING);
         this.AT_LEAST_ONE(() => this.SUBRULE(this.havingCondition));
     });
 
@@ -800,8 +800,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [25] OrderClause ::= 'ORDER' 'BY' OrderCondition+
      */
     orderClause = this.RULE('orderClause', () => {
-        this.CONSUME(DocumentToken.ORDER);
-        this.CONSUME(DocumentToken.BY);
+        this.CONSUME(RdfToken.ORDER);
+        this.CONSUME(RdfToken.BY);
         this.AT_LEAST_ONE(() => this.SUBRULE(this.orderCondition));
     });
 
@@ -813,8 +813,8 @@ export class SparqlParser extends CstParser implements IParser {
             {
                 ALT: () => {
                     this.OR2([
-                        { ALT: () => this.CONSUME(DocumentToken.ASC_KW) },
-                        { ALT: () => this.CONSUME(DocumentToken.DESC_KW) }
+                        { ALT: () => this.CONSUME(RdfToken.ASC_KW) },
+                        { ALT: () => this.CONSUME(RdfToken.DESC_KW) }
                     ]);
                     this.SUBRULE(this.brackettedExpression);
                 }
@@ -848,16 +848,16 @@ export class SparqlParser extends CstParser implements IParser {
      * [28] LimitClause ::= 'LIMIT' INTEGER
      */
     limitClause = this.RULE('limitClause', () => {
-        this.CONSUME(DocumentToken.LIMIT);
-        this.CONSUME(DocumentToken.INTEGER);
+        this.CONSUME(RdfToken.LIMIT);
+        this.CONSUME(RdfToken.INTEGER);
     });
 
     /**
      * [29] OffsetClause ::= 'OFFSET' INTEGER
      */
     offsetClause = this.RULE('offsetClause', () => {
-        this.CONSUME(DocumentToken.OFFSET);
-        this.CONSUME(DocumentToken.INTEGER);
+        this.CONSUME(RdfToken.OFFSET);
+        this.CONSUME(RdfToken.INTEGER);
     });
 
     // ==========================================
@@ -880,7 +880,7 @@ export class SparqlParser extends CstParser implements IParser {
         this.OPTION(() => {
             this.SUBRULE(this.update1);
             this.OPTION2(() => {
-                this.CONSUME(DocumentToken.SEMICOLON);
+                this.CONSUME(RdfToken.SEMICOLON);
                 this.SUBRULE(this.update);
             });
         });
@@ -909,11 +909,11 @@ export class SparqlParser extends CstParser implements IParser {
      * [33] Load ::= 'LOAD' 'SILENT'? iri ('INTO' GraphRef)?
      */
     load = this.RULE('load', () => {
-        this.CONSUME(DocumentToken.LOAD);
-        this.OPTION1(() => this.CONSUME(DocumentToken.SILENT));
+        this.CONSUME(RdfToken.LOAD);
+        this.OPTION1(() => this.CONSUME(RdfToken.SILENT));
         this.SUBRULE(this.iri);
         this.OPTION2(() => {
-            this.CONSUME(DocumentToken.INTO);
+            this.CONSUME(RdfToken.INTO);
             this.SUBRULE(this.graphRef);
         });
     });
@@ -922,8 +922,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [34] Clear ::= 'CLEAR' 'SILENT'? GraphRefAll
      */
     clear = this.RULE('clear', () => {
-        this.CONSUME(DocumentToken.CLEAR);
-        this.OPTION(() => this.CONSUME(DocumentToken.SILENT));
+        this.CONSUME(RdfToken.CLEAR);
+        this.OPTION(() => this.CONSUME(RdfToken.SILENT));
         this.SUBRULE(this.graphRefAll);
     });
 
@@ -931,8 +931,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [35] Drop ::= 'DROP' 'SILENT'? GraphRefAll
      */
     drop = this.RULE('drop', () => {
-        this.CONSUME(DocumentToken.DROP);
-        this.OPTION(() => this.CONSUME(DocumentToken.SILENT));
+        this.CONSUME(RdfToken.DROP);
+        this.OPTION(() => this.CONSUME(RdfToken.SILENT));
         this.SUBRULE(this.graphRefAll);
     });
 
@@ -940,8 +940,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [36] Create ::= 'CREATE' 'SILENT'? GraphRef
      */
     create = this.RULE('create', () => {
-        this.CONSUME(DocumentToken.CREATE_KW);
-        this.OPTION(() => this.CONSUME(DocumentToken.SILENT));
+        this.CONSUME(RdfToken.CREATE_KW);
+        this.OPTION(() => this.CONSUME(RdfToken.SILENT));
         this.SUBRULE(this.graphRef);
     });
 
@@ -949,10 +949,10 @@ export class SparqlParser extends CstParser implements IParser {
      * [37] Add ::= 'ADD' 'SILENT'? GraphOrDefault 'TO' GraphOrDefault
      */
     add = this.RULE('add', () => {
-        this.CONSUME(DocumentToken.ADD_KW);
-        this.OPTION(() => this.CONSUME(DocumentToken.SILENT));
+        this.CONSUME(RdfToken.ADD_KW);
+        this.OPTION(() => this.CONSUME(RdfToken.SILENT));
         this.SUBRULE1(this.graphOrDefault);
-        this.CONSUME(DocumentToken.TO);
+        this.CONSUME(RdfToken.TO);
         this.SUBRULE2(this.graphOrDefault);
     });
 
@@ -960,10 +960,10 @@ export class SparqlParser extends CstParser implements IParser {
      * [38] Move ::= 'MOVE' 'SILENT'? GraphOrDefault 'TO' GraphOrDefault
      */
     move = this.RULE('move', () => {
-        this.CONSUME(DocumentToken.MOVE);
-        this.OPTION(() => this.CONSUME(DocumentToken.SILENT));
+        this.CONSUME(RdfToken.MOVE);
+        this.OPTION(() => this.CONSUME(RdfToken.SILENT));
         this.SUBRULE1(this.graphOrDefault);
-        this.CONSUME(DocumentToken.TO);
+        this.CONSUME(RdfToken.TO);
         this.SUBRULE2(this.graphOrDefault);
     });
 
@@ -971,10 +971,10 @@ export class SparqlParser extends CstParser implements IParser {
      * [39] Copy ::= 'COPY' 'SILENT'? GraphOrDefault 'TO' GraphOrDefault
      */
     copy = this.RULE('copy', () => {
-        this.CONSUME(DocumentToken.COPY);
-        this.OPTION(() => this.CONSUME(DocumentToken.SILENT));
+        this.CONSUME(RdfToken.COPY);
+        this.OPTION(() => this.CONSUME(RdfToken.SILENT));
         this.SUBRULE1(this.graphOrDefault);
-        this.CONSUME(DocumentToken.TO);
+        this.CONSUME(RdfToken.TO);
         this.SUBRULE2(this.graphOrDefault);
     });
 
@@ -982,8 +982,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [40] InsertData ::= 'INSERT' 'DATA' QuadData
      */
     insertData = this.RULE('insertData', () => {
-        this.CONSUME(DocumentToken.INSERT);
-        this.CONSUME(DocumentToken.DATA);
+        this.CONSUME(RdfToken.INSERT);
+        this.CONSUME(RdfToken.DATA);
         this.SUBRULE(this.quadData);
     });
 
@@ -991,8 +991,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [41] DeleteData ::= 'DELETE' 'DATA' QuadData
      */
     deleteData = this.RULE('deleteData', () => {
-        this.CONSUME(DocumentToken.DELETE_KW);
-        this.CONSUME(DocumentToken.DATA);
+        this.CONSUME(RdfToken.DELETE_KW);
+        this.CONSUME(RdfToken.DATA);
         const prev = this._insideDeleteBlock;
         this._insideDeleteBlock = true;
         this.SUBRULE(this.quadData);
@@ -1003,8 +1003,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [42] DeleteWhere ::= 'DELETE' 'WHERE' QuadPattern
      */
     deleteWhere = this.RULE('deleteWhere', () => {
-        this.CONSUME(DocumentToken.DELETE_KW);
-        this.CONSUME(DocumentToken.WHERE);
+        this.CONSUME(RdfToken.DELETE_KW);
+        this.CONSUME(RdfToken.WHERE);
         const prev = this._insideDeleteBlock;
         this._insideDeleteBlock = true;
         this.SUBRULE(this.quadPattern);
@@ -1016,7 +1016,7 @@ export class SparqlParser extends CstParser implements IParser {
      */
     modify = this.RULE('modify', () => {
         this.OPTION1(() => {
-            this.CONSUME(DocumentToken.WITH_KW);
+            this.CONSUME(RdfToken.WITH_KW);
             this.SUBRULE1(this.iri);
         });
         this.OR([
@@ -1029,7 +1029,7 @@ export class SparqlParser extends CstParser implements IParser {
             { ALT: () => this.SUBRULE2(this.insertClause) }
         ]);
         this.MANY(() => this.SUBRULE(this.usingClause));
-        this.CONSUME(DocumentToken.WHERE);
+        this.CONSUME(RdfToken.WHERE);
         this.SUBRULE(this.groupGraphPattern);
     });
 
@@ -1037,7 +1037,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [44] DeleteClause ::= 'DELETE' QuadPattern
      */
     deleteClause = this.RULE('deleteClause', () => {
-        this.CONSUME(DocumentToken.DELETE_KW);
+        this.CONSUME(RdfToken.DELETE_KW);
         const prev = this._insideDeleteBlock;
         this._insideDeleteBlock = true;
         this.SUBRULE(this.quadPattern);
@@ -1048,7 +1048,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [45] InsertClause ::= 'INSERT' QuadPattern
      */
     insertClause = this.RULE('insertClause', () => {
-        this.CONSUME(DocumentToken.INSERT);
+        this.CONSUME(RdfToken.INSERT);
         this.SUBRULE(this.quadPattern);
     });
 
@@ -1056,11 +1056,11 @@ export class SparqlParser extends CstParser implements IParser {
      * [46] UsingClause ::= 'USING' (iri | 'NAMED' iri)
      */
     usingClause = this.RULE('usingClause', () => {
-        this.CONSUME(DocumentToken.USING);
+        this.CONSUME(RdfToken.USING);
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.NAMED);
+                    this.CONSUME(RdfToken.NAMED);
                     this.SUBRULE1(this.iri);
                 }
             },
@@ -1073,10 +1073,10 @@ export class SparqlParser extends CstParser implements IParser {
      */
     graphOrDefault = this.RULE('graphOrDefault', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.DEFAULT_KW) },
+            { ALT: () => this.CONSUME(RdfToken.DEFAULT_KW) },
             {
                 ALT: () => {
-                    this.OPTION(() => this.CONSUME(DocumentToken.GRAPH));
+                    this.OPTION(() => this.CONSUME(RdfToken.GRAPH));
                     this.SUBRULE(this.iri);
                 }
             }
@@ -1087,7 +1087,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [48] GraphRef ::= 'GRAPH' iri
      */
     graphRef = this.RULE('graphRef', () => {
-        this.CONSUME(DocumentToken.GRAPH);
+        this.CONSUME(RdfToken.GRAPH);
         this.SUBRULE(this.iri);
     });
 
@@ -1097,9 +1097,9 @@ export class SparqlParser extends CstParser implements IParser {
     graphRefAll = this.RULE('graphRefAll', () => {
         this.OR([
             { ALT: () => this.SUBRULE(this.graphRef) },
-            { ALT: () => this.CONSUME(DocumentToken.DEFAULT_KW) },
-            { ALT: () => this.CONSUME(DocumentToken.NAMED) },
-            { ALT: () => this.CONSUME(DocumentToken.ALL_KW) }
+            { ALT: () => this.CONSUME(RdfToken.DEFAULT_KW) },
+            { ALT: () => this.CONSUME(RdfToken.NAMED) },
+            { ALT: () => this.CONSUME(RdfToken.ALL_KW) }
         ]);
     });
 
@@ -1111,18 +1111,18 @@ export class SparqlParser extends CstParser implements IParser {
      * [50] QuadPattern ::= '{' Quads '}'
      */
     quadPattern = this.RULE('quadPattern', () => {
-        this.CONSUME(DocumentToken.LCURLY);
+        this.CONSUME(RdfToken.LCURLY);
         this.SUBRULE(this.quads);
-        this.CONSUME(DocumentToken.RCURLY);
+        this.CONSUME(RdfToken.RCURLY);
     });
 
     /**
      * [51] QuadData ::= '{' Quads '}'
      */
     quadData = this.RULE('quadData', () => {
-        this.CONSUME(DocumentToken.LCURLY);
+        this.CONSUME(RdfToken.LCURLY);
         this.SUBRULE(this.quads);
-        this.CONSUME(DocumentToken.RCURLY);
+        this.CONSUME(RdfToken.RCURLY);
     });
 
     /**
@@ -1132,7 +1132,7 @@ export class SparqlParser extends CstParser implements IParser {
         this.OPTION1(() => this.SUBRULE1(this.triplesTemplate));
         this.MANY(() => {
             this.SUBRULE(this.quadsNotTriples);
-            this.OPTION2(() => this.CONSUME(DocumentToken.PERIOD));
+            this.OPTION2(() => this.CONSUME(RdfToken.PERIOD));
             this.OPTION3(() => this.SUBRULE2(this.triplesTemplate));
         });
     });
@@ -1141,11 +1141,11 @@ export class SparqlParser extends CstParser implements IParser {
      * [53] QuadsNotTriples ::= 'GRAPH' VarOrIri '{' TriplesTemplate? '}'
      */
     quadsNotTriples = this.RULE('quadsNotTriples', () => {
-        this.CONSUME(DocumentToken.GRAPH);
+        this.CONSUME(RdfToken.GRAPH);
         this.SUBRULE(this.varOrIri);
-        this.CONSUME(DocumentToken.LCURLY);
+        this.CONSUME(RdfToken.LCURLY);
         this.OPTION(() => this.SUBRULE(this.triplesTemplate));
-        this.CONSUME(DocumentToken.RCURLY);
+        this.CONSUME(RdfToken.RCURLY);
     });
 
     /**
@@ -1154,7 +1154,7 @@ export class SparqlParser extends CstParser implements IParser {
     triplesTemplate = this.RULE('triplesTemplate', () => {
         this.SUBRULE(this.triplesSameSubject);
         this.OPTION(() => {
-            this.CONSUME(DocumentToken.PERIOD);
+            this.CONSUME(RdfToken.PERIOD);
             this.OPTION2(() => this.SUBRULE(this.triplesTemplate));
         });
     });
@@ -1167,12 +1167,12 @@ export class SparqlParser extends CstParser implements IParser {
      * [55] GroupGraphPattern ::= '{' (SubSelect | GroupGraphPatternSub) '}'
      */
     groupGraphPattern = this.RULE('groupGraphPattern', () => {
-        this.CONSUME(DocumentToken.LCURLY);
+        this.CONSUME(RdfToken.LCURLY);
         this.OR([
             { ALT: () => this.SUBRULE(this.subSelect) },
             { ALT: () => this.SUBRULE(this.groupGraphPatternSub) }
         ]);
-        this.CONSUME(DocumentToken.RCURLY);
+        this.CONSUME(RdfToken.RCURLY);
     });
 
     /**
@@ -1182,7 +1182,7 @@ export class SparqlParser extends CstParser implements IParser {
         this.OPTION1(() => this.SUBRULE1(this.triplesBlock));
         this.MANY(() => {
             this.SUBRULE(this.graphPatternNotTriples);
-            this.OPTION2(() => this.CONSUME(DocumentToken.PERIOD));
+            this.OPTION2(() => this.CONSUME(RdfToken.PERIOD));
             this.OPTION3(() => this.SUBRULE2(this.triplesBlock));
         });
     });
@@ -1193,7 +1193,7 @@ export class SparqlParser extends CstParser implements IParser {
     triplesBlock = this.RULE('triplesBlock', () => {
         this.SUBRULE(this.triplesSameSubjectPath);
         this.OPTION(() => {
-            this.CONSUME(DocumentToken.PERIOD);
+            this.CONSUME(RdfToken.PERIOD);
             this.OPTION2(() => this.SUBRULE(this.triplesBlock));
         });
     });
@@ -1229,7 +1229,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [60] OptionalGraphPattern ::= 'OPTIONAL' GroupGraphPattern
      */
     optionalGraphPattern = this.RULE('optionalGraphPattern', () => {
-        this.CONSUME(DocumentToken.OPTIONAL_KW);
+        this.CONSUME(RdfToken.OPTIONAL_KW);
         this.SUBRULE(this.groupGraphPattern);
     });
 
@@ -1237,7 +1237,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [61] GraphGraphPattern ::= 'GRAPH' VarOrIri GroupGraphPattern
      */
     graphGraphPattern = this.RULE('graphGraphPattern', () => {
-        this.CONSUME(DocumentToken.GRAPH);
+        this.CONSUME(RdfToken.GRAPH);
         this.SUBRULE(this.varOrIri);
         this.SUBRULE(this.groupGraphPattern);
     });
@@ -1246,8 +1246,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [62] ServiceGraphPattern ::= 'SERVICE' 'SILENT'? VarOrIri GroupGraphPattern
      */
     serviceGraphPattern = this.RULE('serviceGraphPattern', () => {
-        this.CONSUME(DocumentToken.SERVICE);
-        this.OPTION(() => this.CONSUME(DocumentToken.SILENT));
+        this.CONSUME(RdfToken.SERVICE);
+        this.OPTION(() => this.CONSUME(RdfToken.SILENT));
         this.SUBRULE(this.varOrIri);
         this.SUBRULE(this.groupGraphPattern);
     });
@@ -1256,19 +1256,19 @@ export class SparqlParser extends CstParser implements IParser {
      * [63] Bind ::= 'BIND' '(' Expression 'AS' Var ')'
      */
     bind = this.RULE('bind', () => {
-        this.CONSUME(DocumentToken.BIND_KW);
-        this.CONSUME(DocumentToken.LPARENT);
+        this.CONSUME(RdfToken.BIND_KW);
+        this.CONSUME(RdfToken.LPARENT);
         this.SUBRULE(this.expression);
-        this.CONSUME(DocumentToken.AS_KW);
+        this.CONSUME(RdfToken.AS_KW);
         this.SUBRULE(this.var);
-        this.CONSUME(DocumentToken.RPARENT);
+        this.CONSUME(RdfToken.RPARENT);
     });
 
     /**
      * [64] InlineData ::= 'VALUES' DataBlock
      */
     inlineData = this.RULE('inlineData', () => {
-        this.CONSUME(DocumentToken.VALUES);
+        this.CONSUME(RdfToken.VALUES);
         this.SUBRULE(this.dataBlock);
     });
 
@@ -1287,9 +1287,9 @@ export class SparqlParser extends CstParser implements IParser {
      */
     inlineDataOneVar = this.RULE('inlineDataOneVar', () => {
         this.SUBRULE(this.var);
-        this.CONSUME(DocumentToken.LCURLY);
+        this.CONSUME(RdfToken.LCURLY);
         this.MANY(() => this.SUBRULE(this.dataBlockValue));
-        this.CONSUME(DocumentToken.RCURLY);
+        this.CONSUME(RdfToken.RCURLY);
     });
 
     /**
@@ -1297,29 +1297,29 @@ export class SparqlParser extends CstParser implements IParser {
      */
     inlineDataFull = this.RULE('inlineDataFull', () => {
         this.OR1([
-            { ALT: () => this.CONSUME1(DocumentToken.NIL) },
+            { ALT: () => this.CONSUME1(RdfToken.NIL) },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.LPARENT);
                     this.MANY1(() => this.SUBRULE(this.var));
-                    this.CONSUME(DocumentToken.RPARENT);
+                    this.CONSUME(RdfToken.RPARENT);
                 }
             }
         ]);
-        this.CONSUME(DocumentToken.LCURLY);
+        this.CONSUME(RdfToken.LCURLY);
         this.MANY2(() => {
             this.OR2([
                 {
                     ALT: () => {
-                        this.CONSUME2(DocumentToken.LPARENT);
+                        this.CONSUME2(RdfToken.LPARENT);
                         this.MANY3(() => this.SUBRULE(this.dataBlockValue));
-                        this.CONSUME2(DocumentToken.RPARENT);
+                        this.CONSUME2(RdfToken.RPARENT);
                     }
                 },
-                { ALT: () => this.CONSUME2(DocumentToken.NIL) }
+                { ALT: () => this.CONSUME2(RdfToken.NIL) }
             ]);
         });
-        this.CONSUME(DocumentToken.RCURLY);
+        this.CONSUME(RdfToken.RCURLY);
     });
 
     /**
@@ -1331,7 +1331,7 @@ export class SparqlParser extends CstParser implements IParser {
             { ALT: () => this.SUBRULE(this.rdfLiteral) },
             { ALT: () => this.SUBRULE(this.numericLiteral) },
             { ALT: () => this.SUBRULE(this.booleanLiteral) },
-            { ALT: () => this.CONSUME(DocumentToken.UNDEF) },
+            { ALT: () => this.CONSUME(RdfToken.UNDEF) },
             { ALT: () => this.SUBRULE(this.tripleTermData) }
         ]);
     });
@@ -1340,7 +1340,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [69] MinusGraphPattern ::= 'MINUS' GroupGraphPattern
      */
     minusGraphPattern = this.RULE('minusGraphPattern', () => {
-        this.CONSUME(DocumentToken.MINUS_KW);
+        this.CONSUME(RdfToken.MINUS_KW);
         this.SUBRULE(this.groupGraphPattern);
     });
 
@@ -1350,7 +1350,7 @@ export class SparqlParser extends CstParser implements IParser {
     groupOrUnionGraphPattern = this.RULE('groupOrUnionGraphPattern', () => {
         this.SUBRULE1(this.groupGraphPattern);
         this.MANY(() => {
-            this.CONSUME(DocumentToken.UNION);
+            this.CONSUME(RdfToken.UNION);
             this.SUBRULE2(this.groupGraphPattern);
         });
     });
@@ -1359,7 +1359,7 @@ export class SparqlParser extends CstParser implements IParser {
      * [71] Filter ::= 'FILTER' Constraint
      */
     filter = this.RULE('filter', () => {
-        this.CONSUME(DocumentToken.FILTER);
+        this.CONSUME(RdfToken.FILTER);
         this.SUBRULE(this.constraint);
     });
 
@@ -1391,17 +1391,17 @@ export class SparqlParser extends CstParser implements IParser {
      */
     argList = this.RULE('argList', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.NIL) },
+            { ALT: () => this.CONSUME(RdfToken.NIL) },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.LPARENT);
-                    this.OPTION(() => this.CONSUME(DocumentToken.DISTINCT));
+                    this.CONSUME(RdfToken.LPARENT);
+                    this.OPTION(() => this.CONSUME(RdfToken.DISTINCT));
                     this.SUBRULE1(this.expression);
                     this.MANY(() => {
-                        this.CONSUME(DocumentToken.COMMA);
+                        this.CONSUME(RdfToken.COMMA);
                         this.SUBRULE2(this.expression);
                     });
-                    this.CONSUME(DocumentToken.RPARENT);
+                    this.CONSUME(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -1412,16 +1412,16 @@ export class SparqlParser extends CstParser implements IParser {
      */
     expressionList = this.RULE('expressionList', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.NIL) },
+            { ALT: () => this.CONSUME(RdfToken.NIL) },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
                     this.MANY(() => {
-                        this.CONSUME(DocumentToken.COMMA);
+                        this.CONSUME(RdfToken.COMMA);
                         this.SUBRULE2(this.expression);
                     });
-                    this.CONSUME(DocumentToken.RPARENT);
+                    this.CONSUME(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -1435,9 +1435,9 @@ export class SparqlParser extends CstParser implements IParser {
      * [76] ConstructTemplate ::= '{' ConstructTriples? '}'
      */
     constructTemplate = this.RULE('constructTemplate', () => {
-        this.CONSUME(DocumentToken.LCURLY);
+        this.CONSUME(RdfToken.LCURLY);
         this.OPTION(() => this.SUBRULE(this.constructTriples));
-        this.CONSUME(DocumentToken.RCURLY);
+        this.CONSUME(RdfToken.RCURLY);
     });
 
     /**
@@ -1446,7 +1446,7 @@ export class SparqlParser extends CstParser implements IParser {
     constructTriples = this.RULE('constructTriples', () => {
         this.SUBRULE(this.triplesSameSubject);
         this.OPTION(() => {
-            this.CONSUME(DocumentToken.PERIOD);
+            this.CONSUME(RdfToken.PERIOD);
             this.OPTION2(() => this.SUBRULE(this.constructTriples));
         });
     });
@@ -1490,7 +1490,7 @@ export class SparqlParser extends CstParser implements IParser {
         this.SUBRULE1(this.verb);
         this.SUBRULE1(this.objectList);
         this.MANY(() => {
-            this.CONSUME(DocumentToken.SEMICOLON);
+            this.CONSUME(RdfToken.SEMICOLON);
             this.OPTION(() => {
                 this.SUBRULE2(this.verb);
                 this.SUBRULE2(this.objectList);
@@ -1504,7 +1504,7 @@ export class SparqlParser extends CstParser implements IParser {
     verb = this.RULE('verb', () => {
         this.OR([
             { ALT: () => this.SUBRULE(this.varOrIri) },
-            { ALT: () => this.CONSUME(DocumentToken.A) }
+            { ALT: () => this.CONSUME(RdfToken.A) }
         ]);
     });
 
@@ -1514,7 +1514,7 @@ export class SparqlParser extends CstParser implements IParser {
     objectList = this.RULE('objectList', () => {
         this.SUBRULE1(this.graphObject);
         this.MANY(() => {
-            this.CONSUME(DocumentToken.COMMA);
+            this.CONSUME(RdfToken.COMMA);
             this.SUBRULE2(this.graphObject);
         });
     });
@@ -1570,7 +1570,7 @@ export class SparqlParser extends CstParser implements IParser {
         ]);
         this.SUBRULE1(this.objectListPath);
         this.MANY(() => {
-            this.CONSUME(DocumentToken.SEMICOLON);
+            this.CONSUME(RdfToken.SEMICOLON);
             this.OPTION(() => {
                 this._verbIsSimplePath = true;
                 this.OR2([
@@ -1602,7 +1602,7 @@ export class SparqlParser extends CstParser implements IParser {
     objectListPath = this.RULE('objectListPath', () => {
         this.SUBRULE1(this.objectPath);
         this.MANY(() => {
-            this.CONSUME(DocumentToken.COMMA);
+            this.CONSUME(RdfToken.COMMA);
             this.SUBRULE2(this.objectPath);
         });
     });
@@ -1633,7 +1633,7 @@ export class SparqlParser extends CstParser implements IParser {
         this.SUBRULE1(this.pathSequence);
         this.MANY(() => {
             this._verbIsSimplePath = false;
-            this.CONSUME(DocumentToken.PIPE);
+            this.CONSUME(RdfToken.PIPE);
             this.SUBRULE2(this.pathSequence);
         });
     });
@@ -1645,7 +1645,7 @@ export class SparqlParser extends CstParser implements IParser {
         this.SUBRULE1(this.pathEltOrInverse);
         this.MANY(() => {
             this._verbIsSimplePath = false;
-            this.CONSUME(DocumentToken.SLASH);
+            this.CONSUME(RdfToken.SLASH);
             this.SUBRULE2(this.pathEltOrInverse);
         });
     });
@@ -1667,7 +1667,7 @@ export class SparqlParser extends CstParser implements IParser {
             {
                 ALT: () => {
                     this._verbIsSimplePath = false;
-                    this.CONSUME(DocumentToken.CARET);
+                    this.CONSUME(RdfToken.CARET);
                     this.SUBRULE2(this.pathElt);
                 }
             }
@@ -1680,9 +1680,9 @@ export class SparqlParser extends CstParser implements IParser {
     pathMod = this.RULE('pathMod', () => {
         this._verbIsSimplePath = false;
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.QUESTION_MARK) },
-            { ALT: () => this.CONSUME(DocumentToken.STAR) },
-            { ALT: () => this.CONSUME(DocumentToken.PLUS_SIGN) }
+            { ALT: () => this.CONSUME(RdfToken.QUESTION_MARK) },
+            { ALT: () => this.CONSUME(RdfToken.STAR) },
+            { ALT: () => this.CONSUME(RdfToken.PLUS_SIGN) }
         ]);
     });
 
@@ -1692,20 +1692,20 @@ export class SparqlParser extends CstParser implements IParser {
     pathPrimary = this.RULE('pathPrimary', () => {
         this.OR([
             { ALT: () => this.SUBRULE(this.iri) },
-            { ALT: () => this.CONSUME(DocumentToken.A) },
+            { ALT: () => this.CONSUME(RdfToken.A) },
             {
                 ALT: () => {
                     this._verbIsSimplePath = false;
-                    this.CONSUME(DocumentToken.BANG);
+                    this.CONSUME(RdfToken.BANG);
                     this.SUBRULE(this.pathNegatedPropertySet);
                 }
             },
             {
                 ALT: () => {
                     this._verbIsSimplePath = false;
-                    this.CONSUME(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.LPARENT);
                     this.SUBRULE(this.path);
-                    this.CONSUME(DocumentToken.RPARENT);
+                    this.CONSUME(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -1719,15 +1719,15 @@ export class SparqlParser extends CstParser implements IParser {
             { ALT: () => this.SUBRULE1(this.pathOneInPropertySet) },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.LPARENT);
                     this.OPTION(() => {
                         this.SUBRULE2(this.pathOneInPropertySet);
                         this.MANY(() => {
-                            this.CONSUME(DocumentToken.PIPE);
+                            this.CONSUME(RdfToken.PIPE);
                             this.SUBRULE3(this.pathOneInPropertySet);
                         });
                     });
-                    this.CONSUME(DocumentToken.RPARENT);
+                    this.CONSUME(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -1739,13 +1739,13 @@ export class SparqlParser extends CstParser implements IParser {
     pathOneInPropertySet = this.RULE('pathOneInPropertySet', () => {
         this.OR([
             { ALT: () => this.SUBRULE(this.iri) },
-            { ALT: () => this.CONSUME(DocumentToken.A) },
+            { ALT: () => this.CONSUME(RdfToken.A) },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.CARET);
+                    this.CONSUME(RdfToken.CARET);
                     this.OR2([
                         { ALT: () => this.SUBRULE2(this.iri) },
-                        { ALT: () => this.CONSUME2(DocumentToken.A) }
+                        { ALT: () => this.CONSUME2(RdfToken.A) }
                     ]);
                 }
             }
@@ -1776,24 +1776,24 @@ export class SparqlParser extends CstParser implements IParser {
      * [102] ReifiedTriple ::= '<<' ReifiedTripleSubject Verb ReifiedTripleObject Reifier? '>>'
      */
     reifiedTriple = this.RULE('reifiedTriple', () => {
-        this.CONSUME(DocumentToken.OPEN_REIFIED_TRIPLE);
+        this.CONSUME(RdfToken.OPEN_REIFIED_TRIPLE);
         this.SUBRULE(this.reifiedTripleSubject);
         this.SUBRULE(this.verb);
         this.SUBRULE(this.reifiedTripleObject);
         this.OPTION(() => this.SUBRULE(this.reifier));
-        this.CONSUME(DocumentToken.CLOSE_REIFIED_TRIPLE);
+        this.CONSUME(RdfToken.CLOSE_REIFIED_TRIPLE);
     });
 
     /**
      * [103] ReifiedTriplePath ::= '<<' ReifiedTripleSubject VerbPath ReifiedTripleObjectPath Reifier? '>>'
      */
     reifiedTriplePath = this.RULE('reifiedTriplePath', () => {
-        this.CONSUME(DocumentToken.OPEN_REIFIED_TRIPLE);
+        this.CONSUME(RdfToken.OPEN_REIFIED_TRIPLE);
         this.SUBRULE(this.reifiedTripleSubject);
         this.SUBRULE(this.verbPath);
         this.SUBRULE(this.reifiedTripleObjectPath);
         this.OPTION(() => this.SUBRULE(this.reifier));
-        this.CONSUME(DocumentToken.CLOSE_REIFIED_TRIPLE);
+        this.CONSUME(RdfToken.CLOSE_REIFIED_TRIPLE);
     });
 
     /**
@@ -1870,9 +1870,9 @@ export class SparqlParser extends CstParser implements IParser {
      * [108] AnnotationBlockPath ::= '{|' PropertyListPathNotEmpty '|}'
      */
     annotationBlockPath = this.RULE('annotationBlockPath', () => {
-        this.CONSUME(DocumentToken.OPEN_ANNOTATION);
+        this.CONSUME(RdfToken.OPEN_ANNOTATION);
         this.SUBRULE(this.propertyListPathNotEmpty);
-        this.CONSUME(DocumentToken.CLOSE_ANNOTATION);
+        this.CONSUME(RdfToken.CLOSE_ANNOTATION);
     });
 
     /**
@@ -1909,16 +1909,16 @@ export class SparqlParser extends CstParser implements IParser {
      * [110] AnnotationBlock ::= '{|' PropertyListNotEmpty '|}'
      */
     annotationBlock = this.RULE('annotationBlock', () => {
-        this.CONSUME(DocumentToken.OPEN_ANNOTATION);
+        this.CONSUME(RdfToken.OPEN_ANNOTATION);
         this.SUBRULE(this.propertyListNotEmpty);
-        this.CONSUME(DocumentToken.CLOSE_ANNOTATION);
+        this.CONSUME(RdfToken.CLOSE_ANNOTATION);
     });
 
     /**
      * [111] Reifier ::= '~' VarOrReifierId?
      */
     reifier = this.RULE('reifier', () => {
-        this.CONSUME(DocumentToken.TILDE);
+        this.CONSUME(RdfToken.TILDE);
         this.OPTION(() => this.SUBRULE(this.varOrReifierId));
     });
 
@@ -1937,11 +1937,11 @@ export class SparqlParser extends CstParser implements IParser {
      * [113] TripleTerm ::= '<<(' TripleTermSubject Verb TripleTermObject ')>>'
      */
     tripleTerm = this.RULE('tripleTerm', () => {
-        this.CONSUME(DocumentToken.OPEN_TRIPLE_TERM);
+        this.CONSUME(RdfToken.OPEN_TRIPLE_TERM);
         this.SUBRULE(this.tripleTermSubject);
         this.SUBRULE(this.verb);
         this.SUBRULE(this.tripleTermObject);
-        this.CONSUME(DocumentToken.CLOSE_TRIPLE_TERM);
+        this.CONSUME(RdfToken.CLOSE_TRIPLE_TERM);
     });
 
     /**
@@ -1978,14 +1978,14 @@ export class SparqlParser extends CstParser implements IParser {
      * [116] TripleTermData ::= '<<(' TripleTermDataSubject (iri | 'a') TripleTermDataObject ')>>'
      */
     tripleTermData = this.RULE('tripleTermData', () => {
-        this.CONSUME(DocumentToken.OPEN_TRIPLE_TERM);
+        this.CONSUME(RdfToken.OPEN_TRIPLE_TERM);
         this.SUBRULE(this.tripleTermDataSubject);
         this.OR([
             { ALT: () => this.SUBRULE1(this.iri) },
-            { ALT: () => this.CONSUME(DocumentToken.A) }
+            { ALT: () => this.CONSUME(RdfToken.A) }
         ]);
         this.SUBRULE(this.tripleTermDataObject);
-        this.CONSUME(DocumentToken.CLOSE_TRIPLE_TERM);
+        this.CONSUME(RdfToken.CLOSE_TRIPLE_TERM);
     });
 
     /**
@@ -2025,7 +2025,7 @@ export class SparqlParser extends CstParser implements IParser {
     conditionalOrExpression = this.RULE('conditionalOrExpression', () => {
         this.SUBRULE1(this.conditionalAndExpression);
         this.MANY(() => {
-            this.CONSUME(DocumentToken.OR);
+            this.CONSUME(RdfToken.OR);
             this.SUBRULE2(this.conditionalAndExpression);
         });
     });
@@ -2036,7 +2036,7 @@ export class SparqlParser extends CstParser implements IParser {
     conditionalAndExpression = this.RULE('conditionalAndExpression', () => {
         this.SUBRULE1(this.valueLogical);
         this.MANY(() => {
-            this.CONSUME(DocumentToken.AND);
+            this.CONSUME(RdfToken.AND);
             this.SUBRULE2(this.valueLogical);
         });
     });
@@ -2058,14 +2058,14 @@ export class SparqlParser extends CstParser implements IParser {
         this.SUBRULE1(this.numericExpression);
         this.OPTION(() => {
             this.OR([
-                { ALT: () => { this.CONSUME(DocumentToken.EQ); this.SUBRULE2(this.numericExpression); } },
-                { ALT: () => { this.CONSUME(DocumentToken.NEQ); this.SUBRULE3(this.numericExpression); } },
-                { ALT: () => { this.CONSUME(DocumentToken.LT); this.SUBRULE4(this.numericExpression); } },
-                { ALT: () => { this.CONSUME(DocumentToken.GT); this.SUBRULE5(this.numericExpression); } },
-                { ALT: () => { this.CONSUME(DocumentToken.LTE); this.SUBRULE6(this.numericExpression); } },
-                { ALT: () => { this.CONSUME(DocumentToken.GTE); this.SUBRULE7(this.numericExpression); } },
-                { ALT: () => { this.CONSUME(DocumentToken.IN_KW); this.SUBRULE1(this.expressionList); } },
-                { ALT: () => { this.CONSUME(DocumentToken.NOT); this.CONSUME2(DocumentToken.IN_KW); this.SUBRULE2(this.expressionList); } }
+                { ALT: () => { this.CONSUME(RdfToken.EQ); this.SUBRULE2(this.numericExpression); } },
+                { ALT: () => { this.CONSUME(RdfToken.NEQ); this.SUBRULE3(this.numericExpression); } },
+                { ALT: () => { this.CONSUME(RdfToken.LT); this.SUBRULE4(this.numericExpression); } },
+                { ALT: () => { this.CONSUME(RdfToken.GT); this.SUBRULE5(this.numericExpression); } },
+                { ALT: () => { this.CONSUME(RdfToken.LTE); this.SUBRULE6(this.numericExpression); } },
+                { ALT: () => { this.CONSUME(RdfToken.GTE); this.SUBRULE7(this.numericExpression); } },
+                { ALT: () => { this.CONSUME(RdfToken.IN_KW); this.SUBRULE1(this.expressionList); } },
+                { ALT: () => { this.CONSUME(RdfToken.NOT); this.CONSUME2(RdfToken.IN_KW); this.SUBRULE2(this.expressionList); } }
             ]);
         });
     });
@@ -2088,13 +2088,13 @@ export class SparqlParser extends CstParser implements IParser {
             this.OR([
                 {
                     ALT: () => {
-                        this.CONSUME(DocumentToken.PLUS_SIGN);
+                        this.CONSUME(RdfToken.PLUS_SIGN);
                         this.SUBRULE2(this.multiplicativeExpression);
                     }
                 },
                 {
                     ALT: () => {
-                        this.CONSUME(DocumentToken.MINUS_SIGN);
+                        this.CONSUME(RdfToken.MINUS_SIGN);
                         this.SUBRULE3(this.multiplicativeExpression);
                     }
                 },
@@ -2106,8 +2106,8 @@ export class SparqlParser extends CstParser implements IParser {
                         ]);
                         this.OPTION(() => {
                             this.OR3([
-                                { ALT: () => { this.CONSUME(DocumentToken.STAR); this.SUBRULE1(this.unaryExpression); } },
-                                { ALT: () => { this.CONSUME(DocumentToken.SLASH); this.SUBRULE2(this.unaryExpression); } }
+                                { ALT: () => { this.CONSUME(RdfToken.STAR); this.SUBRULE1(this.unaryExpression); } },
+                                { ALT: () => { this.CONSUME(RdfToken.SLASH); this.SUBRULE2(this.unaryExpression); } }
                             ]);
                         });
                     }
@@ -2123,8 +2123,8 @@ export class SparqlParser extends CstParser implements IParser {
         this.SUBRULE1(this.unaryExpression);
         this.MANY(() => {
             this.OR([
-                { ALT: () => { this.CONSUME(DocumentToken.STAR); this.SUBRULE2(this.unaryExpression); } },
-                { ALT: () => { this.CONSUME(DocumentToken.SLASH); this.SUBRULE3(this.unaryExpression); } }
+                { ALT: () => { this.CONSUME(RdfToken.STAR); this.SUBRULE2(this.unaryExpression); } },
+                { ALT: () => { this.CONSUME(RdfToken.SLASH); this.SUBRULE3(this.unaryExpression); } }
             ]);
         });
     });
@@ -2134,9 +2134,9 @@ export class SparqlParser extends CstParser implements IParser {
      */
     unaryExpression = this.RULE('unaryExpression', () => {
         this.OR([
-            { ALT: () => { this.CONSUME(DocumentToken.BANG); this.SUBRULE1(this.unaryExpression); } },
-            { ALT: () => { this.CONSUME(DocumentToken.PLUS_SIGN); this.SUBRULE2(this.primaryExpression); } },
-            { ALT: () => { this.CONSUME(DocumentToken.MINUS_SIGN); this.SUBRULE3(this.primaryExpression); } },
+            { ALT: () => { this.CONSUME(RdfToken.BANG); this.SUBRULE1(this.unaryExpression); } },
+            { ALT: () => { this.CONSUME(RdfToken.PLUS_SIGN); this.SUBRULE2(this.primaryExpression); } },
+            { ALT: () => { this.CONSUME(RdfToken.MINUS_SIGN); this.SUBRULE3(this.primaryExpression); } },
             { ALT: () => this.SUBRULE4(this.primaryExpression) }
         ]);
     });
@@ -2162,20 +2162,20 @@ export class SparqlParser extends CstParser implements IParser {
      * [129] BrackettedExpression ::= '(' Expression ')'
      */
     brackettedExpression = this.RULE('brackettedExpression', () => {
-        this.CONSUME(DocumentToken.LPARENT);
+        this.CONSUME(RdfToken.LPARENT);
         this.SUBRULE(this.expression);
-        this.CONSUME(DocumentToken.RPARENT);
+        this.CONSUME(RdfToken.RPARENT);
     });
 
     /**
      * [137] ExprTripleTerm ::= '<<(' ExprTripleTermSubject Verb ExprTripleTermObject ')>>'
      */
     exprTripleTerm = this.RULE('exprTripleTerm', () => {
-        this.CONSUME(DocumentToken.OPEN_TRIPLE_TERM);
+        this.CONSUME(RdfToken.OPEN_TRIPLE_TERM);
         this.SUBRULE(this.exprTripleTermSubject);
         this.SUBRULE(this.verb);
         this.SUBRULE(this.exprTripleTermObject);
-        this.CONSUME(DocumentToken.CLOSE_TRIPLE_TERM);
+        this.CONSUME(RdfToken.CLOSE_TRIPLE_TERM);
     });
 
     /**
@@ -2235,83 +2235,83 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STR);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.STR);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.LANG_KW);
-                    this.CONSUME2(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.LANG_KW);
+                    this.CONSUME2(RdfToken.LPARENT);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.LANGMATCHES);
-                    this.CONSUME3(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.LANGMATCHES);
+                    this.CONSUME3(RdfToken.LPARENT);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME1(DocumentToken.COMMA);
+                    this.CONSUME1(RdfToken.COMMA);
                     this.SUBRULE4(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.LANGDIR);
-                    this.CONSUME4(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.LANGDIR);
+                    this.CONSUME4(RdfToken.LPARENT);
                     this.SUBRULE5(this.expression);
-                    this.CONSUME4(DocumentToken.RPARENT);
+                    this.CONSUME4(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.DATATYPE);
-                    this.CONSUME5(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.DATATYPE);
+                    this.CONSUME5(RdfToken.LPARENT);
                     this.SUBRULE6(this.expression);
-                    this.CONSUME5(DocumentToken.RPARENT);
+                    this.CONSUME5(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.IRI_KW);
-                    this.CONSUME6(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.IRI_KW);
+                    this.CONSUME6(RdfToken.LPARENT);
                     this.SUBRULE7(this.expression);
-                    this.CONSUME6(DocumentToken.RPARENT);
+                    this.CONSUME6(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.URI_KW);
-                    this.CONSUME7(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.URI_KW);
+                    this.CONSUME7(RdfToken.LPARENT);
                     this.SUBRULE8(this.expression);
-                    this.CONSUME7(DocumentToken.RPARENT);
+                    this.CONSUME7(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.BNODE_KW);
+                    this.CONSUME(RdfToken.BNODE_KW);
                     this.OR2([
                         {
                             ALT: () => {
-                                this.CONSUME8(DocumentToken.LPARENT);
+                                this.CONSUME8(RdfToken.LPARENT);
                                 this.SUBRULE9(this.expression);
-                                this.CONSUME8(DocumentToken.RPARENT);
+                                this.CONSUME8(RdfToken.RPARENT);
                             }
                         },
-                        { ALT: () => this.CONSUME1(DocumentToken.NIL) }
+                        { ALT: () => this.CONSUME1(RdfToken.NIL) }
                     ]);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.BOUND);
-                    this.CONSUME9(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.BOUND);
+                    this.CONSUME9(RdfToken.LPARENT);
                     this.SUBRULE1(this.var);
-                    this.CONSUME9(DocumentToken.RPARENT);
+                    this.CONSUME9(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -2324,59 +2324,59 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STRLEN);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.STRLEN);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.UCASE);
-                    this.CONSUME2(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.UCASE);
+                    this.CONSUME2(RdfToken.LPARENT);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.LCASE);
-                    this.CONSUME3(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.LCASE);
+                    this.CONSUME3(RdfToken.LPARENT);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.ENCODE_FOR_URI);
-                    this.CONSUME4(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.ENCODE_FOR_URI);
+                    this.CONSUME4(RdfToken.LPARENT);
                     this.SUBRULE4(this.expression);
-                    this.CONSUME4(DocumentToken.RPARENT);
+                    this.CONSUME4(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.CONTAINS);
-                    this.CONSUME5(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.CONTAINS);
+                    this.CONSUME5(RdfToken.LPARENT);
                     this.SUBRULE5(this.expression);
-                    this.CONSUME1(DocumentToken.COMMA);
+                    this.CONSUME1(RdfToken.COMMA);
                     this.SUBRULE6(this.expression);
-                    this.CONSUME5(DocumentToken.RPARENT);
+                    this.CONSUME5(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STRSTARTS);
-                    this.CONSUME6(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.STRSTARTS);
+                    this.CONSUME6(RdfToken.LPARENT);
                     this.SUBRULE7(this.expression);
-                    this.CONSUME2(DocumentToken.COMMA);
+                    this.CONSUME2(RdfToken.COMMA);
                     this.SUBRULE8(this.expression);
-                    this.CONSUME6(DocumentToken.RPARENT);
+                    this.CONSUME6(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.CONCAT);
+                    this.CONSUME(RdfToken.CONCAT);
                     this.SUBRULE1(this.expressionList);
                 }
             },
@@ -2391,32 +2391,32 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STRENDS);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.STRENDS);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.COMMA);
+                    this.CONSUME1(RdfToken.COMMA);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STRBEFORE);
-                    this.CONSUME2(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.STRBEFORE);
+                    this.CONSUME2(RdfToken.LPARENT);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME2(DocumentToken.COMMA);
+                    this.CONSUME2(RdfToken.COMMA);
                     this.SUBRULE4(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STRAFTER);
-                    this.CONSUME3(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.STRAFTER);
+                    this.CONSUME3(RdfToken.LPARENT);
                     this.SUBRULE5(this.expression);
-                    this.CONSUME3(DocumentToken.COMMA);
+                    this.CONSUME3(RdfToken.COMMA);
                     this.SUBRULE6(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             },
             { ALT: () => this.SUBRULE(this.builtInCallStringFuncs3) }
@@ -2430,34 +2430,34 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STRLANG);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.STRLANG);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.COMMA);
+                    this.CONSUME1(RdfToken.COMMA);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STRLANGDIR);
-                    this.CONSUME2(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.STRLANGDIR);
+                    this.CONSUME2(RdfToken.LPARENT);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME2(DocumentToken.COMMA);
+                    this.CONSUME2(RdfToken.COMMA);
                     this.SUBRULE4(this.expression);
-                    this.CONSUME3(DocumentToken.COMMA);
+                    this.CONSUME3(RdfToken.COMMA);
                     this.SUBRULE5(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STRDT);
-                    this.CONSUME3(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.STRDT);
+                    this.CONSUME3(RdfToken.LPARENT);
                     this.SUBRULE6(this.expression);
-                    this.CONSUME4(DocumentToken.COMMA);
+                    this.CONSUME4(RdfToken.COMMA);
                     this.SUBRULE7(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -2470,40 +2470,40 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.ABS_KW);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.ABS_KW);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.CEIL);
-                    this.CONSUME2(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.CEIL);
+                    this.CONSUME2(RdfToken.LPARENT);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.FLOOR);
-                    this.CONSUME3(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.FLOOR);
+                    this.CONSUME3(RdfToken.LPARENT);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.ROUND);
-                    this.CONSUME4(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.ROUND);
+                    this.CONSUME4(RdfToken.LPARENT);
                     this.SUBRULE4(this.expression);
-                    this.CONSUME4(DocumentToken.RPARENT);
+                    this.CONSUME4(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.RAND);
-                    this.CONSUME1(DocumentToken.NIL);
+                    this.CONSUME(RdfToken.RAND);
+                    this.CONSUME1(RdfToken.NIL);
                 }
             }
         ]);
@@ -2516,72 +2516,72 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.YEAR);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.YEAR);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.MONTH);
-                    this.CONSUME2(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.MONTH);
+                    this.CONSUME2(RdfToken.LPARENT);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.DAY);
-                    this.CONSUME3(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.DAY);
+                    this.CONSUME3(RdfToken.LPARENT);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.HOURS);
-                    this.CONSUME4(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.HOURS);
+                    this.CONSUME4(RdfToken.LPARENT);
                     this.SUBRULE4(this.expression);
-                    this.CONSUME4(DocumentToken.RPARENT);
+                    this.CONSUME4(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.MINUTES);
-                    this.CONSUME5(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.MINUTES);
+                    this.CONSUME5(RdfToken.LPARENT);
                     this.SUBRULE5(this.expression);
-                    this.CONSUME5(DocumentToken.RPARENT);
+                    this.CONSUME5(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.SECONDS);
-                    this.CONSUME6(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.SECONDS);
+                    this.CONSUME6(RdfToken.LPARENT);
                     this.SUBRULE6(this.expression);
-                    this.CONSUME6(DocumentToken.RPARENT);
+                    this.CONSUME6(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.TIMEZONE);
-                    this.CONSUME7(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.TIMEZONE);
+                    this.CONSUME7(RdfToken.LPARENT);
                     this.SUBRULE7(this.expression);
-                    this.CONSUME7(DocumentToken.RPARENT);
+                    this.CONSUME7(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.TZ_KW);
-                    this.CONSUME8(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.TZ_KW);
+                    this.CONSUME8(RdfToken.LPARENT);
                     this.SUBRULE8(this.expression);
-                    this.CONSUME8(DocumentToken.RPARENT);
+                    this.CONSUME8(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.NOW);
-                    this.CONSUME2(DocumentToken.NIL);
+                    this.CONSUME(RdfToken.NOW);
+                    this.CONSUME2(RdfToken.NIL);
                 }
             }
         ]);
@@ -2594,42 +2594,42 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.MD5);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.MD5);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.SHA1);
-                    this.CONSUME2(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.SHA1);
+                    this.CONSUME2(RdfToken.LPARENT);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.SHA256);
-                    this.CONSUME3(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.SHA256);
+                    this.CONSUME3(RdfToken.LPARENT);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.SHA384);
-                    this.CONSUME4(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.SHA384);
+                    this.CONSUME4(RdfToken.LPARENT);
                     this.SUBRULE4(this.expression);
-                    this.CONSUME4(DocumentToken.RPARENT);
+                    this.CONSUME4(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.SHA512);
-                    this.CONSUME5(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.SHA512);
+                    this.CONSUME5(RdfToken.LPARENT);
                     this.SUBRULE5(this.expression);
-                    this.CONSUME5(DocumentToken.RPARENT);
+                    this.CONSUME5(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -2642,52 +2642,52 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.SAMETERM);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.SAMETERM);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.COMMA);
+                    this.CONSUME1(RdfToken.COMMA);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.ISIRI);
-                    this.CONSUME2(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.ISIRI);
+                    this.CONSUME2(RdfToken.LPARENT);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.ISURI);
-                    this.CONSUME3(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.ISURI);
+                    this.CONSUME3(RdfToken.LPARENT);
                     this.SUBRULE4(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.ISBLANK);
-                    this.CONSUME4(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.ISBLANK);
+                    this.CONSUME4(RdfToken.LPARENT);
                     this.SUBRULE5(this.expression);
-                    this.CONSUME4(DocumentToken.RPARENT);
+                    this.CONSUME4(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.ISLITERAL);
-                    this.CONSUME5(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.ISLITERAL);
+                    this.CONSUME5(RdfToken.LPARENT);
                     this.SUBRULE6(this.expression);
-                    this.CONSUME5(DocumentToken.RPARENT);
+                    this.CONSUME5(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.ISNUMERIC);
-                    this.CONSUME6(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.ISNUMERIC);
+                    this.CONSUME6(RdfToken.LPARENT);
                     this.SUBRULE7(this.expression);
-                    this.CONSUME6(DocumentToken.RPARENT);
+                    this.CONSUME6(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -2700,32 +2700,32 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.COALESCE);
+                    this.CONSUME(RdfToken.COALESCE);
                     this.SUBRULE1(this.expressionList);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.IF_KW);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.IF_KW);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.COMMA);
+                    this.CONSUME1(RdfToken.COMMA);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME2(DocumentToken.COMMA);
+                    this.CONSUME2(RdfToken.COMMA);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.UUID_KW);
-                    this.CONSUME1(DocumentToken.NIL);
+                    this.CONSUME(RdfToken.UUID_KW);
+                    this.CONSUME1(RdfToken.NIL);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.STRUUID);
-                    this.CONSUME2(DocumentToken.NIL);
+                    this.CONSUME(RdfToken.STRUUID);
+                    this.CONSUME2(RdfToken.NIL);
                 }
             }
         ]);
@@ -2738,62 +2738,62 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.ISTRIPLE);
-                    this.CONSUME1(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.ISTRIPLE);
+                    this.CONSUME1(RdfToken.LPARENT);
                     this.SUBRULE1(this.expression);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.TRIPLE_KW);
-                    this.CONSUME2(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.TRIPLE_KW);
+                    this.CONSUME2(RdfToken.LPARENT);
                     this.SUBRULE2(this.expression);
-                    this.CONSUME1(DocumentToken.COMMA);
+                    this.CONSUME1(RdfToken.COMMA);
                     this.SUBRULE3(this.expression);
-                    this.CONSUME2(DocumentToken.COMMA);
+                    this.CONSUME2(RdfToken.COMMA);
                     this.SUBRULE4(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.SUBJECT_KW);
-                    this.CONSUME3(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.SUBJECT_KW);
+                    this.CONSUME3(RdfToken.LPARENT);
                     this.SUBRULE5(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.PREDICATE_KW);
-                    this.CONSUME4(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.PREDICATE_KW);
+                    this.CONSUME4(RdfToken.LPARENT);
                     this.SUBRULE6(this.expression);
-                    this.CONSUME4(DocumentToken.RPARENT);
+                    this.CONSUME4(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.OBJECT_KW);
-                    this.CONSUME5(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.OBJECT_KW);
+                    this.CONSUME5(RdfToken.LPARENT);
                     this.SUBRULE7(this.expression);
-                    this.CONSUME5(DocumentToken.RPARENT);
+                    this.CONSUME5(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.HASLANG);
-                    this.CONSUME6(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.HASLANG);
+                    this.CONSUME6(RdfToken.LPARENT);
                     this.SUBRULE8(this.expression);
-                    this.CONSUME6(DocumentToken.RPARENT);
+                    this.CONSUME6(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.HASLANGDIR);
-                    this.CONSUME7(DocumentToken.LPARENT);
+                    this.CONSUME(RdfToken.HASLANGDIR);
+                    this.CONSUME7(RdfToken.LPARENT);
                     this.SUBRULE9(this.expression);
-                    this.CONSUME7(DocumentToken.RPARENT);
+                    this.CONSUME7(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -2803,57 +2803,57 @@ export class SparqlParser extends CstParser implements IParser {
      * [132] RegexExpression ::= 'REGEX' '(' Expression ',' Expression (',' Expression)? ')'
      */
     regexExpression = this.RULE('regexExpression', () => {
-        this.CONSUME(DocumentToken.REGEX);
-        this.CONSUME(DocumentToken.LPARENT);
+        this.CONSUME(RdfToken.REGEX);
+        this.CONSUME(RdfToken.LPARENT);
         this.SUBRULE1(this.expression);
-        this.CONSUME1(DocumentToken.COMMA);
+        this.CONSUME1(RdfToken.COMMA);
         this.SUBRULE2(this.expression);
         this.OPTION(() => {
-            this.CONSUME2(DocumentToken.COMMA);
+            this.CONSUME2(RdfToken.COMMA);
             this.SUBRULE3(this.expression);
         });
-        this.CONSUME(DocumentToken.RPARENT);
+        this.CONSUME(RdfToken.RPARENT);
     });
 
     /**
      * [133] SubstringExpression ::= 'SUBSTR' '(' Expression ',' Expression (',' Expression)? ')'
      */
     substringExpression = this.RULE('substringExpression', () => {
-        this.CONSUME(DocumentToken.SUBSTR);
-        this.CONSUME(DocumentToken.LPARENT);
+        this.CONSUME(RdfToken.SUBSTR);
+        this.CONSUME(RdfToken.LPARENT);
         this.SUBRULE1(this.expression);
-        this.CONSUME1(DocumentToken.COMMA);
+        this.CONSUME1(RdfToken.COMMA);
         this.SUBRULE2(this.expression);
         this.OPTION(() => {
-            this.CONSUME2(DocumentToken.COMMA);
+            this.CONSUME2(RdfToken.COMMA);
             this.SUBRULE3(this.expression);
         });
-        this.CONSUME(DocumentToken.RPARENT);
+        this.CONSUME(RdfToken.RPARENT);
     });
 
     /**
      * [134] StrReplaceExpression ::= 'REPLACE' '(' Expression ',' Expression ',' Expression (',' Expression)? ')'
      */
     strReplaceExpression = this.RULE('strReplaceExpression', () => {
-        this.CONSUME(DocumentToken.REPLACE_KW);
-        this.CONSUME(DocumentToken.LPARENT);
+        this.CONSUME(RdfToken.REPLACE_KW);
+        this.CONSUME(RdfToken.LPARENT);
         this.SUBRULE1(this.expression);
-        this.CONSUME1(DocumentToken.COMMA);
+        this.CONSUME1(RdfToken.COMMA);
         this.SUBRULE2(this.expression);
-        this.CONSUME2(DocumentToken.COMMA);
+        this.CONSUME2(RdfToken.COMMA);
         this.SUBRULE3(this.expression);
         this.OPTION(() => {
-            this.CONSUME3(DocumentToken.COMMA);
+            this.CONSUME3(RdfToken.COMMA);
             this.SUBRULE4(this.expression);
         });
-        this.CONSUME(DocumentToken.RPARENT);
+        this.CONSUME(RdfToken.RPARENT);
     });
 
     /**
      * [135] ExistsFunc ::= 'EXISTS' GroupGraphPattern
      */
     existsFunc = this.RULE('existsFunc', () => {
-        this.CONSUME(DocumentToken.EXISTS);
+        this.CONSUME(RdfToken.EXISTS);
         this.SUBRULE(this.groupGraphPattern);
     });
 
@@ -2861,8 +2861,8 @@ export class SparqlParser extends CstParser implements IParser {
      * [136] NotExistsFunc ::= 'NOT' 'EXISTS' GroupGraphPattern
      */
     notExistsFunc = this.RULE('notExistsFunc', () => {
-        this.CONSUME(DocumentToken.NOT);
-        this.CONSUME(DocumentToken.EXISTS);
+        this.CONSUME(RdfToken.NOT);
+        this.CONSUME(RdfToken.EXISTS);
         this.SUBRULE(this.groupGraphPattern);
     });
 
@@ -2883,74 +2883,74 @@ export class SparqlParser extends CstParser implements IParser {
         this.OR([
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.COUNT);
-                    this.CONSUME1(DocumentToken.LPARENT);
-                    this.OPTION1(() => this.CONSUME1(DocumentToken.DISTINCT));
+                    this.CONSUME(RdfToken.COUNT);
+                    this.CONSUME1(RdfToken.LPARENT);
+                    this.OPTION1(() => this.CONSUME1(RdfToken.DISTINCT));
                     this.OR2([
-                        { ALT: () => this.CONSUME(DocumentToken.STAR) },
+                        { ALT: () => this.CONSUME(RdfToken.STAR) },
                         { ALT: () => this.SUBRULE1(this.expression) }
                     ]);
-                    this.CONSUME1(DocumentToken.RPARENT);
+                    this.CONSUME1(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.SUM);
-                    this.CONSUME2(DocumentToken.LPARENT);
-                    this.OPTION2(() => this.CONSUME2(DocumentToken.DISTINCT));
+                    this.CONSUME(RdfToken.SUM);
+                    this.CONSUME2(RdfToken.LPARENT);
+                    this.OPTION2(() => this.CONSUME2(RdfToken.DISTINCT));
                     this.SUBRULE2(this.expression);
-                    this.CONSUME2(DocumentToken.RPARENT);
+                    this.CONSUME2(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.MIN_KW);
-                    this.CONSUME3(DocumentToken.LPARENT);
-                    this.OPTION3(() => this.CONSUME3(DocumentToken.DISTINCT));
+                    this.CONSUME(RdfToken.MIN_KW);
+                    this.CONSUME3(RdfToken.LPARENT);
+                    this.OPTION3(() => this.CONSUME3(RdfToken.DISTINCT));
                     this.SUBRULE3(this.expression);
-                    this.CONSUME3(DocumentToken.RPARENT);
+                    this.CONSUME3(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.MAX_KW);
-                    this.CONSUME4(DocumentToken.LPARENT);
-                    this.OPTION4(() => this.CONSUME4(DocumentToken.DISTINCT));
+                    this.CONSUME(RdfToken.MAX_KW);
+                    this.CONSUME4(RdfToken.LPARENT);
+                    this.OPTION4(() => this.CONSUME4(RdfToken.DISTINCT));
                     this.SUBRULE4(this.expression);
-                    this.CONSUME4(DocumentToken.RPARENT);
+                    this.CONSUME4(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.AVG);
-                    this.CONSUME5(DocumentToken.LPARENT);
-                    this.OPTION5(() => this.CONSUME5(DocumentToken.DISTINCT));
+                    this.CONSUME(RdfToken.AVG);
+                    this.CONSUME5(RdfToken.LPARENT);
+                    this.OPTION5(() => this.CONSUME5(RdfToken.DISTINCT));
                     this.SUBRULE5(this.expression);
-                    this.CONSUME5(DocumentToken.RPARENT);
+                    this.CONSUME5(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.SAMPLE);
-                    this.CONSUME6(DocumentToken.LPARENT);
-                    this.OPTION6(() => this.CONSUME6(DocumentToken.DISTINCT));
+                    this.CONSUME(RdfToken.SAMPLE);
+                    this.CONSUME6(RdfToken.LPARENT);
+                    this.OPTION6(() => this.CONSUME6(RdfToken.DISTINCT));
                     this.SUBRULE6(this.expression);
-                    this.CONSUME6(DocumentToken.RPARENT);
+                    this.CONSUME6(RdfToken.RPARENT);
                 }
             },
             {
                 ALT: () => {
-                    this.CONSUME(DocumentToken.GROUP_CONCAT);
-                    this.CONSUME7(DocumentToken.LPARENT);
-                    this.OPTION7(() => this.CONSUME7(DocumentToken.DISTINCT));
+                    this.CONSUME(RdfToken.GROUP_CONCAT);
+                    this.CONSUME7(RdfToken.LPARENT);
+                    this.OPTION7(() => this.CONSUME7(RdfToken.DISTINCT));
                     this.SUBRULE7(this.expression);
                     this.OPTION8(() => {
-                        this.CONSUME(DocumentToken.SEMICOLON);
-                        this.CONSUME(DocumentToken.SEPARATOR);
-                        this.CONSUME(DocumentToken.EQ);
+                        this.CONSUME(RdfToken.SEMICOLON);
+                        this.CONSUME(RdfToken.SEPARATOR);
+                        this.CONSUME(RdfToken.EQ);
                         this.SUBRULE(this.string);
                     });
-                    this.CONSUME7(DocumentToken.RPARENT);
+                    this.CONSUME7(RdfToken.RPARENT);
                 }
             }
         ]);
@@ -2979,10 +2979,10 @@ export class SparqlParser extends CstParser implements IParser {
         this.SUBRULE(this.string);
         this.OPTION(() => {
             this.OR([
-                { ALT: () => this.CONSUME(DocumentToken.LANGTAG) },
+                { ALT: () => this.CONSUME(RdfToken.LANGTAG) },
                 {
                     ALT: () => {
-                        this.CONSUME(DocumentToken.DCARET);
+                        this.CONSUME(RdfToken.DCARET);
                         this.SUBRULE(this.iri);
                     }
                 }
@@ -3006,9 +3006,9 @@ export class SparqlParser extends CstParser implements IParser {
      */
     numericLiteralUnsigned = this.RULE('numericLiteralUnsigned', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.INTEGER) },
-            { ALT: () => this.CONSUME(DocumentToken.DECIMAL) },
-            { ALT: () => this.CONSUME(DocumentToken.DOUBLE) }
+            { ALT: () => this.CONSUME(RdfToken.INTEGER) },
+            { ALT: () => this.CONSUME(RdfToken.DECIMAL) },
+            { ALT: () => this.CONSUME(RdfToken.DOUBLE) }
         ]);
     });
 
@@ -3017,9 +3017,9 @@ export class SparqlParser extends CstParser implements IParser {
      */
     numericLiteralPositive = this.RULE('numericLiteralPositive', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.INTEGER_POSITIVE) },
-            { ALT: () => this.CONSUME(DocumentToken.DECIMAL_POSITIVE) },
-            { ALT: () => this.CONSUME(DocumentToken.DOUBLE_POSITIVE) }
+            { ALT: () => this.CONSUME(RdfToken.INTEGER_POSITIVE) },
+            { ALT: () => this.CONSUME(RdfToken.DECIMAL_POSITIVE) },
+            { ALT: () => this.CONSUME(RdfToken.DOUBLE_POSITIVE) }
         ]);
     });
 
@@ -3028,9 +3028,9 @@ export class SparqlParser extends CstParser implements IParser {
      */
     numericLiteralNegative = this.RULE('numericLiteralNegative', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.INTEGER_NEGATIVE) },
-            { ALT: () => this.CONSUME(DocumentToken.DECIMAL_NEGATIVE) },
-            { ALT: () => this.CONSUME(DocumentToken.DOUBLE_NEGATIVE) }
+            { ALT: () => this.CONSUME(RdfToken.INTEGER_NEGATIVE) },
+            { ALT: () => this.CONSUME(RdfToken.DECIMAL_NEGATIVE) },
+            { ALT: () => this.CONSUME(RdfToken.DOUBLE_NEGATIVE) }
         ]);
     });
 
@@ -3039,8 +3039,8 @@ export class SparqlParser extends CstParser implements IParser {
      */
     booleanLiteral = this.RULE('booleanLiteral', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.TRUE) },
-            { ALT: () => this.CONSUME(DocumentToken.FALSE) }
+            { ALT: () => this.CONSUME(RdfToken.TRUE) },
+            { ALT: () => this.CONSUME(RdfToken.FALSE) }
         ]);
     });
 
@@ -3049,10 +3049,10 @@ export class SparqlParser extends CstParser implements IParser {
      */
     string = this.RULE('string', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.STRING_LITERAL_QUOTE) },
-            { ALT: () => this.CONSUME(DocumentToken.STRING_LITERAL_SINGLE_QUOTE) },
-            { ALT: () => this.CONSUME(DocumentToken.STRING_LITERAL_LONG_QUOTE) },
-            { ALT: () => this.CONSUME(DocumentToken.STRING_LITERAL_LONG_SINGLE_QUOTE) }
+            { ALT: () => this.CONSUME(RdfToken.STRING_LITERAL_QUOTE) },
+            { ALT: () => this.CONSUME(RdfToken.STRING_LITERAL_SINGLE_QUOTE) },
+            { ALT: () => this.CONSUME(RdfToken.STRING_LITERAL_LONG_QUOTE) },
+            { ALT: () => this.CONSUME(RdfToken.STRING_LITERAL_LONG_SINGLE_QUOTE) }
         ]);
     });
 
@@ -3065,7 +3065,7 @@ export class SparqlParser extends CstParser implements IParser {
      */
     iri = this.RULE('iri', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.IRIREF) },
+            { ALT: () => this.CONSUME(RdfToken.IRIREF) },
             { ALT: () => this.SUBRULE(this.prefixedName) }
         ]);
     });
@@ -3075,8 +3075,8 @@ export class SparqlParser extends CstParser implements IParser {
      */
     prefixedName = this.RULE('prefixedName', () => {
         const token = this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.PNAME_LN) },
-            { ALT: () => this.CONSUME(DocumentToken.PNAME_NS) }
+            { ALT: () => this.CONSUME(RdfToken.PNAME_LN) },
+            { ALT: () => this.CONSUME(RdfToken.PNAME_NS) }
         ]);
 
         if (token?.image) {
@@ -3103,14 +3103,14 @@ export class SparqlParser extends CstParser implements IParser {
      */
     blankNode = this.RULE('blankNode', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.BLANK_NODE_LABEL) },
+            { ALT: () => this.CONSUME(RdfToken.BLANK_NODE_LABEL) },
             { ALT: () => this.SUBRULE(this.anon) }
         ]);
     });
 
     anon = this.RULE('anon', () => {
-        this.CONSUME(DocumentToken.LBRACKET);
-        this.CONSUME(DocumentToken.RBRACKET);
+        this.CONSUME(RdfToken.LBRACKET);
+        this.CONSUME(RdfToken.RBRACKET);
     });
 
     // ==========================================
@@ -3122,8 +3122,8 @@ export class SparqlParser extends CstParser implements IParser {
      */
     var = this.RULE('var', () => {
         this.OR([
-            { ALT: () => this.CONSUME(DocumentToken.VAR1) },
-            { ALT: () => this.CONSUME(DocumentToken.VAR2) }
+            { ALT: () => this.CONSUME(RdfToken.VAR1) },
+            { ALT: () => this.CONSUME(RdfToken.VAR2) }
         ]);
     });
 
@@ -3157,7 +3157,7 @@ export class SparqlParser extends CstParser implements IParser {
             { ALT: () => this.SUBRULE(this.numericLiteral) },
             { ALT: () => this.SUBRULE(this.booleanLiteral) },
             { ALT: () => this.SUBRULE(this.blankNode) },
-            { ALT: () => this.CONSUME(DocumentToken.NIL) },
+            { ALT: () => this.CONSUME(RdfToken.NIL) },
             { ALT: () => this.SUBRULE(this.tripleTerm) }
         ]);
     });
@@ -3213,9 +3213,9 @@ export class SparqlParser extends CstParser implements IParser {
      * BlankNodePropertyList ::= '[' PropertyListNotEmpty ']'
      */
     blankNodePropertyList = this.RULE('blankNodePropertyList', () => {
-        this.CONSUME(DocumentToken.LBRACKET);
+        this.CONSUME(RdfToken.LBRACKET);
         this.SUBRULE(this.propertyListNotEmpty);
-        this.CONSUME(DocumentToken.RBRACKET);
+        this.CONSUME(RdfToken.RBRACKET);
     });
 
     /**
@@ -3232,27 +3232,27 @@ export class SparqlParser extends CstParser implements IParser {
      * BlankNodePropertyListPath ::= '[' PropertyListPathNotEmpty ']'
      */
     blankNodePropertyListPath = this.RULE('blankNodePropertyListPath', () => {
-        this.CONSUME(DocumentToken.LBRACKET);
+        this.CONSUME(RdfToken.LBRACKET);
         this.SUBRULE(this.propertyListPathNotEmpty);
-        this.CONSUME(DocumentToken.RBRACKET);
+        this.CONSUME(RdfToken.RBRACKET);
     });
 
     /**
      * Collection ::= '(' GraphNode+ ')'
      */
     collection = this.RULE('collection', () => {
-        this.CONSUME(DocumentToken.LPARENT);
+        this.CONSUME(RdfToken.LPARENT);
         this.AT_LEAST_ONE(() => this.SUBRULE(this.graphNode));
-        this.CONSUME(DocumentToken.RPARENT);
+        this.CONSUME(RdfToken.RPARENT);
     });
 
     /**
      * CollectionPath ::= '(' GraphNodePath+ ')'
      */
     collectionPath = this.RULE('collectionPath', () => {
-        this.CONSUME(DocumentToken.LPARENT);
+        this.CONSUME(RdfToken.LPARENT);
         this.AT_LEAST_ONE(() => this.SUBRULE(this.graphNodePath));
-        this.CONSUME(DocumentToken.RPARENT);
+        this.CONSUME(RdfToken.RPARENT);
     });
 
     /**
@@ -3260,7 +3260,7 @@ export class SparqlParser extends CstParser implements IParser {
      */
     valuesClause = this.RULE('valuesClause', () => {
         this.OPTION(() => {
-            this.CONSUME(DocumentToken.VALUES);
+            this.CONSUME(RdfToken.VALUES);
             this.SUBRULE(this.dataBlock);
         });
     });

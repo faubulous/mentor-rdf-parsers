@@ -1,5 +1,5 @@
-export { IToken } from 'chevrotain';
-export { DocumentToken as RdfTokens } from './tokens.js';
+export { IToken, IRecognitionException, TokenType } from 'chevrotain';
+export { RdfToken } from './tokens.js';
 export { QuadInfo, TermToken } from './types.js';
 export {
     getNextToken,

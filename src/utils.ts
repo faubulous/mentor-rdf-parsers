@@ -1,5 +1,5 @@
 import { IToken } from "chevrotain";
-import { DocumentToken } from "./tokens.js";
+import { RdfToken } from "./tokens.js";
 
 /**
  * Token names that can generate blank nodes during parsing.
@@ -133,8 +133,8 @@ export function getTokenAtOffset(tokens: IToken[], offset: number): IToken[] {
  */
 export function isVariableToken(token: IToken) {
     switch (token.tokenType.name) {
-        case DocumentToken.VAR1.name:
-        case DocumentToken.VAR2.name:
+        case RdfToken.VAR1.name:
+        case RdfToken.VAR2.name:
             return true;
         default:
             return false;
@@ -155,9 +155,9 @@ export function isUpperCaseToken(token?: IToken): boolean {
  * Get the prefix name from a prefixed name token.
  */
 export function getPrefixFromToken(token: IToken): string {
-    if (token.tokenType.name === DocumentToken.PNAME_LN.name) {
+    if (token.tokenType.name === RdfToken.PNAME_LN.name) {
         return token.image.split(':')[0];
-    } else if (token.tokenType.name === DocumentToken.PNAME_NS.name) {
+    } else if (token.tokenType.name === RdfToken.PNAME_NS.name) {
         return token.image.substring(0, token.image.length - 1);
     } else {
         throw new Error("Cannot get prefix from token type: " + token.tokenType.name);

@@ -399,7 +399,7 @@ const _GTE = />=/;
 /**
  * Common tokens for W3C RDF syntaxes such as N-Triples, N-Quads, Turtle, TriG and SPARQL.
  */
-export const DocumentToken = {
+export const RdfToken = {
     A: createToken({ name: 'A', label: 'a', pattern: _A }),
     ANON: createToken({ name: 'ANON', pattern: _ANON }),
     TTL_BASE: createToken({ name: 'BASE', label: '@base', pattern: _BASE }),
