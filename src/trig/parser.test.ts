@@ -23,14 +23,17 @@ describe("TrigDocument", () => {
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
+    // Reuse lexer and parser instances to avoid expensive performSelfAnalysis() on each test
+    const lexer = new TrigLexer();
+    const parser = new TrigParser();
+
     const parse = (text) => {
-        const lexResult = new TrigLexer().tokenize(text);
+        const lexResult = lexer.tokenize(text);
 
         if (lexResult.errors.length > 0) {
             throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
         }
 
-        const parser = new TrigParser();
         const cst = parser.parse(lexResult.tokens);
 
         return {

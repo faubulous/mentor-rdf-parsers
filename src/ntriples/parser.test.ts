@@ -30,8 +30,12 @@ describe("NTriplesDocument", () => {
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
+    // Reuse lexer and parser instances to avoid expensive performSelfAnalysis() on each test
+    const lexer = new NTriplesLexer();
+    const parser = new NTriplesParser();
+
     const parse = (text) => {
-        const lexResult = new NTriplesLexer().tokenize(text);
+        const lexResult = lexer.tokenize(text);
 
         if (lexResult.errors.length > 0) {
             throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
@@ -39,7 +43,7 @@ describe("NTriplesDocument", () => {
 
         return {
             lexResult,
-            cst: new NTriplesParser().parse(lexResult.tokens)
+            cst: parser.parse(lexResult.tokens)
         }
     }
 

@@ -30,8 +30,12 @@ describe("NQuadsDocument", () => {
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
+    // Reuse lexer and parser instances to avoid expensive performSelfAnalysis() on each test
+    const lexer = new NQuadsLexer();
+    const parser = new NQuadsParser();
+
     const parse = (text) => {
-        const lexResult = new NQuadsLexer().tokenize(text);
+        const lexResult = lexer.tokenize(text);
 
         if (lexResult.errors.length > 0) {
             throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
@@ -39,7 +43,7 @@ describe("NQuadsDocument", () => {
 
         return {
             lexResult,
-            cst: new NQuadsParser().parse(lexResult.tokens)
+            cst: parser.parse(lexResult.tokens)
         }
     }
 

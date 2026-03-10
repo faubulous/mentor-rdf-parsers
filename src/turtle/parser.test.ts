@@ -30,16 +30,19 @@ describe("TurtleDocument", () => {
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
+    // Reuse lexer and parser instances to avoid expensive performSelfAnalysis() on each test
+    const lexer = new TurtleLexer();
+    const parser = new TurtleParser();
+
     const parse = (fileIri: string, text?: string) => {
         const data = fileIri ? getTestData(fileIri) : text;
 
-        const lexResult = new TurtleLexer().tokenize(data);
+        const lexResult = lexer.tokenize(data);
 
         if (lexResult.errors.length > 0) {
             throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
         }
 
-        const parser = new TurtleParser();
         const cst = parser.parse(lexResult.tokens);
 
         return {

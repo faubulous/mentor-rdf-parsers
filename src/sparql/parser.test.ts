@@ -35,17 +35,19 @@ describe("SparqlDocument", () => {
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
+    // Reuse lexer and parser instances to avoid expensive performSelfAnalysis() on each test
+    const lexer = new SparqlLexer();
+    const parser = new SparqlParser();
+
     const parse = (fileIri: string, text?: string) => {
         const data = fileIri ? getTestData(fileIri) : text;
 
-        const lexer = new SparqlLexer();
         const lexResult = lexer.tokenize(data);
 
         if (lexResult.errors.length > 0) {
             throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
         }
 
-        const parser = new SparqlParser();
         const cst = parser.parse(lexResult.tokens);
 
         return {

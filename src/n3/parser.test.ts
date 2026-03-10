@@ -20,16 +20,19 @@ describe("N3Document", () => {
         return fs.readFileSync(resolvedPath, 'utf-8');
     }
 
+    // Reuse lexer and parser instances to avoid expensive performSelfAnalysis() on each test
+    const lexer = new N3Lexer();
+    const parser = new N3Parser();
+
     const parse = (fileIri: string, text?: string) => {
         const data = fileIri ? getTestData(fileIri) : text;
 
-        const lexResult = new N3Lexer().tokenize(data);
+        const lexResult = lexer.tokenize(data);
 
         if (lexResult.errors.length > 0) {
             throw new Error('Lexing errors detected:\n' + JSON.stringify(lexResult.errors));
         }
 
-        const parser = new N3Parser();
         const cst = parser.parse(lexResult.tokens);
 
         return {
