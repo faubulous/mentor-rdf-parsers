@@ -31,13 +31,7 @@ describe("TrigDocument", () => {
         }
 
         const parser = new TrigParser();
-        parser.input = lexResult.tokens;
-
-        const cst = parser.trigDoc();
-
-        if (parser.errors.length > 0) {
-            throw new Error('Parsing errors detected:\n' + JSON.stringify(parser.errors));
-        }
+        const cst = parser.parse(lexResult.tokens);
 
         return {
             cst: cst,

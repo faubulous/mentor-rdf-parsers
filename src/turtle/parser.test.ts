@@ -40,13 +40,7 @@ describe("TurtleDocument", () => {
         }
 
         const parser = new TurtleParser();
-        parser.input = lexResult.tokens;
-
-        const cst = parser.turtleDoc();
-
-        if (parser.errors.length > 0) {
-            throw new Error('Parsing errors detected:\n' + JSON.stringify(parser.errors));
-        }
+        const cst = parser.parse(lexResult.tokens);
 
         return {
             cst: cst,

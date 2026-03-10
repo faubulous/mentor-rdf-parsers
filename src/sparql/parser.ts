@@ -20,7 +20,7 @@ import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator }
  */
 
 // SPARQL token order - longer/more specific patterns must come before shorter ones
-const allTokens: TokenType[] = [
+export const SparqlTokens: TokenType[] = [
     RdfToken.WS,
     RdfToken.COMMENT,
 
@@ -271,7 +271,7 @@ export class SparqlLexer extends Lexer implements ILexer {
     blankNodeIdGenerator?: BlankNodeIdGenerator | null;
 
     constructor(blankNodeIdGenerator?: BlankNodeIdGenerator | null) {
-        super(allTokens);
+        super(SparqlTokens);
         this.blankNodeIdGenerator = blankNodeIdGenerator;
     }
 
@@ -464,7 +464,7 @@ export class SparqlParser extends CstParser implements IParser {
     semanticErrors: IRecognitionException[] = [];
 
     constructor() {
-        super(allTokens, {
+        super(SparqlTokens, {
             recoveryEnabled: true
         });
 
@@ -488,7 +488,9 @@ export class SparqlParser extends CstParser implements IParser {
         this._throwOnErrors = throwOnErrors;
         this.semanticErrors = [];
         this.namespaces = {};
-        this.input = tokens;
+        // Filter out comment tokens - they are kept in the token stream for formatters
+        // but should not be processed by the parser
+        this.input = tokens.filter(t => t.tokenType.name !== 'COMMENT');
 
         const cst = this.queryOrUpdate();
 

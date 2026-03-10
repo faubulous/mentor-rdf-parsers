@@ -30,13 +30,7 @@ describe("N3Document", () => {
         }
 
         const parser = new N3Parser();
-        parser.input = lexResult.tokens;
-
-        const cst = parser.n3Doc();
-
-        if (parser.errors.length > 0) {
-            throw new Error('Parsing errors detected:\n' + JSON.stringify(parser.errors));
-        }
+        const cst = parser.parse(lexResult.tokens);
 
         return {
             cst: cst,

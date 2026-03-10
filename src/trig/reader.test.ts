@@ -28,9 +28,7 @@ describe("TrigReader", () => {
         }
 
         const parser = new TrigParser();
-        parser.input = lexResult.tokens;
-
-        return parser.trigDoc();
+        return parser.parse(lexResult.tokens);
     }
 
     const matchQuads = async (fileIri: string) => {
@@ -45,8 +43,7 @@ describe("TrigReader", () => {
         const expected = await parseQuads(data);
 
         const parser = new TrigParser();
-        parser.input = lexResult.tokens;
-        const cst = parser.trigDoc();
+        const cst = parser.parse(lexResult.tokens);
 
         const reader = new TrigReader();
         const actual = reader.visit(cst);

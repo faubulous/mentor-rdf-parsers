@@ -5,7 +5,7 @@ import { NTriplesParserBase } from '../ntriples/parser.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
 // The order of tokens matters if multiple can match the same text
-const allTokens: TokenType[] = [
+export const NQuadsTokens: TokenType[] = [
     RdfToken.WS,
     RdfToken.PERIOD,
     RdfToken.OPEN_TRIPLE_TERM,
@@ -33,7 +33,7 @@ export class NQuadsLexer extends Lexer implements ILexer {
     blankNodeIdGenerator?: BlankNodeIdGenerator | null;
 
     constructor(blankNodeIdGenerator?: BlankNodeIdGenerator | null) {
-        super(allTokens);
+        super(NQuadsTokens);
         this.blankNodeIdGenerator = blankNodeIdGenerator;
     }
 
@@ -58,7 +58,7 @@ export class NQuadsLexer extends Lexer implements ILexer {
  */
 export class NQuadsParser extends NTriplesParserBase implements IParser {
     constructor() {
-        super(allTokens);
+        super(NQuadsTokens);
 
         this.performSelfAnalysis();
     }
@@ -71,7 +71,9 @@ export class NQuadsParser extends NTriplesParserBase implements IParser {
      * @returns A concrete syntax tree (CST) object.
      */
     parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
-        this.input = tokens;
+        // Filter out comment tokens - they are kept in the token stream for formatters
+        // but should not be processed by the parser
+        this.input = tokens.filter(t => t.tokenType.name !== 'COMMENT');
 
         const cst = this.nquadsDoc();
 

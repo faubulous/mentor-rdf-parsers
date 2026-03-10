@@ -5,7 +5,7 @@ import { IParser, ILexer } from '../syntax.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
 // The order of tokens matters if multiple can match the same text
-const allTokens: TokenType[] = [
+export const TrigTokens: TokenType[] = [
     RdfToken.WS,
     RdfToken.COMMA,
     RdfToken.SEMICOLON,
@@ -61,7 +61,7 @@ export class TrigLexer extends Lexer implements ILexer {
     blankNodeIdGenerator?: BlankNodeIdGenerator | null;
 
     constructor(blankNodeIdGenerator?: BlankNodeIdGenerator | null) {
-        super(allTokens);
+        super(TrigTokens);
         this.blankNodeIdGenerator = blankNodeIdGenerator;
     }
 
@@ -86,7 +86,7 @@ export class TrigLexer extends Lexer implements ILexer {
  */
 export class TrigParser extends TurtleParserBase implements IParser {
     constructor() {
-        super(allTokens, {
+        super(TrigTokens, {
             recoveryEnabled: true
         });
 
@@ -103,7 +103,9 @@ export class TrigParser extends TurtleParserBase implements IParser {
         this._throwOnErrors = throwOnErrors;
         this.semanticErrors = [];
         this.namespaces = {};
-        this.input = tokens;
+        // Filter out comment tokens - they are kept in the token stream for formatters
+        // but should not be processed by the parser
+        this.input = tokens.filter(t => t.tokenType.name !== 'COMMENT');
 
         const cst = this.trigDoc();
 

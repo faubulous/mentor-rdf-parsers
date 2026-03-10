@@ -408,7 +408,7 @@ export const RdfToken = {
     CLOSE_REIFIED_TRIPLE: createToken({ name: 'CLOSE_REIFIED_TRIPLE', label: '>>', pattern: _CLOSE_REIFIED_TRIPLE }),
     CLOSE_TRIPLE_TERM: createToken({ name: 'CLOSE_TRIPLE_TERM', label: ')>>', pattern: _CLOSE_TRIPLE_TERM }),
     COMMA: createToken({ name: ',', pattern: _COMMA }),
-    COMMENT: createToken({ name: 'COMMENT', pattern: _COMMENT, group: 'comments' }),
+    COMMENT: createToken({ name: 'COMMENT', pattern: _COMMENT }),
     DCARET: createToken({ name: 'DCARET', label: '^^', pattern: _DCARET }),
     DECIMAL: createToken({ name: 'DECIMAL', pattern: _DECIMAL }),
     PERIOD: createToken({ name: 'PERIOD', label: '.', pattern: _PERIOD }),

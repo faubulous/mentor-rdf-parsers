@@ -33,7 +33,7 @@ All parsers run with Chevrotain's `recoveryEnabled: true`, which means they can 
 
 The parsers produce Chevrotain CST nodes, giving you full access to every token including its position, image, and type. This makes the parsers suitable for:
 
-- Syntax highlighting (comment tokens are preserved)
+- Syntax highlighting (comment tokens are included in the token stream)
 - Code navigation and symbol extraction
 - Refactoring and formatting tools
 - Diagnostics and error reporting with precise source locations
@@ -53,6 +53,24 @@ Blank node IDs are assigned to:
 - `OPEN_ANNOTATION` (`{|`) — annotation blank nodes
 - `LCURLY` (`{`) — N3 formulas
 - `TILDE` (`~`) — N3 quick variables
+
+### Language-Specific Token Arrays
+
+Each language exports its token array for use in formatters, syntax highlighters, and other tools:
+
+```typescript
+import { 
+  TurtleTokens, 
+  TrigTokens, 
+  N3Tokens, 
+  NTriplesTokens, 
+  NQuadsTokens, 
+  SparqlTokens 
+} from '@faubulous/mentor-rdf-parsers';
+
+// Use tokens for custom lexer configuration or syntax highlighting
+console.log(TurtleTokens.map(t => t.name));
+```
 
 ## Installation
 
@@ -203,6 +221,30 @@ const quads = new TurtleReader().visit(cst);
 // Blank nodes in quads match the token IDs
 const firstBlankNode = quads[0].subject;
 console.log(firstBlankNode.value); // "b0"
+```
+
+### Accessing Comment Tokens
+
+Comment tokens are included in the main token stream, making them available for formatters and serializers:
+
+```typescript
+import { TurtleLexer } from '@faubulous/mentor-rdf-parsers';
+
+const input = `
+  # This is a comment
+  @prefix ex: <http://example.org/> .
+  ex:Alice ex:knows ex:Bob . # end of line comment
+`;
+
+const lexer = new TurtleLexer();
+const lexResult = lexer.tokenize(input);
+
+// Filter comment tokens from the token stream
+const comments = lexResult.tokens.filter(t => t.tokenType.name === 'COMMENT');
+
+for (const comment of comments) {
+    console.log(`Comment at line ${comment.startLine}: ${comment.image}`);
+}
 ```
 
 #### Custom ID Generator

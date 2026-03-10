@@ -4,7 +4,7 @@ import { IParser, ILexer } from '../syntax.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
 // The order of tokens matters if multiple can match the same text
-const allTokens: TokenType[] = [
+export const NTriplesTokens: TokenType[] = [
     RdfToken.WS,
     RdfToken.PERIOD,
     RdfToken.OPEN_TRIPLE_TERM,
@@ -32,7 +32,7 @@ export class NTriplesLexer extends Lexer implements ILexer {
     blankNodeIdGenerator?: BlankNodeIdGenerator | null;
 
     constructor(blankNodeIdGenerator?: BlankNodeIdGenerator | null) {
-        super(allTokens);
+        super(NTriplesTokens);
         this.blankNodeIdGenerator = blankNodeIdGenerator;
     }
 
@@ -57,7 +57,7 @@ export class NTriplesLexer extends Lexer implements ILexer {
 export class NTriplesParserBase extends CstParser {
     readonly semanticErrors: IRecognitionException[] = [];
     
-    constructor(tokenVocabulary: TokenType[] = allTokens, config?: object) {
+    constructor(tokenVocabulary: TokenType[] = NTriplesTokens, config?: object) {
         super(tokenVocabulary, config);
     }
 
@@ -127,7 +127,7 @@ export class NTriplesParserBase extends CstParser {
  */
 export class NTriplesParser extends NTriplesParserBase implements IParser {
     constructor() {
-        super(allTokens);
+        super(NTriplesTokens);
 
         this.performSelfAnalysis();
     }
@@ -139,7 +139,9 @@ export class NTriplesParser extends NTriplesParserBase implements IParser {
      * @returns A concrete syntax tree (CST) object.
      */
     parse(tokens: IToken[], throwOnErrors: boolean = true): CstNode {
-        this.input = tokens;
+        // Filter out comment tokens - they are kept in the token stream for formatters
+        // but should not be processed by the parser
+        this.input = tokens.filter(t => t.tokenType.name !== 'COMMENT');
 
         const cst = this.ntriplesDoc();
 

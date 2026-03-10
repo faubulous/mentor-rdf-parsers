@@ -4,7 +4,7 @@ import { IParser, ILexer } from '../syntax.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
 
 // N3 token order - note that longer/more specific patterns must come before shorter ones
-const allTokens: TokenType[] = [
+export const N3Tokens: TokenType[] = [
     RdfToken.WS,
     RdfToken.COMMA,
     RdfToken.SEMICOLON,
@@ -62,7 +62,7 @@ export class N3Lexer extends Lexer implements ILexer {
     blankNodeIdGenerator?: BlankNodeIdGenerator | null;
 
     constructor(blankNodeIdGenerator?: BlankNodeIdGenerator | null) {
-        super(allTokens);
+        super(N3Tokens);
         this.blankNodeIdGenerator = blankNodeIdGenerator;
     }
 
@@ -84,19 +84,6 @@ export class N3Lexer extends Lexer implements ILexer {
 /**
  * A W3C compliant parser for the N3 (Notation3) syntax.
  * Based on the N3 grammar: https://w3c.github.io/N3/spec/
- *
- * n3Doc ::= (n3Statement '.' | sparqlDirective)* EOF
- * n3Statement ::= n3Directive | triples
- * n3Directive ::= prefixID | base | forAll | forSome
- * triples ::= subject predicateObjectList?
- *
- * verb ::= predicate | 'a' | 'has' expression | 'is' expression 'of' | '=' | '<=' | '=>'
- * predicate ::= expression | '<-' expression
- * expression ::= path
- * path ::= pathItem ('!' path | '^' path)?
- * pathItem ::= iri | blankNode | quickVar | collection | blankNodePropertyList | literal | formula
- * formula ::= '{' formulaContent? '}'
- * formulaContent ::= n3Statement ('.' formulaContent?)? | sparqlDirective formulaContent?
  */
 export class N3Parser extends CstParser implements IParser {
     /**
@@ -115,7 +102,7 @@ export class N3Parser extends CstParser implements IParser {
     semanticErrors: IRecognitionException[] = [];
 
     constructor() {
-        super(allTokens, {
+        super(N3Tokens, {
             recoveryEnabled: true
         });
 
@@ -139,7 +126,9 @@ export class N3Parser extends CstParser implements IParser {
         this._throwOnErrors = throwOnErrors;
         this.semanticErrors = [];
         this.namespaces = {};
-        this.input = tokens;
+        // Filter out comment tokens - they are kept in the token stream for formatters
+        // but should not be processed by the parser
+        this.input = tokens.filter(t => t.tokenType.name !== 'COMMENT');
 
         const cst = this.n3Doc();
 

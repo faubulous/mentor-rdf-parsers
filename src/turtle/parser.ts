@@ -7,7 +7,7 @@ import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator }
 // - Define 'triples' acoording to https://www.w3.org/TR/n-quads/#grammar-production-triples
 
 // The order of tokens matters if multiple can match the same text
-const allTokens: TokenType[] = [
+export const TurtleTokens: TokenType[] = [
     RdfToken.WS,
     RdfToken.COMMA,
     RdfToken.SEMICOLON,
@@ -60,7 +60,7 @@ export class TurtleLexer extends Lexer implements ILexer {
     blankNodeIdGenerator?: BlankNodeIdGenerator | null;
 
     constructor(blankNodeIdGenerator?: BlankNodeIdGenerator | null) {
-        super(allTokens);
+        super(TurtleTokens);
         this.blankNodeIdGenerator = blankNodeIdGenerator;
     }
 
@@ -509,7 +509,7 @@ export class TurtleParserBase extends CstParser {
 export class TurtleParser extends TurtleParserBase implements IParser {
 
     constructor() {
-        super(allTokens, {
+        super(TurtleTokens, {
             recoveryEnabled: true
         });
 
@@ -526,7 +526,9 @@ export class TurtleParser extends TurtleParserBase implements IParser {
         this._throwOnErrors = throwOnErrors;
         this.semanticErrors = [];
         this.namespaces = {};
-        this.input = tokens;
+        // Filter out comment tokens - they are kept in the token stream for formatters
+        // but should not be processed by the parser
+        this.input = tokens.filter(t => t.tokenType.name !== 'COMMENT');
 
         const cst = this.turtleDoc();
 

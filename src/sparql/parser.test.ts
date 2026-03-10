@@ -46,13 +46,7 @@ describe("SparqlDocument", () => {
         }
 
         const parser = new SparqlParser();
-        parser.input = lexResult.tokens;
-
-        const cst = parser.queryOrUpdate();
-
-        if (parser.errors.length > 0) {
-            throw new Error('Parsing errors detected:\n' + JSON.stringify(parser.errors));
-        }
+        const cst = parser.parse(lexResult.tokens);
 
         return {
             cst: cst,
@@ -1582,8 +1576,7 @@ describe("SparqlDocument", () => {
             const lexer = new SparqlLexer();
             const lexResult = lexer.tokenize(query);
             const parser = new SparqlParser();
-            parser.input = lexResult.tokens;
-            const cst = parser.queryOrUpdate();
+            const cst = parser.parse(lexResult.tokens, false);
             const variableParser = new SparqlVariableParser();
             return variableParser.getSelectedVariables(cst);
         };
