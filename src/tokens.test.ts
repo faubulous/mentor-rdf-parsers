@@ -176,7 +176,7 @@ describe('Token Metadata', () => {
             if (metadata) {
                 it(`RdfToken.${tokenKey} should have metadata from TOKEN_METADATA.${metadataKey}`, () => {
                     for (const [metaKey, metaValue] of Object.entries(metadata)) {
-                        expect((token as Record<string, unknown>)[metaKey]).toBe(metaValue);
+                        expect((token as unknown as Record<string, unknown>)[metaKey]).toBe(metaValue);
                     }
                 });
             }
