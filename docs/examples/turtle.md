@@ -127,3 +127,56 @@ const cst = new TurtleParser().parse(lexResult.tokens);
 const quads = new TurtleReader().visit(cst);
 // Produces 3 quads
 ```
+
+## QuadInfo: Accessing Source Positions
+
+For IDE features that need to associate positions with triples, use `turtleDocInfo()` to get `QuadInfo` objects. Each `QuadInfo` contains the subject, predicate, and object with their source tokens:
+
+```typescript
+import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import type { QuadInfo } from '@faubulous/mentor-rdf-parsers';
+
+const input = `
+  @prefix ex: <http://example.org/> .
+  ex:Alice ex:knows ex:Bob .
+`;
+
+const lexResult = new TurtleLexer().tokenize(input);
+const cst = new TurtleParser().parse(lexResult.tokens);
+const reader = new TurtleReader();
+const quadInfos: QuadInfo[] = reader.turtleDocInfo(cst);
+
+for (const info of quadInfos) {
+    console.log(`Subject: ${info.subject.term.value}`);
+    console.log(`  Token position: line ${info.subject.token.startLine}, column ${info.subject.token.startColumn}`);
+    
+    console.log(`Predicate: ${info.predicate.term.value}`);
+    console.log(`  Token position: line ${info.predicate.token.startLine}, column ${info.predicate.token.startColumn}`);
+    
+    console.log(`Object: ${info.object.term.value}`);
+    console.log(`  Token position: line ${info.object.token.startLine}, column ${info.object.token.startColumn}`);
+}
+```
+
+### Token Information
+
+Each `TermToken` in a `QuadInfo` provides:
+- `term`: The RDF/JS term (NamedNode, BlankNode, Literal, etc.)
+- `token`: The Chevrotain token with position information:
+  - `startOffset`, `endOffset`: Character offsets in the input
+  - `startLine`, `endLine`: Line numbers (1-based)
+  - `startColumn`, `endColumn`: Column numbers (1-based)
+  - `image`: The original text of the token
+
+```typescript
+const info = quadInfos[0];
+
+// Get the exact text span for highlighting
+const subjectSpan = {
+    start: info.subject.token.startOffset,
+    end: info.subject.token.endOffset,
+    text: info.subject.token.image
+};
+
+console.log(`Subject "${info.subject.term.value}" spans characters ${subjectSpan.start}-${subjectSpan.end}`);
+```

@@ -141,3 +141,63 @@ const lexResult = new TrigLexer().tokenize(input);
 const cst = new TrigParser().parse(lexResult.tokens);
 const quads = new TrigReader().visit(cst);
 ```
+
+## QuadInfo: Accessing Source Positions
+
+For IDE features that need to associate positions with quads, use `trigDocInfo()` to get `QuadInfo` objects. Each `QuadInfo` includes the graph term along with subject, predicate, and object:
+
+```typescript
+import { TrigLexer, TrigParser, TrigReader } from '@faubulous/mentor-rdf-parsers';
+import type { QuadInfo } from '@faubulous/mentor-rdf-parsers';
+
+const input = `
+  @prefix ex: <http://example.org/> .
+  ex:graph1 {
+    ex:Alice ex:knows ex:Bob .
+  }
+`;
+
+const lexResult = new TrigLexer().tokenize(input);
+const cst = new TrigParser().parse(lexResult.tokens);
+const reader = new TrigReader();
+const quadInfos: QuadInfo[] = reader.trigDocInfo(cst);
+
+for (const info of quadInfos) {
+    console.log(`Subject: ${info.subject.term.value}`);
+    console.log(`  Line ${info.subject.token.startLine}, column ${info.subject.token.startColumn}`);
+    
+    console.log(`Predicate: ${info.predicate.term.value}`);
+    console.log(`Object: ${info.object.term.value}`);
+    
+    // Graph info is available for TriG
+    if (info.graph) {
+        console.log(`Graph: ${info.graph.term.value}`);
+        console.log(`  Line ${info.graph.token.startLine}, column ${info.graph.token.startColumn}`);
+    }
+}
+```
+
+### Token Information
+
+Each `TermToken` in a `QuadInfo` provides:
+- `term`: The RDF/JS term (NamedNode, BlankNode, Literal, DefaultGraph, etc.)
+- `token`: The Chevrotain token with position information:
+  - `startOffset`, `endOffset`: Character offsets in the input
+  - `startLine`, `endLine`: Line numbers (1-based)
+  - `startColumn`, `endColumn`: Column numbers (1-based)
+  - `image`: The original text of the token
+
+```typescript
+const info = quadInfos[0];
+
+// Get the exact text span for highlighting
+const graphSpan = info.graph ? {
+    start: info.graph.token.startOffset,
+    end: info.graph.token.endOffset,
+    text: info.graph.token.image
+} : null;
+
+if (graphSpan) {
+    console.log(`Graph "${info.graph.term.value}" spans characters ${graphSpan.start}-${graphSpan.end}`);
+}
+```
