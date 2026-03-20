@@ -49,3 +49,36 @@ export interface QuadInfo {
      */
     graph?: TermToken;
 }
+
+/**
+ * A statement with associated comment tokens.
+ * Groups a QuadInfo with any leading or trailing comments from the source.
+ */
+export interface StatementInfo {
+    /**
+     * The quad information including terms and tokens.
+     */
+    quadInfo: QuadInfo;
+
+    /**
+     * Comment tokens that appear before this statement.
+     * For statements sharing a subject, only the first statement gets leading comments.
+     */
+    leadingComments: IToken[];
+
+    /**
+     * A comment token on the same line as this statement's last token.
+     * For statements sharing a subject, only the last statement gets the trailing comment.
+     */
+    trailingComment?: IToken;
+
+    /**
+     * The end offset of this statement in the source (for internal use).
+     */
+    endOffset: number;
+
+    /**
+     * The end line of this statement in the source (for trailing comment detection).
+     */
+    endLine: number;
+}

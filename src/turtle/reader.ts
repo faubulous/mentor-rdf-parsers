@@ -3,7 +3,7 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TurtleParser } from './parser.js';
-import type { QuadInfo, TermToken } from '../types.js';
+import type { QuadInfo, TermToken, StatementInfo } from '../types.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new TurtleParser().getBaseCstVisitorConstructor();
@@ -210,6 +210,119 @@ export class TurtleReader extends BaseVisitor {
                 for (const info of this.triplesInfo(triple, quads)) {
                     result.push(info);
                 }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Parse the document and return statement information with associated comments.
+     * This is more efficient than calling turtleDocInfo() and then grouping comments
+     * externally, as it performs comment association during a single CST traversal.
+     *
+     * @param ctx The CST root node.
+     * @param tokens The full token array from the lexer (must include COMMENT tokens).
+     * @returns An array of statements with leading/trailing comments attached.
+     */
+    turtleDocInfoWithComments(ctx: CstNode, tokens: IToken[]): StatementInfo[] {
+        const context = this.getChildren(ctx);
+
+        // First process directives to populate namespaces and base IRI
+        if (context.directive) {
+            for (const directive of context.directive) {
+                const { prefix, namespaceIri, baseIri } = this.visit(directive as any) as DirectiveResult;
+
+                if (prefix !== undefined) {
+                    this.namespaces[prefix] = namespaceIri!;
+                } else if (baseIri !== undefined) {
+                    this.baseIri = baseIri;
+                }
+            }
+        }
+
+        // Extract and sort comment tokens
+        const comments = tokens
+            .filter(t => t.tokenType.name === 'COMMENT')
+            .sort((a, b) => a.startOffset - b.startOffset);
+
+        const result: StatementInfo[] = [];
+        const quads: Quad[] = []; // For internal quad generation (collections, etc.)
+
+        let commentIdx = 0;
+        let previousStatementEnd = -1;
+
+        if (context.triples) {
+            for (const triple of context.triples) {
+                const triplesInfos = this.triplesInfo(triple, quads);
+                if (triplesInfos.length === 0) continue;
+
+                // Calculate statement span from first subject to last object
+                const firstSubjectOffset = triplesInfos[0].subject.token.startOffset;
+                let statementEndOffset = 0;
+                let statementEndLine = 1;
+
+                for (const info of triplesInfos) {
+                    const objToken = info.object.token;
+                    const endOffset = objToken.endOffset ?? (objToken.startOffset + objToken.image.length - 1);
+                    const endLine = objToken.endLine ?? objToken.startLine ?? 1;
+                    if (endOffset > statementEndOffset) {
+                        statementEndOffset = endOffset;
+                        statementEndLine = endLine;
+                    }
+                }
+
+                // Collect leading comments: between previousStatementEnd and firstSubjectOffset
+                const leading: IToken[] = [];
+                while (commentIdx < comments.length) {
+                    const c = comments[commentIdx];
+                    if (c.startOffset < firstSubjectOffset && c.startOffset > previousStatementEnd) {
+                        leading.push(c);
+                        commentIdx++;
+                    } else {
+                        break;
+                    }
+                }
+
+                // Collect trailing comment: on the same line as the statement end
+                let trailing: IToken | undefined;
+                if (
+                    commentIdx < comments.length &&
+                    comments[commentIdx].startOffset > statementEndOffset &&
+                    comments[commentIdx].startLine === statementEndLine
+                ) {
+                    trailing = comments[commentIdx];
+                    commentIdx++;
+                }
+
+                // Create StatementInfo for each quad
+                // Only first gets leading comments; only last gets trailing comment
+                for (let i = 0; i < triplesInfos.length; i++) {
+                    result.push({
+                        quadInfo: triplesInfos[i],
+                        leadingComments: i === 0 ? leading : [],
+                        trailingComment: i === triplesInfos.length - 1 ? trailing : undefined,
+                        endOffset: statementEndOffset,
+                        endLine: statementEndLine
+                    });
+                }
+
+                previousStatementEnd = statementEndOffset;
+            }
+        }
+
+        // Handle remaining trailing comments (document footer)
+        if (commentIdx < comments.length && result.length > 0) {
+            const last = result[result.length - 1];
+            const lastEndLine = last.endLine;
+            while (commentIdx < comments.length) {
+                if (!last.trailingComment && comments[commentIdx].startLine === lastEndLine) {
+                    last.trailingComment = comments[commentIdx];
+                } else {
+                    // Append as leading comments on last statement (document footer)
+                    last.leadingComments.push(comments[commentIdx]);
+                }
+                commentIdx++;
             }
         }
 

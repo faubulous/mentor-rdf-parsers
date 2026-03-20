@@ -4,7 +4,8 @@
 [![npm downloads](https://img.shields.io/npm/dm/@faubulous/mentor-rdf-parsers.svg)](https://www.npmjs.com/package/@faubulous/mentor-rdf-parsers)
 [![License: LGPL-2.1](https://img.shields.io/badge/License-LGPL--2.1-blue.svg)](https://opensource.org/licenses/LGPL-2.1)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Built with Chevrotain](https://img.shields.io/badge/Built%20with-Chevrotain-orange.svg)](https://chevrotain.io/)
+[![Built with Chevrotain](https://img.shields.io/badge/Built%20with-Chevrotain-orange.svg)](https://chevrotain.io/)[![RDF 1.2](https://img.shields.io/badge/RDF-1.2-green.svg)](https://www.w3.org/TR/rdf12-concepts/)
+
 
 Standards-compliant, fault-tolerant parsers for RDF languages, built with [Chevrotain](https://chevrotain.io/). Designed for IDEs and language tools where error recovery and concrete syntax tree (CST) access are essential.
 

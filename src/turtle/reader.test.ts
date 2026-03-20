@@ -832,3 +832,185 @@ ex:s ex:p (1 2) .`;
         expect(blankNodeInfo!.subject.term.value).toBe('my-custom-0');
     });
 });
+
+describe("TurtleReader.turtleDocInfoWithComments", () => {
+    it('returns StatementInfo with empty comments when no comments present', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:Alice ex:knows ex:Bob .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].quadInfo.subject.term.value).toBe('http://example.org/Alice');
+        expect(infos[0].leadingComments).toHaveLength(0);
+        expect(infos[0].trailingComment).toBeUndefined();
+    });
+
+    it('attaches leading comment to statement', () => {
+        const input = `@prefix ex: <http://example.org/> .
+# This is Alice
+ex:Alice ex:knows ex:Bob .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].leadingComments).toHaveLength(1);
+        expect(infos[0].leadingComments[0].image).toBe('# This is Alice');
+        expect(infos[0].trailingComment).toBeUndefined();
+    });
+
+    it('attaches trailing comment on same line', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:Alice ex:knows ex:Bob . # end of line`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].leadingComments).toHaveLength(0);
+        expect(infos[0].trailingComment).toBeDefined();
+        expect(infos[0].trailingComment!.image).toBe('# end of line');
+    });
+
+    it('attaches both leading and trailing comments', () => {
+        const input = `@prefix ex: <http://example.org/> .
+# Leading comment
+ex:Alice ex:knows ex:Bob . # Trailing comment`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].leadingComments).toHaveLength(1);
+        expect(infos[0].leadingComments[0].image).toBe('# Leading comment');
+        expect(infos[0].trailingComment).toBeDefined();
+        expect(infos[0].trailingComment!.image).toBe('# Trailing comment');
+    });
+
+    it('distributes comments correctly between multiple statements', () => {
+        const input = `@prefix ex: <http://example.org/> .
+# Comment for Alice
+ex:Alice ex:knows ex:Bob .
+# Comment for Carol
+ex:Carol ex:knows ex:Dave . # End of Carol`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(2);
+        
+        // First statement
+        expect(infos[0].quadInfo.subject.term.value).toBe('http://example.org/Alice');
+        expect(infos[0].leadingComments).toHaveLength(1);
+        expect(infos[0].leadingComments[0].image).toBe('# Comment for Alice');
+        expect(infos[0].trailingComment).toBeUndefined();
+        
+        // Second statement
+        expect(infos[1].quadInfo.subject.term.value).toBe('http://example.org/Carol');
+        expect(infos[1].leadingComments).toHaveLength(1);
+        expect(infos[1].leadingComments[0].image).toBe('# Comment for Carol');
+        expect(infos[1].trailingComment).toBeDefined();
+        expect(infos[1].trailingComment!.image).toBe('# End of Carol');
+    });
+
+    it('handles multiple quads from shared subject correctly', () => {
+        const input = `@prefix ex: <http://example.org/> .
+# About Alice
+ex:Alice ex:knows ex:Bob ;
+         ex:likes ex:Carol . # End of Alice`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(2);
+        
+        // First quad gets the leading comment
+        expect(infos[0].quadInfo.predicate.term.value).toBe('http://example.org/knows');
+        expect(infos[0].leadingComments).toHaveLength(1);
+        expect(infos[0].leadingComments[0].image).toBe('# About Alice');
+        expect(infos[0].trailingComment).toBeUndefined();
+        
+        // Last quad gets the trailing comment
+        expect(infos[1].quadInfo.predicate.term.value).toBe('http://example.org/likes');
+        expect(infos[1].leadingComments).toHaveLength(0);
+        expect(infos[1].trailingComment).toBeDefined();
+        expect(infos[1].trailingComment!.image).toBe('# End of Alice');
+    });
+
+    it('handles multiple leading comments', () => {
+        const input = `@prefix ex: <http://example.org/> .
+# First comment
+# Second comment
+# Third comment
+ex:Alice ex:knows ex:Bob .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].leadingComments).toHaveLength(3);
+        expect(infos[0].leadingComments[0].image).toBe('# First comment');
+        expect(infos[0].leadingComments[1].image).toBe('# Second comment');
+        expect(infos[0].leadingComments[2].image).toBe('# Third comment');
+    });
+
+    it('attaches document footer comments to last statement', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:Alice ex:knows ex:Bob .
+# Footer comment 1
+# Footer comment 2`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(1);
+        // Footer comments are attached as leading comments to last statement
+        expect(infos[0].leadingComments).toHaveLength(2);
+        expect(infos[0].leadingComments[0].image).toBe('# Footer comment 1');
+        expect(infos[0].leadingComments[1].image).toBe('# Footer comment 2');
+    });
+
+    it('returns empty array for document with only directives', () => {
+        const input = `@prefix ex: <http://example.org/> .
+# Just a comment`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(0);
+    });
+
+    it('includes endOffset and endLine in StatementInfo', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:Alice ex:knows ex:Bob .`;
+        
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        
+        expect(infos).toHaveLength(1);
+        expect(infos[0].endOffset).toBeGreaterThan(0);
+        expect(infos[0].endLine).toBe(2);
+    });
+});

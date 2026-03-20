@@ -180,3 +180,50 @@ const subjectSpan = {
 
 console.log(`Subject "${info.subject.term.value}" spans characters ${subjectSpan.start}-${subjectSpan.end}`);
 ```
+
+## StatementInfo: Associating Comments with Statements
+
+For formatters and serializers that need to preserve comments, use `turtleDocInfoWithComments()` to get `StatementInfo` objects. This method efficiently associates comment tokens with their corresponding statements during a single CST traversal:
+
+```typescript
+import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import type { StatementInfo } from '@faubulous/mentor-rdf-parsers';
+
+const input = `
+  @prefix ex: <http://example.org/> .
+  
+  # Alice knows Bob
+  ex:Alice ex:knows ex:Bob . # end of triple
+  
+  # Carol knows Dave
+  ex:Carol ex:knows ex:Dave .
+`;
+
+const lexResult = new TurtleLexer().tokenize(input);
+const cst = new TurtleParser().parse(lexResult.tokens);
+const reader = new TurtleReader();
+
+// Pass both the CST and the full token stream (including COMMENT tokens)
+const statementInfos: StatementInfo[] = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+
+for (const info of statementInfos) {
+    console.log(`Statement: ${info.quadInfo.subject.term.value} ${info.quadInfo.predicate.term.value}`);
+    
+    // Leading comments appear before the statement's subject
+    for (const comment of info.leadingComments) {
+        console.log(`  Leading: ${comment.image}`);
+    }
+    
+    // Trailing comment is on the same line as the statement's last token
+    if (info.trailingComment) {
+        console.log(`  Trailing: ${info.trailingComment.image}`);
+    }
+}
+```
+
+### Comment Association Rules
+
+- **Leading comments**: Comment tokens between the previous statement's end and the current statement's subject
+- **Trailing comment**: A comment token on the same source line as the statement's last object
+- **Shared subjects**: When multiple quads share a subject (using `;`), only the first quad gets leading comments and only the last gets the trailing comment
+- **Document footer**: Comments after the last statement are attached to the last statement's leading comments
