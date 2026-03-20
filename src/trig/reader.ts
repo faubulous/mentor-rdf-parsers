@@ -3,7 +3,7 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term, DefaultGraph } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TrigParser } from './parser.js';
-import type { QuadInfo, TermToken } from '../types.js';
+import type { QuadTokens, TermToken } from '../types.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new TrigParser().getBaseCstVisitorConstructor();
@@ -223,9 +223,9 @@ export class TrigReader extends BaseVisitor {
      * Parse the document and return quad information with source tokens.
      * This is useful for IDE features that need to associate positions with triples.
      */
-    trigDocInfo(ctx: CstNode): QuadInfo[] {
+    readQuadTokens(ctx: CstNode): QuadTokens[] {
         const context = this.getChildren(ctx);
-        const result: QuadInfo[] = [];
+        const result: QuadTokens[] = [];
         const quads: Quad[] = []; // For internal quad generation
 
         // Collect all directives and blocks with their source offsets
@@ -269,9 +269,9 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process block and collect QuadInfo.
+     * Process block and collect QuadTokens.
      */
-    protected blockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): void {
+    protected blockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): void {
         const context = this.getChildren(ctx);
         if (context.triplesOrGraph) {
             this.triplesOrGraphInfo(context.triplesOrGraph[0], quads, infoResults);
@@ -289,9 +289,9 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process triplesOrGraph and collect QuadInfo.
+     * Process triplesOrGraph and collect QuadTokens.
      */
-    protected triplesOrGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): void {
+    protected triplesOrGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): void {
         const context = this.getChildren(ctx);
         if (context.labelOrSubject) {
             const labelOrSubjectToken = this.labelOrSubjectInfo(context.labelOrSubject[0]);
@@ -328,9 +328,9 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process wrappedGraph and collect QuadInfo.
+     * Process wrappedGraph and collect QuadTokens.
      */
-    protected wrappedGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): void {
+    protected wrappedGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: TermToken): void {
         const context = this.getChildren(ctx);
         if (context.triplesBlock) {
             this.triplesBlockInfo(context.triplesBlock[0], quads, infoResults, graphToken);
@@ -338,9 +338,9 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process triplesBlock and collect QuadInfo.
+     * Process triplesBlock and collect QuadTokens.
      */
-    protected triplesBlockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): void {
+    protected triplesBlockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: TermToken): void {
         const context = this.getChildren(ctx);
         if (context.triples) {
             this.triplesInfo(context.triples[0], quads, infoResults, graphToken);
@@ -352,16 +352,16 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process triples and collect QuadInfo.
+     * Process triples and collect QuadTokens.
      */
-    protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): void {
+    protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: TermToken): void {
         const context = this.getChildren(ctx);
         if (context.subject) {
             const subjectToken = this.subjectInfo(context.subject[0], quads);
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    const quadInfo: QuadInfo = {
+                    const quadInfo: QuadTokens = {
                         subject: subjectToken,
                         predicate,
                         object
@@ -377,7 +377,7 @@ export class TrigReader extends BaseVisitor {
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    const quadInfo: QuadInfo = {
+                    const quadInfo: QuadTokens = {
                         subject: subjectToken,
                         predicate,
                         object
@@ -393,7 +393,7 @@ export class TrigReader extends BaseVisitor {
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    const quadInfo: QuadInfo = {
+                    const quadInfo: QuadTokens = {
                         subject: reifierToken,
                         predicate,
                         object
@@ -408,16 +408,16 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process triples2 and collect QuadInfo.
+     * Process triples2 and collect QuadTokens.
      */
-    protected triples2Info(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): void {
+    protected triples2Info(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: TermToken): void {
         const context = this.getChildren(ctx);
         if (context.blankNodePropertyList) {
             const subjectToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, graphToken);
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    const quadInfo: QuadInfo = {
+                    const quadInfo: QuadTokens = {
                         subject: subjectToken,
                         predicate,
                         object
@@ -433,7 +433,7 @@ export class TrigReader extends BaseVisitor {
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    const quadInfo: QuadInfo = {
+                    const quadInfo: QuadTokens = {
                         subject: subjectToken,
                         predicate,
                         object
@@ -520,14 +520,14 @@ export class TrigReader extends BaseVisitor {
         } else if (context.blank) {
             return this.blankInfo(context.blank[0], quads);
         } else if (context.blankNodePropertyList) {
-            const infoResults: QuadInfo[] = [];
+            const infoResults: QuadTokens[] = [];
             return this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, undefined);
         } else if (context.collection) {
             return this.collectionInfo(context.collection[0], quads);
         } else if (context.tripleTerm) {
             return this.tripleTermInfo(context.tripleTerm[0]);
         } else if (context.reifiedTriple) {
-            const infoResults: QuadInfo[] = [];
+            const infoResults: QuadTokens[] = [];
             return this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
         }
         throw new Error('Invalid object: ' + JSON.stringify(context));
@@ -600,7 +600,7 @@ export class TrigReader extends BaseVisitor {
     /**
      * Get blank node property list info.
      */
-    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[], graphToken?: TermToken): TermToken {
+    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: TermToken): TermToken {
         const context = this.getChildren(ctx);
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
         // Use pre-assigned ID from LBRACKET token
@@ -611,7 +611,7 @@ export class TrigReader extends BaseVisitor {
         if (context.predicateObjectList) {
             for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
                 this._emitQuad(quads, subject, predicate.term as NamedNode, object.term);
-                const quadInfo: QuadInfo = {
+                const quadInfo: QuadTokens = {
                     subject: subjectToken,
                     predicate,
                     object
@@ -767,7 +767,7 @@ export class TrigReader extends BaseVisitor {
     /**
      * Get reified triple info.
      */
-    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
         const context = this.getChildren(ctx);
         const token = this.findFirstToken(context)!;
         const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');

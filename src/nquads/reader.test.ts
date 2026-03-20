@@ -356,14 +356,14 @@ describe("NQuadsReader", () => {
     });
 });
 
-describe("NQuadsReader.nquadsDocInfo", () => {
-    it('returns QuadInfo with correct tokens for simple quad', () => {
+describe("NQuadsReader.readQuadTokens", () => {
+    it('returns QuadTokens with correct tokens for simple quad', () => {
         const input = `<http://example.org/s> <http://example.org/p> <http://example.org/o> <http://example.org/g> .`;
         
         const lexResult = new NQuadsLexer().tokenize(input);
         const cst = new NQuadsParser().parse(lexResult.tokens);
         const reader = new NQuadsReader();
-        const infos = reader.nquadsDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subject.term.value).toBe('http://example.org/s');
@@ -379,13 +379,13 @@ describe("NQuadsReader.nquadsDocInfo", () => {
         expect(infos[0].graph!.token.startOffset).toBeDefined();
     });
 
-    it('returns QuadInfo without graph for triple in default graph', () => {
+    it('returns QuadTokens without graph for triple in default graph', () => {
         const input = `<http://example.org/s> <http://example.org/p> <http://example.org/o> .`;
         
         const lexResult = new NQuadsLexer().tokenize(input);
         const cst = new NQuadsParser().parse(lexResult.tokens);
         const reader = new NQuadsReader();
-        const infos = reader.nquadsDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].graph).toBeUndefined();
@@ -397,7 +397,7 @@ describe("NQuadsReader.nquadsDocInfo", () => {
         const lexResult = new NQuadsLexer().tokenize(input);
         const cst = new NQuadsParser().parse(lexResult.tokens);
         const reader = new NQuadsReader();
-        const infos = reader.nquadsDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].graph).toBeDefined();
@@ -412,7 +412,7 @@ describe("NQuadsReader.nquadsDocInfo", () => {
         const lexResult = new NQuadsLexer().tokenize(input);
         const cst = new NQuadsParser().parse(lexResult.tokens);
         const reader = new NQuadsReader();
-        const infos = reader.nquadsDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
         expect(infos[0].subject.term.value).toBe('http://example.org/s1');

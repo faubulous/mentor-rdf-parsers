@@ -3,7 +3,7 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NTriplesParser } from './parser.js';
-import type { QuadInfo, TermToken } from '../types.js';
+import type { QuadTokens, TermToken } from '../types.js';
 
 const BaseVisitor = new NTriplesParser().getBaseCstVisitorConstructor();
 
@@ -60,9 +60,9 @@ export class NTriplesReader extends BaseVisitor {
      * Parse the document and return quad information with source tokens.
      * This is useful for IDE features that need to associate positions with triples.
      */
-    ntriplesDocInfo(ctx: CstNode): QuadInfo[] {
+    readQuadTokens(ctx: CstNode): QuadTokens[] {
         const context = this.getChildren(ctx);
-        const result: QuadInfo[] = [];
+        const result: QuadTokens[] = [];
 
         if (context.triple) {
             for (const tripleCtx of context.triple) {
@@ -79,7 +79,7 @@ export class NTriplesReader extends BaseVisitor {
     /**
      * Get triple info with tokens.
      */
-    protected tripleInfo(ctx: CstContext): QuadInfo | undefined {
+    protected tripleInfo(ctx: CstContext): QuadTokens | undefined {
         const context = this.getChildren(ctx);
         const subject = this.subjectInfo(context.subject![0]);
         const predicate = this.predicateInfo(context.predicate![0]);

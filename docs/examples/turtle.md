@@ -128,13 +128,13 @@ const quads = new TurtleReader().visit(cst);
 // Produces 3 quads
 ```
 
-## QuadInfo: Accessing Source Positions
+## QuadTokens: Accessing Source Positions
 
-For IDE features that need to associate positions with triples, use `turtleDocInfo()` to get `QuadInfo` objects. Each `QuadInfo` contains the subject, predicate, and object with their source tokens:
+For IDE features that need to associate positions with triples, use `readQuadTokens()` to get `QuadTokens` objects. Each `QuadTokens` contains the subject, predicate, and object with their source tokens:
 
 ```typescript
 import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
-import type { QuadInfo } from '@faubulous/mentor-rdf-parsers';
+import type { QuadTokens } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .
@@ -144,9 +144,9 @@ const input = `
 const lexResult = new TurtleLexer().tokenize(input);
 const cst = new TurtleParser().parse(lexResult.tokens);
 const reader = new TurtleReader();
-const quadInfos: QuadInfo[] = reader.turtleDocInfo(cst);
+const quadTokens: QuadTokens[] = reader.readQuadTokens(cst);
 
-for (const info of quadInfos) {
+for (const info of quadTokens) {
     console.log(`Subject: ${info.subject.term.value}`);
     console.log(`  Token position: line ${info.subject.token.startLine}, column ${info.subject.token.startColumn}`);
     
@@ -160,7 +160,7 @@ for (const info of quadInfos) {
 
 ### Token Information
 
-Each `TermToken` in a `QuadInfo` provides:
+Each `TermToken` in a `QuadTokens` provides:
 - `term`: The RDF/JS term (NamedNode, BlankNode, Literal, etc.)
 - `token`: The Chevrotain token with position information:
   - `startOffset`, `endOffset`: Character offsets in the input
@@ -169,7 +169,7 @@ Each `TermToken` in a `QuadInfo` provides:
   - `image`: The original text of the token
 
 ```typescript
-const info = quadInfos[0];
+const info = quadTokens[0];
 
 // Get the exact text span for highlighting
 const subjectSpan = {
@@ -181,13 +181,13 @@ const subjectSpan = {
 console.log(`Subject "${info.subject.term.value}" spans characters ${subjectSpan.start}-${subjectSpan.end}`);
 ```
 
-## StatementInfo: Associating Comments with Statements
+## QuadContext: Associating Comments with Statements
 
-For formatters and serializers that need to preserve comments, use `turtleDocInfoWithComments()` to get `StatementInfo` objects. This method efficiently associates comment tokens with their corresponding statements during a single CST traversal:
+For formatters and serializers that need to preserve comments, use `readQuadContexts()` to get `QuadContext` objects. This method efficiently associates comment tokens with their corresponding statements during a single CST traversal:
 
 ```typescript
 import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
-import type { StatementInfo } from '@faubulous/mentor-rdf-parsers';
+import type { QuadContext } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .
@@ -204,10 +204,10 @@ const cst = new TurtleParser().parse(lexResult.tokens);
 const reader = new TurtleReader();
 
 // Pass both the CST and the full token stream (including COMMENT tokens)
-const statementInfos: StatementInfo[] = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+const quadContexts: QuadContext[] = reader.readQuadContexts(cst, lexResult.tokens);
 
-for (const info of statementInfos) {
-    console.log(`Statement: ${info.quadInfo.subject.term.value} ${info.quadInfo.predicate.term.value}`);
+for (const info of quadContexts) {
+    console.log(`Statement: ${info.subject.term.value} ${info.predicate.term.value}`);
     
     // Leading comments appear before the statement's subject
     for (const comment of info.leadingComments) {

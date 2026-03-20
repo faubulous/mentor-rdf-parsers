@@ -440,15 +440,15 @@ describe("TrigReader", () => {
     });
 });
 
-describe("TrigReader.trigDocInfo", () => {
-    it('returns QuadInfo with correct tokens for simple quad in named graph', () => {
+describe("TrigReader.readQuadTokens", () => {
+    it('returns QuadTokens with correct tokens for simple quad in named graph', () => {
         const input = `@prefix ex: <http://example.org/> .
 ex:g { ex:s ex:p ex:o . }`;
         
         const lexResult = new TrigLexer().tokenize(input);
         const cst = new TrigParser().parse(lexResult.tokens);
         const reader = new TrigReader();
-        const infos = reader.trigDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subject.term.value).toBe('http://example.org/s');
@@ -464,14 +464,14 @@ ex:g { ex:s ex:p ex:o . }`;
         expect(infos[0].graph!.token.startOffset).toBeDefined();
     });
 
-    it('returns QuadInfo without graph for triple in default graph', () => {
+    it('returns QuadTokens without graph for triple in default graph', () => {
         const input = `@prefix ex: <http://example.org/> .
 ex:s ex:p ex:o .`;
         
         const lexResult = new TrigLexer().tokenize(input);
         const cst = new TrigParser().parse(lexResult.tokens);
         const reader = new TrigReader();
-        const infos = reader.trigDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].graph).toBeUndefined();
@@ -484,7 +484,7 @@ GRAPH ex:g { ex:s ex:p ex:o . }`;
         const lexResult = new TrigLexer().tokenize(input);
         const cst = new TrigParser().parse(lexResult.tokens);
         const reader = new TrigReader();
-        const infos = reader.trigDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].graph).toBeDefined();
@@ -501,7 +501,7 @@ ex:g {
         const lexResult = new TrigLexer().tokenize(input);
         const cst = new TrigParser().parse(lexResult.tokens);
         const reader = new TrigReader();
-        const infos = reader.trigDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
         expect(infos[0].subject.term.value).toBe('http://example.org/s1');
@@ -517,7 +517,7 @@ ex:s a ex:Class .`;
         const lexResult = new TrigLexer().tokenize(input);
         const cst = new TrigParser().parse(lexResult.tokens);
         const reader = new TrigReader();
-        const infos = reader.trigDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].predicate.term.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
@@ -531,7 +531,7 @@ ex:s a ex:Class .`;
         const lexResult = new TrigLexer().tokenize(input);
         const cst = new TrigParser().parse(lexResult.tokens);
         const reader = new TrigReader();
-        const infos = reader.trigDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         // Should have quads from blank node property list
         expect(infos.length).toBeGreaterThanOrEqual(2);

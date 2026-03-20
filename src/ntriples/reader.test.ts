@@ -296,14 +296,14 @@ describe("NTriplesReader", () => {
     });
 });
 
-describe("NTriplesReader.ntriplesDocInfo", () => {
-    it('returns QuadInfo with correct tokens for simple triple', () => {
+describe("NTriplesReader.readQuadTokens", () => {
+    it('returns QuadTokens with correct tokens for simple triple', () => {
         const input = `<http://example.org/s> <http://example.org/p> <http://example.org/o> .`;
         
         const lexResult = new NTriplesLexer().tokenize(input);
         const cst = new NTriplesParser().parse(lexResult.tokens);
         const reader = new NTriplesReader();
-        const infos = reader.ntriplesDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subject.term.value).toBe('http://example.org/s');
@@ -322,7 +322,7 @@ describe("NTriplesReader.ntriplesDocInfo", () => {
         const lexResult = new NTriplesLexer().tokenize(input);
         const cst = new NTriplesParser().parse(lexResult.tokens);
         const reader = new NTriplesReader();
-        const infos = reader.ntriplesDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subject.term.termType).toBe('BlankNode');
@@ -335,7 +335,7 @@ describe("NTriplesReader.ntriplesDocInfo", () => {
         const lexResult = new NTriplesLexer().tokenize(input);
         const cst = new NTriplesParser().parse(lexResult.tokens);
         const reader = new NTriplesReader();
-        const infos = reader.ntriplesDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].object.term.termType).toBe('Literal');
@@ -350,7 +350,7 @@ describe("NTriplesReader.ntriplesDocInfo", () => {
         const lexResult = new NTriplesLexer().tokenize(input);
         const cst = new NTriplesParser().parse(lexResult.tokens);
         const reader = new NTriplesReader();
-        const infos = reader.ntriplesDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
         expect(infos[0].subject.term.value).toBe('http://example.org/s1');

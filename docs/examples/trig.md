@@ -142,13 +142,13 @@ const cst = new TrigParser().parse(lexResult.tokens);
 const quads = new TrigReader().visit(cst);
 ```
 
-## QuadInfo: Accessing Source Positions
+## QuadTokens: Accessing Source Positions
 
-For IDE features that need to associate positions with quads, use `trigDocInfo()` to get `QuadInfo` objects. Each `QuadInfo` includes the graph term along with subject, predicate, and object:
+For IDE features that need to associate positions with quads, use `readQuadTokens()` to get `QuadTokens` objects. Each `QuadTokens` includes the graph term along with subject, predicate, and object:
 
 ```typescript
 import { TrigLexer, TrigParser, TrigReader } from '@faubulous/mentor-rdf-parsers';
-import type { QuadInfo } from '@faubulous/mentor-rdf-parsers';
+import type { QuadTokens } from '@faubulous/mentor-rdf-parsers';
 
 const input = `
   @prefix ex: <http://example.org/> .
@@ -160,9 +160,9 @@ const input = `
 const lexResult = new TrigLexer().tokenize(input);
 const cst = new TrigParser().parse(lexResult.tokens);
 const reader = new TrigReader();
-const quadInfos: QuadInfo[] = reader.trigDocInfo(cst);
+const quadTokens: QuadTokens[] = reader.readQuadTokens(cst);
 
-for (const info of quadInfos) {
+for (const info of quadTokens) {
     console.log(`Subject: ${info.subject.term.value}`);
     console.log(`  Line ${info.subject.token.startLine}, column ${info.subject.token.startColumn}`);
     
@@ -179,7 +179,7 @@ for (const info of quadInfos) {
 
 ### Token Information
 
-Each `TermToken` in a `QuadInfo` provides:
+Each `TermToken` in a `QuadTokens` provides:
 - `term`: The RDF/JS term (NamedNode, BlankNode, Literal, DefaultGraph, etc.)
 - `token`: The Chevrotain token with position information:
   - `startOffset`, `endOffset`: Character offsets in the input
@@ -188,7 +188,7 @@ Each `TermToken` in a `QuadInfo` provides:
   - `image`: The original text of the token
 
 ```typescript
-const info = quadInfos[0];
+const info = quadTokens[0];
 
 // Get the exact text span for highlighting
 const graphSpan = info.graph ? {

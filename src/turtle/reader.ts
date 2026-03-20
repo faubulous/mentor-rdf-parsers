@@ -3,7 +3,7 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TurtleParser } from './parser.js';
-import type { QuadInfo, TermToken, StatementInfo } from '../types.js';
+import type { QuadTokens, TermToken, QuadContext } from '../types.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new TurtleParser().getBaseCstVisitorConstructor();
@@ -182,27 +182,57 @@ export class TurtleReader extends BaseVisitor {
         return ctx.children ? ctx.children : ctx;
     }
 
+    protected processDirectives(context: CstContext): void {
+        if (!context.directive) return;
+
+        for (const directive of context.directive) {
+            const { prefix, namespaceIri, baseIri } = this.visit(directive as any) as DirectiveResult;
+
+            if (prefix !== undefined) {
+                this.namespaces[prefix] = namespaceIri!;
+            } else if (baseIri !== undefined) {
+                this.baseIri = baseIri;
+            }
+        }
+    }
+
+    protected getSortedCommentTokens(tokens: IToken[]): IToken[] {
+        return tokens
+            .filter(t => t.tokenType.name === 'COMMENT')
+            .sort((a, b) => a.startOffset - b.startOffset);
+    }
+
+    protected getStatementSpan(triplesInfos: QuadTokens[]): { startOffset: number; endOffset: number; endLine: number } {
+        const startOffset = triplesInfos[0].subject.token.startOffset;
+
+        let endOffset = 0;
+        let endLine = 1;
+
+        for (const info of triplesInfos) {
+            const objToken = info.object.token;
+            const objEndOffset = objToken.endOffset ?? (objToken.startOffset + objToken.image.length - 1);
+            const objEndLine = objToken.endLine ?? objToken.startLine ?? 1;
+
+            if (objEndOffset > endOffset) {
+                endOffset = objEndOffset;
+                endLine = objEndLine;
+            }
+        }
+
+        return { startOffset, endOffset, endLine };
+    }
+
     /**
      * Parse the document and return quad information with source tokens.
      * This is useful for IDE features that need to associate positions with triples.
      */
-    turtleDocInfo(ctx: CstNode): QuadInfo[] {
+    readQuadTokens(ctx: CstNode): QuadTokens[] {
         const context = this.getChildren(ctx);
 
         // First process directives to populate namespaces and base IRI
-        if (context.directive) {
-            for (const directive of context.directive) {
-                const { prefix, namespaceIri, baseIri } = this.visit(directive as any) as DirectiveResult;
+        this.processDirectives(context);
 
-                if (prefix !== undefined) {
-                    this.namespaces[prefix] = namespaceIri!;
-                } else if (baseIri !== undefined) {
-                    this.baseIri = baseIri;
-                }
-            }
-        }
-
-        const result: QuadInfo[] = [];
+        const result: QuadTokens[] = [];
         const quads: Quad[] = []; // For internal quad generation (collections, etc.)
 
         if (context.triples) {
@@ -218,35 +248,22 @@ export class TurtleReader extends BaseVisitor {
 
     /**
      * Parse the document and return statement information with associated comments.
-     * This is more efficient than calling turtleDocInfo() and then grouping comments
+     * This is more efficient than calling readQuadTokens() and then grouping comments
      * externally, as it performs comment association during a single CST traversal.
      *
      * @param ctx The CST root node.
      * @param tokens The full token array from the lexer (must include COMMENT tokens).
      * @returns An array of statements with leading/trailing comments attached.
      */
-    turtleDocInfoWithComments(ctx: CstNode, tokens: IToken[]): StatementInfo[] {
+    readQuadContexts(ctx: CstNode, tokens: IToken[]): QuadContext[] {
         const context = this.getChildren(ctx);
 
         // First process directives to populate namespaces and base IRI
-        if (context.directive) {
-            for (const directive of context.directive) {
-                const { prefix, namespaceIri, baseIri } = this.visit(directive as any) as DirectiveResult;
+        this.processDirectives(context);
 
-                if (prefix !== undefined) {
-                    this.namespaces[prefix] = namespaceIri!;
-                } else if (baseIri !== undefined) {
-                    this.baseIri = baseIri;
-                }
-            }
-        }
+        const comments = this.getSortedCommentTokens(tokens);
 
-        // Extract and sort comment tokens
-        const comments = tokens
-            .filter(t => t.tokenType.name === 'COMMENT')
-            .sort((a, b) => a.startOffset - b.startOffset);
-
-        const result: StatementInfo[] = [];
+        const result: QuadContext[] = [];
         const quads: Quad[] = []; // For internal quad generation (collections, etc.)
 
         let commentIdx = 0;
@@ -257,20 +274,8 @@ export class TurtleReader extends BaseVisitor {
                 const triplesInfos = this.triplesInfo(triple, quads);
                 if (triplesInfos.length === 0) continue;
 
-                // Calculate statement span from first subject to last object
-                const firstSubjectOffset = triplesInfos[0].subject.token.startOffset;
-                let statementEndOffset = 0;
-                let statementEndLine = 1;
-
-                for (const info of triplesInfos) {
-                    const objToken = info.object.token;
-                    const endOffset = objToken.endOffset ?? (objToken.startOffset + objToken.image.length - 1);
-                    const endLine = objToken.endLine ?? objToken.startLine ?? 1;
-                    if (endOffset > statementEndOffset) {
-                        statementEndOffset = endOffset;
-                        statementEndLine = endLine;
-                    }
-                }
+                const { startOffset: firstSubjectOffset, endOffset: statementEndOffset, endLine: statementEndLine } =
+                    this.getStatementSpan(triplesInfos);
 
                 // Collect leading comments: between previousStatementEnd and firstSubjectOffset
                 const leading: IToken[] = [];
@@ -295,11 +300,11 @@ export class TurtleReader extends BaseVisitor {
                     commentIdx++;
                 }
 
-                // Create StatementInfo for each quad
+                // Create QuadContext for each quad
                 // Only first gets leading comments; only last gets trailing comment
                 for (let i = 0; i < triplesInfos.length; i++) {
                     result.push({
-                        quadInfo: triplesInfos[i],
+                        ...triplesInfos[i],
                         leadingComments: i === 0 ? leading : [],
                         trailingComment: i === triplesInfos.length - 1 ? trailing : undefined,
                         endOffset: statementEndOffset,
@@ -330,11 +335,11 @@ export class TurtleReader extends BaseVisitor {
     }
 
     /**
-     * Process triples and return QuadInfo with token information.
+     * Process triples and return QuadTokens with token information.
      */
-    protected triplesInfo(ctx: CstContext, quads: Quad[]): QuadInfo[] {
+    protected triplesInfo(ctx: CstContext, quads: Quad[]): QuadTokens[] {
         const context = this.getChildren(ctx);
-        const result: QuadInfo[] = [];
+        const result: QuadTokens[] = [];
 
         if (context.subject) {
             const subjectToken = this.subjectInfo(context.subject[0], quads);
@@ -425,7 +430,7 @@ export class TurtleReader extends BaseVisitor {
         } else if (context.blankNode) {
             return this.blankNodeInfo(context.blankNode[0]);
         } else if (context.blankNodePropertyList) {
-            const infoResults: QuadInfo[] = [];
+            const infoResults: QuadTokens[] = [];
             const termToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults);
             return termToken;
         } else if (context.collection) {
@@ -433,7 +438,7 @@ export class TurtleReader extends BaseVisitor {
         } else if (context.tripleTerm) {
             return this.tripleTermInfo(context.tripleTerm[0]);
         } else if (context.reifiedTriple) {
-            const infoResults: QuadInfo[] = [];
+            const infoResults: QuadTokens[] = [];
             return this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
         }
         throw new Error('Invalid object: ' + JSON.stringify(context));
@@ -505,9 +510,9 @@ export class TurtleReader extends BaseVisitor {
 
     /**
      * Get blank node property list info. Returns the blank node subject and
-     * populates infoResults with QuadInfo for internal triples.
+     * populates infoResults with QuadTokens for internal triples.
      */
-    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
         const context = this.getChildren(ctx);
         // The LBRACKET token marks the start of this blank node
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
@@ -669,7 +674,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get reified triple info.
      */
-    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadInfo[]): TermToken {
+    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
         const context = this.getChildren(ctx);
         const token = this.findFirstToken(context)!;
         const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');

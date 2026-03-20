@@ -27,7 +27,7 @@ export interface TermToken {
  * Information about a quad including the source tokens for each component.
  * This allows associating document positions with the RDF data model.
  */
-export interface QuadInfo {
+export interface QuadTokens {
     /**
      * The subject term and its defining token.
      */
@@ -51,15 +51,10 @@ export interface QuadInfo {
 }
 
 /**
- * A statement with associated comment tokens.
- * Groups a QuadInfo with any leading or trailing comments from the source.
+ * A quad with associated comment tokens.
+ * Extends QuadTokens with leading or trailing comments from the source.
  */
-export interface StatementInfo {
-    /**
-     * The quad information including terms and tokens.
-     */
-    quadInfo: QuadInfo;
-
+export interface QuadContext extends QuadTokens {
     /**
      * Comment tokens that appear before this statement.
      * For statements sharing a subject, only the first statement gets leading comments.

@@ -80,22 +80,22 @@ console.log(quads[0].graph.termType); // "BlankNode"
 console.log(quads[0].graph.value);    // "g1"
 ```
 
-## QuadInfo: Accessing Source Positions
+## QuadTokens: Accessing Source Positions
 
-For IDE features that need to associate positions with quads, use `nquadsDocInfo()` to get `QuadInfo` objects. Each `QuadInfo` contains the subject, predicate, object, and graph with their source tokens:
+For IDE features that need to associate positions with quads, use `readQuadTokens()` to get `QuadTokens` objects. Each `QuadTokens` contains the subject, predicate, object, and graph with their source tokens:
 
 ```typescript
 import { NQuadsLexer, NQuadsParser, NQuadsReader } from '@faubulous/mentor-rdf-parsers';
-import type { QuadInfo } from '@faubulous/mentor-rdf-parsers';
+import type { QuadTokens } from '@faubulous/mentor-rdf-parsers';
 
 const input = '<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> <http://example.org/graph1> .\n';
 
 const lexResult = new NQuadsLexer().tokenize(input);
 const cst = new NQuadsParser().parse(lexResult.tokens);
 const reader = new NQuadsReader();
-const quadInfos: QuadInfo[] = reader.nquadsDocInfo(cst);
+const quadTokens: QuadTokens[] = reader.readQuadTokens(cst);
 
-for (const info of quadInfos) {
+for (const info of quadTokens) {
     console.log(`Subject: ${info.subject.term.value}`);
     console.log(`  Token position: line ${info.subject.token.startLine}, column ${info.subject.token.startColumn}`);
     
@@ -112,7 +112,7 @@ for (const info of quadInfos) {
 
 ### Token Information
 
-Each `TermToken` in a `QuadInfo` provides:
+Each `TermToken` in a `QuadTokens` provides:
 - `term`: The RDF/JS term (NamedNode, BlankNode, Literal, DefaultGraph)
 - `token`: The Chevrotain token with position information:
   - `startOffset`, `endOffset`: Character offsets in the input
@@ -121,7 +121,7 @@ Each `TermToken` in a `QuadInfo` provides:
   - `image`: The original text of the token
 
 ```typescript
-const info = quadInfos[0];
+const info = quadTokens[0];
 
 // Get the exact text span for highlighting
 if (info.graph) {

@@ -584,15 +584,15 @@ describe("TurtleReader", () => {
     });
 });
 
-describe("TurtleReader.turtleDocInfo", () => {
-    it('returns QuadInfo with correct tokens for simple triple', () => {
+describe("TurtleReader.readQuadTokens", () => {
+    it('returns QuadTokens with correct tokens for simple triple', () => {
         const input = `@prefix ex: <http://example.org/> .
 ex:subject ex:predicate ex:object .`;
         
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subject.term.value).toBe('http://example.org/subject');
@@ -612,7 +612,7 @@ ex:subject a ex:Class .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].predicate.term.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
@@ -626,7 +626,7 @@ _:b1 ex:predicate "value" .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subject.term.termType).toBe('BlankNode');
@@ -640,7 +640,7 @@ _:b1 ex:predicate "value" .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         // Should have 2 quads: internal blank node property and outer triple
         expect(infos.length).toBeGreaterThanOrEqual(2);
@@ -658,7 +658,7 @@ ex:s ex:p "hello world" .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].object.term.termType).toBe('Literal');
@@ -673,7 +673,7 @@ ex:s ex:p 42 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].object.term.value).toBe('42');
@@ -688,7 +688,7 @@ ex:s2 ex:p2 ex:o2 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
         expect(infos[0].subject.term.value).toBe('http://example.org/s1');
@@ -702,7 +702,7 @@ ex:s ex:p1 ex:o1 ; ex:p2 ex:o2 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
         // Both quads share the same subject
@@ -718,7 +718,7 @@ ex:s ex:p ex:o1, ex:o2 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
         // Both quads share same subject and predicate
@@ -734,7 +734,7 @@ ex:s ex:p ex:o1, ex:o2 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subject.token.image).toBe('<http://example.org/s>');
@@ -750,7 +750,7 @@ describe("TurtleReader - Blank Node ID Pre-assignment", () => {
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         // Find the blank node subject
         const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
@@ -793,7 +793,7 @@ ex:s ex:p (1 2) .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         // Get all the LBRACKET tokens
         const lbracketTokens = lexResult.tokens.filter(t => t.tokenType.name === 'LBRACKET');
@@ -822,7 +822,7 @@ ex:s ex:p (1 2) .`;
         const lexResult = lexer.tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfo(cst);
+        const infos = reader.readQuadTokens(cst);
         
         // Find the blank node subject
         const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
@@ -833,18 +833,18 @@ ex:s ex:p (1 2) .`;
     });
 });
 
-describe("TurtleReader.turtleDocInfoWithComments", () => {
-    it('returns StatementInfo with empty comments when no comments present', () => {
+describe("TurtleReader.readQuadContexts", () => {
+    it('returns QuadContext with empty comments when no comments present', () => {
         const input = `@prefix ex: <http://example.org/> .
 ex:Alice ex:knows ex:Bob .`;
         
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].quadInfo.subject.term.value).toBe('http://example.org/Alice');
+        expect(infos[0].subject.term.value).toBe('http://example.org/Alice');
         expect(infos[0].leadingComments).toHaveLength(0);
         expect(infos[0].trailingComment).toBeUndefined();
     });
@@ -857,7 +857,7 @@ ex:Alice ex:knows ex:Bob .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].leadingComments).toHaveLength(1);
@@ -872,7 +872,7 @@ ex:Alice ex:knows ex:Bob . # end of line`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].leadingComments).toHaveLength(0);
@@ -888,7 +888,7 @@ ex:Alice ex:knows ex:Bob . # Trailing comment`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].leadingComments).toHaveLength(1);
@@ -907,18 +907,18 @@ ex:Carol ex:knows ex:Dave . # End of Carol`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(2);
         
         // First statement
-        expect(infos[0].quadInfo.subject.term.value).toBe('http://example.org/Alice');
+        expect(infos[0].subject.term.value).toBe('http://example.org/Alice');
         expect(infos[0].leadingComments).toHaveLength(1);
         expect(infos[0].leadingComments[0].image).toBe('# Comment for Alice');
         expect(infos[0].trailingComment).toBeUndefined();
         
         // Second statement
-        expect(infos[1].quadInfo.subject.term.value).toBe('http://example.org/Carol');
+        expect(infos[1].subject.term.value).toBe('http://example.org/Carol');
         expect(infos[1].leadingComments).toHaveLength(1);
         expect(infos[1].leadingComments[0].image).toBe('# Comment for Carol');
         expect(infos[1].trailingComment).toBeDefined();
@@ -934,18 +934,18 @@ ex:Alice ex:knows ex:Bob ;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(2);
         
         // First quad gets the leading comment
-        expect(infos[0].quadInfo.predicate.term.value).toBe('http://example.org/knows');
+        expect(infos[0].predicate.term.value).toBe('http://example.org/knows');
         expect(infos[0].leadingComments).toHaveLength(1);
         expect(infos[0].leadingComments[0].image).toBe('# About Alice');
         expect(infos[0].trailingComment).toBeUndefined();
         
         // Last quad gets the trailing comment
-        expect(infos[1].quadInfo.predicate.term.value).toBe('http://example.org/likes');
+        expect(infos[1].predicate.term.value).toBe('http://example.org/likes');
         expect(infos[1].leadingComments).toHaveLength(0);
         expect(infos[1].trailingComment).toBeDefined();
         expect(infos[1].trailingComment!.image).toBe('# End of Alice');
@@ -961,7 +961,7 @@ ex:Alice ex:knows ex:Bob .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].leadingComments).toHaveLength(3);
@@ -979,7 +979,7 @@ ex:Alice ex:knows ex:Bob .
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(1);
         // Footer comments are attached as leading comments to last statement
@@ -995,19 +995,19 @@ ex:Alice ex:knows ex:Bob .
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(0);
     });
 
-    it('includes endOffset and endLine in StatementInfo', () => {
+    it('includes endOffset and endLine in QuadContext', () => {
         const input = `@prefix ex: <http://example.org/> .
 ex:Alice ex:knows ex:Bob .`;
         
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.turtleDocInfoWithComments(cst, lexResult.tokens);
+        const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].endOffset).toBeGreaterThan(0);
