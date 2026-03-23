@@ -3,24 +3,10 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NQuadsParser } from './parser.js';
-import type { QuadContext } from '../types.js';
-import { toQuadContext } from '../types.js';
-
-interface CstContext {
-    [key: string]: CstContext[] | IToken[] | undefined;
-    statement?: CstContext[];
-    subject?: CstContext[];
-    predicate?: CstContext[];
-    object?: CstContext[];
-    literal?: CstContext[];
-    datatype?: CstContext[];
-    tripleTerm?: CstContext[];
-    graphLabel?: CstContext[];
-    IRIREF_ABS?: IToken[];
-    BLANK_NODE_LABEL?: IToken[];
-    STRING_LITERAL_QUOTE?: IToken[];
-    LANGTAG?: IToken[];
-}
+import type { QuadContext } from '../quad-context.js';
+import { toQuadContext } from '../quad-context.js';
+import { getCstChildren, findFirstTokenInCst, unescapeRdfString } from '../reader-helpers.js';
+import type { NQuadsReaderCstContext as CstContext } from '../reader-cst-types.js';
 
 const BaseVisitor = new NQuadsParser().getBaseCstVisitorConstructor();
 
@@ -39,7 +25,7 @@ export class NQuadsReader extends BaseVisitor {
      * Extract children from a CstNode or return the context as-is.
      */
     protected getChildren(ctx: CstContext): CstContext {
-        return ctx.children ? ctx.children : ctx;
+        return getCstChildren(ctx as any) as CstContext;
     }
 
     nquadsDoc(ctx: CstContext): Quad[] {
@@ -83,10 +69,10 @@ export class NQuadsReader extends BaseVisitor {
      */
     protected statementInfo(ctx: CstContext): QuadContext | undefined {
         const context = this.getChildren(ctx);
-        const subject = this.subjectInfo(context.subject![0]);
-        const predicate = this.predicateInfo(context.predicate![0]);
-        const object = this.objectInfo(context.object![0]);
-        const graph = context.graphLabel ? this.graphLabelInfo(context.graphLabel[0]) : undefined;
+        const subject = this.subjectContext(context.subject![0]);
+        const predicate = this.predicateContext(context.predicate![0]);
+        const object = this.objectContext(context.object![0]);
+        const graph = context.graphLabel ? this.graphLabelContext(context.graphLabel[0]) : undefined;
 
         return toQuadContext(
             subject.term, subject.token,
@@ -99,8 +85,9 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Get subject term and token.
      */
-    protected subjectInfo(ctx: CstContext) {
+    protected subjectContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.IRIREF_ABS) {
             return {
                 term: this.getNamedNode(context),
@@ -112,28 +99,32 @@ export class NQuadsReader extends BaseVisitor {
                 token: context.BLANK_NODE_LABEL[0]
             };
         }
+
         throw new Error('Invalid subject');
     }
 
     /**
      * Get predicate term and token.
      */
-    protected predicateInfo(ctx: CstContext) {
+    protected predicateContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.IRIREF_ABS) {
             return {
                 term: this.getNamedNode(context),
                 token: context.IRIREF_ABS[0]
             };
         }
+
         throw new Error('Invalid predicate: ' + context);
     }
 
     /**
      * Get object term and token.
      */
-    protected objectInfo(ctx: CstContext) {
+    protected objectContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.IRIREF_ABS) {
             return {
                 term: this.getNamedNode(context),
@@ -145,22 +136,24 @@ export class NQuadsReader extends BaseVisitor {
                 token: context.BLANK_NODE_LABEL[0]
             };
         } else if (context.literal) {
-            return this.literalInfo(context.literal[0]);
+            return this.literalContext(context.literal[0]);
         } else if (context.tripleTerm) {
-            return this.tripleTermInfo(context.tripleTerm[0]);
+            return this.tripleTermContext(context.tripleTerm[0]);
         }
+
         throw new Error('Invalid object');
     }
 
     /**
      * Get literal term and token.
      */
-    protected literalInfo(ctx: CstContext) {
+    protected literalContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = context.STRING_LITERAL_QUOTE![0];
         const value = this.getLiteralValue(context);
 
         let literal: Literal;
+        
         if (context.datatype) {
             const datatype = this.visit(context.datatype[0]) as NamedNode;
             literal = dataFactory.literal(value, datatype);
@@ -177,8 +170,9 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Get triple term info.
      */
-    protected tripleTermInfo(ctx: CstContext) {
+    protected tripleTermContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         const subject = this.visit(context.subject![0]) as NamedNode | BlankNode;
         const predicate = this.visit(context.predicate![0]) as NamedNode;
         const object = this.visit(context.object![0]) as Term;
@@ -194,8 +188,9 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Get graph label term and token.
      */
-    protected graphLabelInfo(ctx: CstContext) {
+    protected graphLabelContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.IRIREF_ABS) {
             return {
                 term: this.getNamedNode(context),
@@ -207,6 +202,7 @@ export class NQuadsReader extends BaseVisitor {
                 token: context.BLANK_NODE_LABEL[0]
             };
         }
+
         throw new Error('Invalid graph label');
     }
 
@@ -214,20 +210,7 @@ export class NQuadsReader extends BaseVisitor {
      * Find the first token in a CST context.
      */
     protected findFirstToken(ctx: CstContext): IToken | undefined {
-        for (const key in ctx) {
-            const value = ctx[key];
-            if (Array.isArray(value) && value.length > 0) {
-                const first = value[0];
-                if (typeof (first as IToken).startOffset === 'number') {
-                    return first as IToken;
-                }
-                if (typeof first === 'object') {
-                    const token = this.findFirstToken(first as CstContext);
-                    if (token) return token;
-                }
-            }
-        }
-        return undefined;
+        return findFirstTokenInCst(ctx as any);
     }
 
     versionDirective(ctx: CstContext): undefined {
@@ -288,13 +271,11 @@ export class NQuadsReader extends BaseVisitor {
 
         if (ctx.datatype) {
             const datatype = this.visit(ctx.datatype[0]) as NamedNode;
-
             return dataFactory.literal(value, datatype);
         } else if (ctx.LANGTAG) {
             // LANGTAG image includes the leading '@', e.g. "@en" — strip it.
             // Language tags are normalized to lowercase per BCP 47.
             const langtag = ctx.LANGTAG[0].image.slice(1).toLowerCase();
-
             return dataFactory.literal(value, langtag);
         } else {
             return dataFactory.literal(value);
@@ -344,20 +325,6 @@ export class NQuadsReader extends BaseVisitor {
      * Interpret escape sequences in a string value.
      */
     unescapeString(raw: string): string {
-        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match: string, u4: string, u8: string, ch: string) => {
-            if (u4) return String.fromCodePoint(parseInt(u4, 16));
-            if (u8) return String.fromCodePoint(parseInt(u8, 16));
-            switch (ch) {
-                case 't': return '\t';
-                case 'n': return '\n';
-                case 'r': return '\r';
-                case 'b': return '\b';
-                case 'f': return '\f';
-                case '"': return '"';
-                case "'": return "'";
-                case '\\': return '\\';
-                default: return match;
-            }
-        });
+        return unescapeRdfString(raw);
     }
 }

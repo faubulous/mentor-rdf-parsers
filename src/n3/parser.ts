@@ -1,7 +1,8 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType, IRecognitionException, ILexingResult } from 'chevrotain';
 import { RdfToken } from '../tokens.js';
 import { IParser, ILexer } from '../syntax.js';
-import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
+import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator, splitPrefixedName } from '../utils.js';
+import { withoutCommentTokens } from '../parser-helpers.js';
 
 // N3 token order - note that longer/more specific patterns must come before shorter ones
 export const N3Tokens: TokenType[] = [
@@ -55,14 +56,15 @@ export const N3Tokens: TokenType[] = [
  */
 export class N3Lexer extends Lexer implements ILexer {
     /**
-     * Optional blank node ID generator function.
-     * When set or undefined, the lexer will automatically assign blank node IDs to tokens.
-     * Set to null to disable automatic blank node ID assignment.
+     * Optional blank node ID generator function. When set or undefined, the 
+     * lexer will automatically assign blank node IDs to tokens. Set to null 
+     * to disable automatic blank node ID assignment.
      */
     blankNodeIdGenerator?: BlankNodeIdGenerator | null;
 
     constructor(blankNodeIdGenerator?: BlankNodeIdGenerator | null) {
         super(N3Tokens);
+
         this.blankNodeIdGenerator = blankNodeIdGenerator;
     }
 
@@ -126,9 +128,10 @@ export class N3Parser extends CstParser implements IParser {
         this._throwOnErrors = throwOnErrors;
         this.semanticErrors = [];
         this.namespaces = {};
+
         // Filter out comment tokens - they are kept in the token stream for formatters
         // but should not be processed by the parser
-        this.input = tokens.filter(t => t.tokenType.name !== 'COMMENT');
+        this.input = withoutCommentTokens(tokens, RdfToken.COMMENT);
 
         const cst = this.n3Doc();
 
@@ -491,8 +494,7 @@ export class N3Parser extends CstParser implements IParser {
         ]);
 
         if (token?.image) {
-            const n = token.image.indexOf(':');
-            const prefix = n > -1 ? token.image.slice(0, n) : token.image;
+            const { prefix } = splitPrefixedName(token.image, true);
 
             if (this.namespaces[prefix] === undefined) {
                 // N3 allows implicit empty prefix

@@ -1,7 +1,8 @@
 import { Lexer, CstParser, IToken, CstNode, TokenType, ILexingResult } from 'chevrotain';
 import { RdfToken } from '../tokens.js';
 import { IParser, ILexer } from '../syntax.js';
-import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
+import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator, splitPrefixedName } from '../utils.js';
+import { withoutCommentTokens } from '../parser-helpers.js';
 
 // TODO:
 // - Define 'triples' acoording to https://www.w3.org/TR/n-quads/#grammar-production-triples
@@ -188,8 +189,7 @@ export class TurtleParserBase extends CstParser {
         ]);
 
         if (token?.image) {
-            const n = token.image.indexOf(':');
-            const prefix = n > -1 ? token.image.slice(0, n) : token.image;
+            const { prefix } = splitPrefixedName(token.image, true);
 
             if (this.namespaces[prefix] === undefined) {
                 const error = new Error(`Undefined prefix: ${prefix}`);
@@ -528,7 +528,7 @@ export class TurtleParser extends TurtleParserBase implements IParser {
         this.namespaces = {};
         // Filter out comment tokens - they are kept in the token stream for formatters
         // but should not be processed by the parser
-        this.input = tokens.filter(t => t.tokenType.name !== 'COMMENT');
+        this.input = withoutCommentTokens(tokens);
 
         const cst = this.turtleDoc();
 

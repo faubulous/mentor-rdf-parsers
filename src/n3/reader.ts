@@ -3,154 +3,20 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term, Variable } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { N3Parser } from './parser.js';
-import type { QuadContext } from '../types.js';
-import { toQuadContext } from '../types.js';
-import { getBlankNodeIdFromToken } from '../utils.js';
+import type { QuadContext } from '../quad-context.js';
+import { toQuadContext } from '../quad-context.js';
+import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
+import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString } from '../reader-helpers.js';
+import type { N3ReaderCstContext as CstContext } from '../reader-cst-types.js';
+import type {
+    DirectiveResult,
+    VerbResult,
+    PredicateObjectResult,
+    VerbInfoResult,
+    PredicateObjectInfoResult,
+} from '../reader-types.js';
 
 const BaseVisitor = new N3Parser().getBaseCstVisitorConstructor();
-
-/**
- * CST context interface for N3 grammar rules.
- * Using index signature to be compatible with Chevrotain's visitor pattern.
- */
-interface CstContext {
-    [key: string]: CstContext[] | IToken[] | undefined;
-    // Document structure
-    n3Doc?: CstContext[];
-    n3Statement?: CstContext[];
-    n3Directive?: CstContext[];
-    sparqlDirective?: CstContext[];
-
-    // Directives
-    prefix?: CstContext[];
-    base?: CstContext[];
-    sparqlPrefix?: CstContext[];
-    sparqlBase?: CstContext[];
-    forAll?: CstContext[];
-    forSome?: CstContext[];
-
-    // Triples and statements
-    triples?: CstContext[];
-    subject?: CstContext[];
-    predicateObjectList?: CstContext[];
-    verb?: CstContext[];
-    predicate?: CstContext[];
-    objectList?: CstContext[];
-    object?: CstContext[];
-
-    // Expressions and paths
-    expression?: CstContext[];
-    path?: CstContext[];
-    pathItem?: CstContext[];
-
-    // Quick variables
-    quickVar?: CstContext[];
-
-    // IRI and prefixed names
-    iri?: CstContext[];
-    prefixedName?: CstContext[];
-
-    // Blank nodes
-    blankNode?: CstContext[];
-    blankNodePropertyList?: CstContext[];
-    anon?: CstContext[];
-
-    // Collections
-    collection?: CstContext[];
-
-    // Literals
-    literal?: CstContext[];
-    stringLiteral?: CstContext[];
-    numericLiteral?: CstContext[];
-    booleanLiteral?: CstContext[];
-    string?: CstContext[];
-    datatype?: CstContext[];
-
-    // Formula
-    formula?: CstContext[];
-    formulaContent?: CstContext[];
-
-    // Tokens
-    PNAME_NS?: IToken[];
-    PNAME_LN?: IToken[];
-    IRIREF?: IToken[];
-    BLANK_NODE_LABEL?: IToken[];
-    LANGTAG?: IToken[];
-    INTEGER?: IToken[];
-    DECIMAL?: IToken[];
-    DOUBLE?: IToken[];
-    STRING_LITERAL_QUOTE?: IToken[];
-    STRING_LITERAL_SINGLE_QUOTE?: IToken[];
-    STRING_LITERAL_LONG_QUOTE?: IToken[];
-    STRING_LITERAL_LONG_SINGLE_QUOTE?: IToken[];
-    QUICK_VAR?: IToken[];
-
-    // Verb tokens
-    A?: IToken[];
-    EQUALS_SIGN?: IToken[];
-    IMPLIES?: IToken[];
-    IMPLIED_BY?: IToken[];
-    HAS?: IToken[];
-    IS?: IToken[];
-    INVERSE_OF?: IToken[];
-
-    // Path tokens
-    EXCL?: IToken[];
-    CARET?: IToken[];
-
-    // Boolean tokens
-    true?: IToken[];
-    false?: IToken[];
-    LBRACKET?: IToken[];
-    LPARENT?: IToken[];
-    LCURLY?: IToken[];
-
-    // Children for nested CST nodes
-    children?: CstContext;
-}
-
-/**
- * Result from parsing a directive.
- */
-interface DirectiveResult {
-    prefix?: string;
-    namespaceIri?: NamedNode;
-    baseIri?: NamedNode;
-}
-
-/**
- * Result from parsing a verb.
- */
-interface VerbResult {
-    predicate: Term;
-    inversePredicate?: boolean;
-}
-
-/**
- * Result from parsing a predicate-object pair.
- */
-interface PredicateObjectResult {
-    predicate: Term;
-    object: Term;
-    inversePredicate?: boolean;
-}
-
-/**
- * Result from parsing a verb with token info.
- */
-interface VerbInfoResult {
-    predicate;
-    inversePredicate?: boolean;
-}
-
-/**
- * Result from parsing a predicate-object pair with token info.
- */
-interface PredicateObjectInfoResult {
-    predicate;
-    object;
-    inversePredicate?: boolean;
-}
 
 // Well-known IRIs
 const RDF_TYPE = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
@@ -190,7 +56,7 @@ export class N3Reader extends BaseVisitor {
      * Chevrotain's parser.parse() returns { name, children } but visitor methods expect children directly.
      */
     protected getChildren(ctx: CstContext): CstContext {
-        return ctx.children ? ctx.children : ctx;
+        return getCstChildren(ctx as any) as CstContext;
     }
 
     // ── Top-level ──────────────────────────────────────────────────────────
@@ -221,20 +87,18 @@ export class N3Reader extends BaseVisitor {
      */
     readQuadContexts(ctx: CstNode): QuadContext[] {
         const context = this.getChildren(ctx);
+        const quads: Quad[] = [];
         const result: QuadContext[] = [];
-        const quads: Quad[] = []; // For internal quad generation
 
-        // Process sparql directives
         if (context.sparqlDirective) {
             for (const directive of context.sparqlDirective) {
                 this._processDirectiveResult(this.visit(directive as any) as DirectiveResult);
             }
         }
 
-        // Process n3Statements
         if (context.n3Statement) {
-            for (const stmt of context.n3Statement) {
-                this.n3StatementInfo(stmt, quads, result);
+            for (const statement of context.n3Statement) {
+                this.n3StatementContext(statement, quads, result);
             }
         }
 
@@ -244,24 +108,26 @@ export class N3Reader extends BaseVisitor {
     /**
     * Process n3Statement and collect QuadContext objects.
      */
-    protected n3StatementInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
+    protected n3StatementContext(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
         const context = this.getChildren(ctx);
+
         if (context.n3Directive) {
-            const res = this.visit(context.n3Directive[0] as any) as DirectiveResult;
-            this._processDirectiveResult(res);
+            const result = this.visit(context.n3Directive[0] as any) as DirectiveResult;
+            this._processDirectiveResult(result);
         } else if (context.triples) {
-            this.triplesInfo(context.triples[0], quads, infoResults);
+            this.triplesContext(context.triples[0], quads, infoResults);
         }
     }
 
     /**
      * Process triples and collect QuadContext objects.
      */
-    protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
+    protected triplesContext(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
         const context = this.getChildren(ctx);
-        // Collect nested triples in a local array first, so we can add main triples before them
+
+        // Collect nested triples in a local array first, so we can add main triples before them.
         const nestedInfoResults: QuadContext[] = [];
-        const subjectToken = this.subjectInfo(context.subject![0], quads, nestedInfoResults);
+        const subjectToken = this.subjectContext(context.subject![0], quads, nestedInfoResults);
 
         if (context.predicateObjectList) {
             for (const { predicate, object, inversePredicate } of this.predicateObjectListInfo(context.predicateObjectList[0], quads, nestedInfoResults)) {
@@ -273,7 +139,7 @@ export class N3Reader extends BaseVisitor {
                 }
             }
         }
-        
+
         // Append nested triples after main triples
         infoResults.push(...nestedInfoResults);
     }
@@ -281,37 +147,42 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get subject term and token.
      */
-    protected subjectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
+    protected subjectContext(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
-        return this.expressionInfo(context.expression![0], quads, infoResults);
+
+        return this.expressionContext(context.expression![0], quads, infoResults);
     }
 
     /**
      * Get expression term and token.
      */
-    protected expressionInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
+    protected expressionContext(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
-        return this.pathInfo(context.path![0], quads, infoResults);
+
+        return this.pathContext(context.path![0], quads, infoResults);
     }
 
     /**
      * Get path term and token.
      */
-    protected pathInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
+    protected pathContext(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
-        let nodeToken = this.pathItemInfo(context.pathItem![0], quads, infoResults);
+        let nodeToken = this.pathItemContext(context.pathItem![0], quads, infoResults);
 
         // Handle path operators: ! (forward) and ^ (reverse)
         if (context.EXCL && context.path) {
             const property = this.visit(context.path[0], quads as any) as NamedNode;
             const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+
             quads.push(dataFactory.quad(nodeToken.term as NamedNode | BlankNode, property, blank));
-            // Keep the original token but update the term
+
             return { term: blank, token: nodeToken.token };
         } else if (context.CARET && context.path) {
             const property = this.visit(context.path[0], quads as any) as NamedNode;
             const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+
             quads.push(dataFactory.quad(blank, property, nodeToken.term as NamedNode | BlankNode | Literal));
+
             return { term: blank, token: nodeToken.token };
         }
 
@@ -321,22 +192,23 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get pathItem term and token.
      */
-    protected pathItemInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
+    protected pathItemContext(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
+
         if (context.formula) {
-            return this.formulaInfo(context.formula[0], quads, infoResults);
+            return this.formulaContext(context.formula[0], quads, infoResults);
         } else if (context.collection) {
-            return this.collectionInfo(context.collection[0], quads);
+            return this.collectionContext(context.collection[0], quads);
         } else if (context.blankNodePropertyList) {
-            return this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults);
+            return this.blankNodePropertyListContext(context.blankNodePropertyList[0], quads, infoResults);
         } else if (context.quickVar) {
-            return this.quickVarInfo(context.quickVar[0]);
+            return this.quickVarContext(context.quickVar[0]);
         } else if (context.iri) {
-            return this.iriInfo(context.iri[0]);
+            return this.iriContext(context.iri[0]);
         } else if (context.blankNode) {
-            return this.blankNodeInfo(context.blankNode[0]);
+            return this.blankNodeContext(context.blankNode[0]);
         } else if (context.literal) {
-            return this.literalInfo(context.literal[0]);
+            return this.literalContext(context.literal[0]);
         }
 
         throw new Error('Invalid pathItem: ' + JSON.stringify(context));
@@ -347,15 +219,18 @@ export class N3Reader extends BaseVisitor {
      */
     protected predicateObjectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): PredicateObjectInfoResult[] {
         const context = this.getChildren(ctx);
-        const result: PredicateObjectInfoResult[] = [];
 
-        if (!context.verb) return result;
+        if (!context.verb) {
+            return [];
+        }
+
+        const result: PredicateObjectInfoResult[] = [];
 
         for (let i = 0; i < context.verb.length; i++) {
             const verbResult = this.verbInfo(context.verb[i], quads, infoResults);
 
             if (context.objectList && context.objectList[i]) {
-                const objectTokens = this.objectListInfo(context.objectList[i], quads, infoResults);
+                const objectTokens = this.objectListContext(context.objectList[i], quads, infoResults);
 
                 for (const objToken of objectTokens) {
                     result.push({
@@ -375,6 +250,7 @@ export class N3Reader extends BaseVisitor {
      */
     protected verbInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): VerbInfoResult {
         const context = this.getChildren(ctx);
+
         if (context.A) {
             return {
                 predicate: { term: RDF_TYPE, token: context.A[0] }
@@ -393,13 +269,20 @@ export class N3Reader extends BaseVisitor {
                 inversePredicate: true
             };
         } else if (context.HAS) {
-            const predToken = this.expressionInfo(context.expression![0], quads, infoResults);
-            return { predicate: predToken };
+            const predToken = this.expressionContext(context.expression![0], quads, infoResults);
+
+            return {
+                predicate: predToken
+            };
         } else if (context.IS) {
-            const predToken = this.expressionInfo(context.expression![0], quads, infoResults);
-            return { predicate: predToken, inversePredicate: true };
+            const predToken = this.expressionContext(context.expression![0], quads, infoResults);
+
+            return {
+                predicate: predToken,
+                inversePredicate: true
+            };
         } else if (context.predicate) {
-            return this.predicateInfoN3(context.predicate[0], quads, infoResults);
+            return this.predicateContextN3(context.predicate[0], quads, infoResults);
         }
 
         throw new Error('Invalid verb: ' + JSON.stringify(context));
@@ -408,27 +291,30 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get predicate term and token for N3.
      */
-    protected predicateInfoN3(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): VerbInfoResult {
+    protected predicateContextN3(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): VerbInfoResult {
         const context = this.getChildren(ctx);
-        if (context.INVERSE_OF) {
-            const predToken = this.expressionInfo(context.expression![0], quads, infoResults);
-            return { predicate: predToken, inversePredicate: true };
-        }
-        const predToken = this.expressionInfo(context.expression![0], quads, infoResults);
-        return { predicate: predToken };
+        const predToken = this.expressionContext(context.expression![0], quads, infoResults);
+
+        return {
+            predicate: predToken,
+            inversePredicate: context.INVERSE_OF !== undefined
+        };
     }
 
     /**
      * Process object list and return info with tokens.
      */
-    protected objectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): any[] {
+    protected objectListContext(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): any[] {
         const context = this.getChildren(ctx);
+
+        if (!context.object) {
+            return [];
+        }
+
         const results: any[] = [];
 
-        if (context.object) {
-            for (const obj of context.object) {
-                results.push(this.objectInfo(obj, quads, infoResults));
-            }
+        for (const obj of context.object) {
+            results.push(this.objectContext(obj, quads, infoResults));
         }
 
         return results;
@@ -437,16 +323,18 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get object term and token.
      */
-    protected objectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
+    protected objectContext(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
-        return this.expressionInfo(context.expression![0], quads, infoResults);
+
+        return this.expressionContext(context.expression![0], quads, infoResults);
     }
 
     /**
      * Get IRI term and token.
      */
-    protected iriInfo(ctx: CstContext) {
+    protected iriContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.prefixedName) {
             return this.prefixedNameInfo(context.prefixedName[0]);
         } else if (context.IRIREF) {
@@ -455,6 +343,7 @@ export class N3Reader extends BaseVisitor {
                 token: context.IRIREF[0]
             };
         }
+
         throw new Error('Invalid IRI: ' + JSON.stringify(context));
     }
 
@@ -464,16 +353,14 @@ export class N3Reader extends BaseVisitor {
     protected prefixedNameInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = context.PNAME_LN ? context.PNAME_LN[0] : context.PNAME_NS![0];
-        const pname = token.image;
-        const colonIndex = pname.indexOf(':');
-        const prefix = colonIndex > -1 ? pname.slice(0, colonIndex) : '';
-        const localName = colonIndex > -1 ? pname.slice(colonIndex + 1) : '';
+        const { prefix, localName } = splitPrefixedName(token.image);
 
         let namespaceIri = this.namespaces[prefix];
 
         if (!namespaceIri) {
             if (prefix === '') {
                 namespaceIri = dataFactory.namedNode('#');
+
                 this.namespaces[''] = namespaceIri;
             } else {
                 throw new Error(`Undefined prefix: ${prefix}`);
@@ -491,8 +378,9 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get blank node term and token.
      */
-    protected blankNodeInfo(ctx: CstContext) {
+    protected blankNodeContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.BLANK_NODE_LABEL) {
             return {
                 term: dataFactory.blankNode(context.BLANK_NODE_LABEL[0].image),
@@ -508,16 +396,18 @@ export class N3Reader extends BaseVisitor {
                 token: token!
             };
         }
+
         throw new Error('Invalid blank node: ' + JSON.stringify(context));
     }
 
     /**
      * Get blank node property list info.
      */
-    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
+    protected blankNodePropertyListContext(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
-        const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
+        
         // Use pre-assigned ID from LBRACKET token
+        const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
         const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
         const subject = dataFactory.blankNode(blankNodeId);
         const subjectToken = { term: subject, token };
@@ -540,8 +430,9 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get literal term and token.
      */
-    protected literalInfo(ctx: CstContext) {
+    protected literalContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.stringLiteral) {
             return this.stringLiteralInfo(context.stringLiteral[0]);
         } else if (context.numericLiteral) {
@@ -549,6 +440,7 @@ export class N3Reader extends BaseVisitor {
         } else if (context.booleanLiteral) {
             return this.booleanLiteralInfo(context.booleanLiteral[0]);
         }
+
         throw new Error('Invalid literal: ' + JSON.stringify(context));
     }
 
@@ -562,6 +454,7 @@ export class N3Reader extends BaseVisitor {
         const value = this.visit(stringCtx as any) as string;
 
         let literal: Literal;
+
         if (context.datatype) {
             const datatype = this.visit(context.datatype[0] as any) as NamedNode;
             literal = dataFactory.literal(value, datatype);
@@ -580,6 +473,7 @@ export class N3Reader extends BaseVisitor {
      */
     protected numericLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.INTEGER) {
             return {
                 term: dataFactory.literal(context.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
@@ -596,6 +490,7 @@ export class N3Reader extends BaseVisitor {
                 token: context.DOUBLE[0]
             };
         }
+
         throw new Error('Invalid numeric literal: ' + JSON.stringify(context));
     }
 
@@ -604,6 +499,7 @@ export class N3Reader extends BaseVisitor {
      */
     protected booleanLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.true) {
             return {
                 term: dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
@@ -615,13 +511,14 @@ export class N3Reader extends BaseVisitor {
                 token: context.false[0]
             };
         }
+
         throw new Error('Invalid boolean literal: ' + JSON.stringify(context));
     }
 
     /**
      * Get collection info.
      */
-    protected collectionInfo(ctx: CstContext, quads: Quad[]) {
+    protected collectionContext(ctx: CstContext, quads: Quad[]) {
         const context = this.getChildren(ctx);
         const token = context.LPARENT ? context.LPARENT[0] : this.findFirstToken(context)!;
         const objectNodes = context.object ?? [];
@@ -632,6 +529,7 @@ export class N3Reader extends BaseVisitor {
 
         // Use pre-assigned ID from LPARENT token for the head blank node
         const baseId = token ? getBlankNodeIdFromToken(token) : undefined;
+
         let head = dataFactory.blankNode(baseId);
         let current: BlankNode = head;
 
@@ -644,6 +542,7 @@ export class N3Reader extends BaseVisitor {
                 // Derive rest node IDs from base ID
                 const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
                 const next = dataFactory.blankNode(restId);
+
                 quads.push(dataFactory.quad(current, RDF_REST, next));
                 current = next;
             } else {
@@ -657,7 +556,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get formula info.
      */
-    protected formulaInfo(ctx: CstContext, parentQuads: Quad[], infoResults: QuadContext[]) {
+    protected formulaContext(ctx: CstContext, parentQuads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         const token = context.LCURLY ? context.LCURLY[0] : this.findFirstToken(context)!;
         const formulaQuads: Quad[] = [];
@@ -683,11 +582,11 @@ export class N3Reader extends BaseVisitor {
      */
     protected formulaContentInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
         const context = this.getChildren(ctx);
-        
+
         // Process n3Statements within formula
         if (context.n3Statement) {
             for (const stmt of context.n3Statement) {
-                this.n3StatementInfo(stmt, quads, infoResults);
+                this.n3StatementContext(stmt, quads, infoResults);
             }
         }
     }
@@ -695,10 +594,11 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get quick variable info.
      */
-    protected quickVarInfo(ctx: CstContext) {
+    protected quickVarContext(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = context.QUICK_VAR![0];
         const name = token.image.slice(1);
+
         return {
             term: dataFactory.variable(name),
             token
@@ -709,38 +609,20 @@ export class N3Reader extends BaseVisitor {
      * Find the first token in a CST context.
      */
     protected findFirstToken(ctx: CstContext): IToken | undefined {
-        for (const key in ctx) {
-            if (key === 'children') continue;
-            const value = ctx[key];
-            if (Array.isArray(value) && value.length > 0) {
-                const first = value[0];
-                if (typeof (first as IToken).startOffset === 'number') {
-                    return first as IToken;
-                }
-                if ((first as CstContext).children || typeof first === 'object') {
-                    const token = this.findFirstToken(first as CstContext);
-                    if (token) return token;
-                }
-            }
-        }
-        return undefined;
+        return findFirstTokenInCst(ctx as any);
     }
 
     /**
      * Find the string token in a string context.
      */
     protected findStringToken(ctx: CstContext): IToken | undefined {
-        const context = this.getChildren(ctx);
-        if (context.STRING_LITERAL_QUOTE) return context.STRING_LITERAL_QUOTE[0];
-        if (context.STRING_LITERAL_SINGLE_QUOTE) return context.STRING_LITERAL_SINGLE_QUOTE[0];
-        if (context.STRING_LITERAL_LONG_QUOTE) return context.STRING_LITERAL_LONG_QUOTE[0];
-        if (context.STRING_LITERAL_LONG_SINGLE_QUOTE) return context.STRING_LITERAL_LONG_SINGLE_QUOTE[0];
-        return undefined;
+        return findStringTokenInCst(ctx as any);
     }
 
     n3Statement(ctx: CstContext, quads: Quad[]): void {
         if (ctx.n3Directive) {
             const result = this.visit(ctx.n3Directive[0] as any) as DirectiveResult;
+
             this._processDirectiveResult(result);
         } else if (ctx.triples) {
             this.visit(ctx.triples[0], quads as any);
@@ -756,8 +638,9 @@ export class N3Reader extends BaseVisitor {
             return this.visit(ctx.forAll[0] as any) as DirectiveResult;
         } else if (ctx.forSome) {
             return this.visit(ctx.forSome[0] as any) as DirectiveResult;
+        } else {
+            return {};
         }
-        return {};
     }
 
     sparqlDirective(ctx: CstContext): DirectiveResult {
@@ -765,8 +648,9 @@ export class N3Reader extends BaseVisitor {
             return this.visit(ctx.sparqlPrefix[0] as any) as DirectiveResult;
         } else if (ctx.sparqlBase) {
             return this.visit(ctx.sparqlBase[0] as any) as DirectiveResult;
+        } else {
+            return {};
         }
-        return {};
     }
 
     _processDirectiveResult(result: DirectiveResult): void {
@@ -835,9 +719,11 @@ export class N3Reader extends BaseVisitor {
     }
 
     predicateObjectList(ctx: CstContext, quads: Quad[]): PredicateObjectResult[] {
-        const result: PredicateObjectResult[] = [];
+        if (!ctx.verb) {
+            return [];
+        }
 
-        if (!ctx.verb) return result;
+        const result: PredicateObjectResult[] = [];
 
         for (let i = 0; i < ctx.verb.length; i++) {
             const verbResult = this.visit(ctx.verb[i], quads as any) as VerbResult;
@@ -871,10 +757,12 @@ export class N3Reader extends BaseVisitor {
         } else if (ctx.HAS) {
             // `has expr` is the same as just `expr` as a predicate
             const predicate = this.visit(ctx.expression![0], quads as any) as Term;
+
             return { predicate };
         } else if (ctx.IS) {
             // `is expr of` means use the expression as predicate but swap subject/object
             const predicate = this.visit(ctx.expression![0], quads as any) as Term;
+
             return { predicate, inversePredicate: true };
         } else if (ctx.predicate) {
             return this.visit(ctx.predicate[0], quads as any) as VerbResult;
@@ -887,11 +775,14 @@ export class N3Reader extends BaseVisitor {
         if (ctx.INVERSE_OF) {
             // `<- expr` means the expression is the predicate but subject/object are swapped
             const predicate = this.visit(ctx.expression![0], quads as any) as Term;
+
             return { predicate, inversePredicate: true };
+        } else {
+            // Regular predicate
+            const predicate = this.visit(ctx.expression![0], quads as any) as Term;
+
+            return { predicate };
         }
-        // Regular predicate
-        const predicate = this.visit(ctx.expression![0], quads as any) as Term;
-        return { predicate };
     }
 
     objectList(ctx: CstContext, quads: Quad[]): Term[] {
@@ -924,13 +815,17 @@ export class N3Reader extends BaseVisitor {
             // a!b means: create a blank node _:x, emit a b _:x, return _:x
             const property = this.visit(ctx.path[0], quads as any) as NamedNode;
             const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+
             quads.push(dataFactory.quad(node as NamedNode | BlankNode, property, blank));
+
             return blank;
         } else if (ctx.CARET && ctx.path) {
             // a^b means: create a blank node _:x, emit _:x b a, return _:x
             const property = this.visit(ctx.path[0], quads as any) as NamedNode;
             const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+
             quads.push(dataFactory.quad(blank, property, node as NamedNode | BlankNode | Literal));
+
             return blank;
         }
 
@@ -984,6 +879,7 @@ export class N3Reader extends BaseVisitor {
     formulaContent(ctx: CstContext, quads: Quad[]): void {
         if (ctx.sparqlDirective) {
             const result = this.visit(ctx.sparqlDirective[0] as any) as DirectiveResult;
+
             this._processDirectiveResult(result);
         }
 
@@ -1019,6 +915,7 @@ export class N3Reader extends BaseVisitor {
         // Use pre-assigned ID from LPARENT token for the head blank node
         const lparentToken = ctx.LPARENT?.[0];
         const baseId = lparentToken ? getBlankNodeIdFromToken(lparentToken) : undefined;
+
         let head = dataFactory.blankNode(baseId);
         let current: BlankNode = head;
 
@@ -1076,9 +973,7 @@ export class N3Reader extends BaseVisitor {
 
     prefixedName(ctx: CstContext): NamedNode {
         const pname = ctx.PNAME_LN ? ctx.PNAME_LN[0].image : ctx.PNAME_NS![0].image;
-        const colonIndex = pname.indexOf(':');
-        const prefix = colonIndex > -1 ? pname.slice(0, colonIndex) : '';
-        const localName = colonIndex > -1 ? pname.slice(colonIndex + 1) : '';
+        const { prefix, localName } = splitPrefixedName(pname);
 
         let namespaceIri = this.namespaces[prefix];
 
@@ -1114,6 +1009,7 @@ export class N3Reader extends BaseVisitor {
         // Use pre-assigned ID from LBRACKET token
         const lbracketToken = ctx.LBRACKET?.[0];
         const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
+        
         return dataFactory.blankNode(blankNodeId);
     }
 
@@ -1182,7 +1078,7 @@ export class N3Reader extends BaseVisitor {
             throw new Error('Invalid string: ' + JSON.stringify(ctx));
         }
 
-        return this.unescapeString(raw);
+        return unescapeRdfString(raw);
     }
 
     datatype(ctx: CstContext): NamedNode {
@@ -1194,27 +1090,6 @@ export class N3Reader extends BaseVisitor {
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
-
-    /**
-     * Interpret escape sequences in an N3 string value.
-     */
-    unescapeString(raw: string): string {
-        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match, u4, u8, ch) => {
-            if (u4) return String.fromCodePoint(parseInt(u4, 16));
-            if (u8) return String.fromCodePoint(parseInt(u8, 16));
-            switch (ch) {
-                case 't': return '\t';
-                case 'n': return '\n';
-                case 'r': return '\r';
-                case 'b': return '\b';
-                case 'f': return '\f';
-                case '"': return '"';
-                case "'": return "'";
-                case '\\': return '\\';
-                default: return match;
-            }
-        });
-    }
 
     getBaseIri(ctx: CstContext): DirectiveResult {
         const value = this.getNamedNode(ctx);
@@ -1248,11 +1123,13 @@ export class N3Reader extends BaseVisitor {
     getBlankNode(ctx: CstContext): BlankNode {
         if (ctx.BLANK_NODE_LABEL !== undefined) {
             const value = ctx.BLANK_NODE_LABEL[0].image;
+
             return dataFactory.blankNode(value);
         } else {
             // Use pre-assigned ID from LBRACKET token
             const lbracketToken = ctx.LBRACKET?.[0];
             const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
+
             return dataFactory.blankNode(blankNodeId);
         }
     }

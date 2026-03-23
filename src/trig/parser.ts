@@ -3,6 +3,7 @@ import { RdfToken } from '../tokens.js';
 import { TurtleParserBase } from '../turtle/parser.js';
 import { IParser, ILexer } from '../syntax.js';
 import { assignBlankNodeIds, BlankNodeIdGenerator, defaultBlankNodeIdGenerator } from '../utils.js';
+import { withoutCommentTokens } from '../parser-helpers.js';
 
 // The order of tokens matters if multiple can match the same text
 export const TrigTokens: TokenType[] = [
@@ -105,7 +106,7 @@ export class TrigParser extends TurtleParserBase implements IParser {
         this.namespaces = {};
         // Filter out comment tokens - they are kept in the token stream for formatters
         // but should not be processed by the parser
-        this.input = tokens.filter(t => t.tokenType.name !== 'COMMENT');
+        this.input = withoutCommentTokens(tokens);
 
         const cst = this.trigDoc();
 

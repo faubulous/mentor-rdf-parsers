@@ -1,7 +1,7 @@
 export { IToken, IRecognitionException, TokenType } from 'chevrotain';
 export { RdfToken } from './tokens.js';
 export { TokenMetadata, TOKEN_METADATA, getTokenMetadata, hasTokenFlag } from './token-metadata.js';
-export { QuadContext, toQuadContext } from './types.js';
+export { QuadContext, toQuadContext } from './quad-context.js';
 export {
     getNextToken,
     getPreviousToken,

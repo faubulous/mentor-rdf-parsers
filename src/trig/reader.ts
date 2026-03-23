@@ -3,142 +3,25 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term, DefaultGraph } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TrigParser } from './parser.js';
-import type { QuadContext } from '../types.js';
-import { toQuadContext } from '../types.js';
-import { getBlankNodeIdFromToken } from '../utils.js';
+import type { QuadContext } from '../quad-context.js';
+import { toQuadContext } from '../quad-context.js';
+import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
+import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString } from '../reader-helpers.js';
+import type { TrigReaderCstContext as CstContext } from '../reader-cst-types.js';
+import type {
+    DirectiveResult,
+    PredicateObjectResult as SharedPredicateObjectResult,
+    ObjectListResult as SharedObjectListResult,
+    PredicateObjectInfoResult as SharedPredicateObjectInfoResult,
+    ObjectListInfoResult as SharedObjectListInfoResult,
+} from '../reader-types.js';
 
 const BaseVisitor = new TrigParser().getBaseCstVisitorConstructor();
 
-/**
- * CST context interface for TriG grammar rules.
- * Using index signature to be compatible with Chevrotain's visitor pattern.
- */
-interface CstContext {
-    [key: string]: CstContext[] | IToken[] | undefined;
-
-    // TriG-specific structure
-    block?: CstContext[];
-    wrappedGraph?: CstContext[];
-    triplesOrGraph?: CstContext[];
-    triplesBlock?: CstContext[];
-    triples2?: CstContext[];
-    labelOrSubject?: CstContext[];
-    blank?: CstContext[];
-
-    // Turtle-compatible structure
-    directive?: CstContext[];
-    triples?: CstContext[];
-
-    // Directives
-    prefix?: CstContext[];
-    base?: CstContext[];
-    sparqlPrefix?: CstContext[];
-    sparqlBase?: CstContext[];
-    version?: CstContext[];
-    sparqlVersion?: CstContext[];
-
-    // Core elements
-    subject?: CstContext[];
-    predicate?: CstContext[];
-    object?: CstContext[];
-    predicateObjectList?: CstContext[];
-    objectList?: CstContext[];
-    blankNodePropertyList?: CstContext[];
-    collection?: CstContext[];
-
-    // IRI and prefixed names
-    iri?: CstContext[];
-    prefixedName?: CstContext[];
-
-    // Literals
-    literal?: CstContext[];
-    stringLiteral?: CstContext[];
-    numericLiteral?: CstContext[];
-    booleanLiteral?: CstContext[];
-    string?: CstContext[];
-    datatype?: CstContext[];
-
-    // Blank nodes
-    blankNode?: CstContext[];
-    anon?: CstContext[];
-
-    // RDF-star / TriG-star
-    tripleTerm?: CstContext[];
-    reifiedTriple?: CstContext[];
-    rtSubject?: CstContext[];
-    rtObject?: CstContext[];
-    ttSubject?: CstContext[];
-    ttObject?: CstContext[];
-    reifier?: CstContext[];
-    annotation?: CstContext[];
-    annotationBlock?: CstContext[];
-
-    // Tokens
-    PNAME_NS?: IToken[];
-    PNAME_LN?: IToken[];
-    IRIREF?: IToken[];
-    BLANK_NODE_LABEL?: IToken[];
-    LANGTAG?: IToken[];
-    INTEGER?: IToken[];
-    DECIMAL?: IToken[];
-    DOUBLE?: IToken[];
-    STRING_LITERAL_QUOTE?: IToken[];
-    STRING_LITERAL_SINGLE_QUOTE?: IToken[];
-    STRING_LITERAL_LONG_QUOTE?: IToken[];
-    STRING_LITERAL_LONG_SINGLE_QUOTE?: IToken[];
-    A?: IToken[];
-    GRAPH?: IToken[];
-    true?: IToken[];
-    false?: IToken[];
-    LBRACKET?: IToken[];
-    LPARENT?: IToken[];
-
-    // Children for nested CST nodes
-    children?: CstContext;
-}
-
-/**
- * Result from parsing a directive.
- */
-interface DirectiveResult {
-    prefix?: string;
-    namespaceIri?: NamedNode;
-    baseIri?: NamedNode;
-}
-
-/**
- * Result from parsing a predicate-object pair.
- */
-interface PredicateObjectResult {
-    predicate: NamedNode;
-    object: Term;
-    annotationCtx?: CstContext;
-}
-
-/**
- * Result from parsing an object list item.
- */
-interface ObjectListResult {
-    objectNodes: Term[];
-    annotationCtx?: CstContext;
-}
-
-/**
- * Result from parsing a predicate-object pair with token info.
- */
-interface PredicateObjectInfoResult {
-    predicate: any;
-    object: any;
-    annotationCtx?: CstContext;
-}
-
-/**
- * Result from parsing an object list item with token info.
- */
-interface ObjectListInfoResult {
-    objectTokens: any[];
-    annotationCtx?: CstContext;
-}
+type PredicateObjectResult = SharedPredicateObjectResult<NamedNode, Term, CstContext>;
+type ObjectListResult = SharedObjectListResult<Term, CstContext>;
+type PredicateObjectInfoResult = SharedPredicateObjectInfoResult<any, any, CstContext>;
+type ObjectListInfoResult = SharedObjectListInfoResult<any, CstContext>;
 
 /**
  * A visitor class that constructs RDF/JS quads from TriG syntax trees.
@@ -171,7 +54,7 @@ export class TrigReader extends BaseVisitor {
      * Chevrotain CST nodes have { name, children } structure.
      */
     protected getChildren(ctx: CstContext): CstContext {
-        return ctx.children ? ctx.children : ctx;
+        return getCstChildren(ctx as any) as CstContext;
     }
 
     /**
@@ -508,10 +391,7 @@ export class TrigReader extends BaseVisitor {
     protected prefixedNameInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = context.PNAME_LN ? context.PNAME_LN[0] : context.PNAME_NS![0];
-        const pname = token.image;
-        const colonIndex = pname.indexOf(':');
-        const prefix = colonIndex > -1 ? pname.slice(0, colonIndex) : '';
-        const localName = colonIndex > -1 ? pname.slice(colonIndex + 1) : '';
+        const { prefix, localName } = splitPrefixedName(token.image);
 
         const namespaceIri = this.namespaces[prefix];
 
@@ -782,34 +662,14 @@ export class TrigReader extends BaseVisitor {
      * Find the first token in a CST context.
      */
     protected findFirstToken(ctx: CstContext): IToken | undefined {
-        const context = this.getChildren(ctx);
-        for (const key in context) {
-            if (key === 'children') continue;
-            const value = context[key];
-            if (Array.isArray(value) && value.length > 0) {
-                const first = value[0];
-                if (typeof (first as IToken).startOffset === 'number') {
-                    return first as IToken;
-                }
-                if ((first as CstContext).children || typeof first === 'object') {
-                    const token = this.findFirstToken(first as CstContext);
-                    if (token) return token;
-                }
-            }
-        }
-        return undefined;
+        return findFirstTokenInCst(ctx as any);
     }
 
     /**
      * Find the string token in a string context.
      */
     protected findStringToken(ctx: CstContext): IToken | undefined {
-        const context = this.getChildren(ctx);
-        if (context.STRING_LITERAL_QUOTE) return context.STRING_LITERAL_QUOTE[0];
-        if (context.STRING_LITERAL_SINGLE_QUOTE) return context.STRING_LITERAL_SINGLE_QUOTE[0];
-        if (context.STRING_LITERAL_LONG_QUOTE) return context.STRING_LITERAL_LONG_QUOTE[0];
-        if (context.STRING_LITERAL_LONG_SINGLE_QUOTE) return context.STRING_LITERAL_LONG_SINGLE_QUOTE[0];
-        return undefined;
+        return findStringTokenInCst(ctx as any);
     }
 
     /**
@@ -1275,21 +1135,7 @@ export class TrigReader extends BaseVisitor {
     }
 
     unescapeString(raw: string): string {
-        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match, u4, u8, ch) => {
-            if (u4) return String.fromCodePoint(parseInt(u4, 16));
-            if (u8) return String.fromCodePoint(parseInt(u8, 16));
-            switch (ch) {
-                case 't': return '\t';
-                case 'n': return '\n';
-                case 'r': return '\r';
-                case 'b': return '\b';
-                case 'f': return '\f';
-                case '"': return '"';
-                case "'": return "'";
-                case '\\': return '\\';
-                default: return match;
-            }
-        });
+        return unescapeRdfString(raw);
     }
 
     iri(ctx: CstContext): NamedNode {
@@ -1304,9 +1150,7 @@ export class TrigReader extends BaseVisitor {
 
     prefixedName(ctx: CstContext): NamedNode {
         const pname = ctx.PNAME_LN ? ctx.PNAME_LN[0].image : ctx.PNAME_NS![0].image;
-        const colonIndex = pname.indexOf(':');
-        const prefix = colonIndex > -1 ? pname.slice(0, colonIndex) : '';
-        const localName = colonIndex > -1 ? pname.slice(colonIndex + 1) : '';
+        const { prefix, localName } = splitPrefixedName(pname);
 
         const namespaceIri = this.namespaces[prefix];
 

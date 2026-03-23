@@ -36,10 +36,7 @@ export const defaultBlankNodeIdGenerator: BlankNodeIdGenerator = (counter: numbe
  * @param generator Optional custom ID generator function. Defaults to generating 'b0', 'b1', etc.
  * @returns The same array of tokens with blank node IDs assigned.
  */
-export function assignBlankNodeIds(
-    tokens: IToken[],
-    generator: BlankNodeIdGenerator = defaultBlankNodeIdGenerator
-): IToken[] {
+export function assignBlankNodeIds(tokens: IToken[], generator: BlankNodeIdGenerator = defaultBlankNodeIdGenerator): IToken[] {
     let counter = 0;
 
     for (const token of tokens) {
@@ -59,6 +56,32 @@ export function assignBlankNodeIds(
  */
 export function getBlankNodeIdFromToken(token: IToken): string | undefined {
     return token.payload?.blankNodeId;
+}
+
+/**
+ * Split a prefixed name into prefix and local name parts.
+ *
+ * Examples:
+ * - "ex:foo" => { prefix: "ex", localName: "foo" }
+ * - ":foo" => { prefix: "", localName: "foo" }
+ */
+export function splitPrefixedName(
+    pname: string,
+    useWholeAsPrefixWhenMissingColon: boolean = false,
+): { prefix: string; localName: string } {
+    const colonIndex = pname.indexOf(':');
+
+    if (colonIndex > -1) {
+        return {
+            prefix: pname.slice(0, colonIndex),
+            localName: pname.slice(colonIndex + 1),
+        };
+    }
+
+    return {
+        prefix: useWholeAsPrefixWhenMissingColon ? pname : '',
+        localName: '',
+    };
 }
 
 /**
@@ -147,8 +170,7 @@ export function isVariableToken(token: IToken) {
  * @returns `true` if the token is upper case. `false` otherwise.
  */
 export function isUpperCaseToken(token?: IToken): boolean {
-    return token ?
-        token.image === token.image.toUpperCase() : false;
+    return token ? token.image === token.image.toUpperCase() : false;
 }
 
 /**

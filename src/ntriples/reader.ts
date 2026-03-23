@@ -3,25 +3,12 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NTriplesParser } from './parser.js';
-import type { QuadContext } from '../types.js';
-import { toQuadContext } from '../types.js';
+import type { QuadContext } from '../quad-context.js';
+import { toQuadContext } from '../quad-context.js';
+import { getCstChildren, findFirstTokenInCst, unescapeRdfString } from '../reader-helpers.js';
+import type { NTriplesReaderCstContext as CstContext } from '../reader-cst-types.js';
 
 const BaseVisitor = new NTriplesParser().getBaseCstVisitorConstructor();
-
-interface CstContext {
-    [key: string]: CstContext[] | IToken[] | undefined;
-    triple?: CstContext[];
-    subject?: CstContext[];
-    predicate?: CstContext[];
-    object?: CstContext[];
-    literal?: CstContext[];
-    datatype?: CstContext[];
-    tripleTerm?: CstContext[];
-    IRIREF_ABS?: IToken[];
-    BLANK_NODE_LABEL?: IToken[];
-    STRING_LITERAL_QUOTE?: IToken[];
-    LANGTAG?: IToken[];
-}
 
 /**
  * A visitor class that constructs RDF/JS quads from N-Triples syntax trees.
@@ -38,7 +25,7 @@ export class NTriplesReader extends BaseVisitor {
      * Extract children from a CstNode or return the context as-is.
      */
     protected getChildren(ctx: CstContext): CstContext {
-        return ctx.children ? ctx.children : ctx;
+        return getCstChildren(ctx as any) as CstContext;
     }
 
     ntriplesDoc(ctx: CstContext): Quad[] {
@@ -189,22 +176,7 @@ export class NTriplesReader extends BaseVisitor {
      * Find the first token in a CST context.
      */
     protected findFirstToken(ctx: CstContext): IToken | undefined {
-        const context = this.getChildren(ctx);
-        for (const key in context) {
-            if (key === 'children') continue;
-            const value = context[key];
-            if (Array.isArray(value) && value.length > 0) {
-                const first = value[0];
-                if (typeof (first as IToken).startOffset === 'number') {
-                    return first as IToken;
-                }
-                if (typeof first === 'object') {
-                    const token = this.findFirstToken(first as CstContext);
-                    if (token) return token;
-                }
-            }
-        }
-        return undefined;
+        return findFirstTokenInCst(ctx as any);
     }
 
     versionDirective(_ctx: CstContext): undefined {
@@ -314,20 +286,6 @@ export class NTriplesReader extends BaseVisitor {
      * Interpret escape sequences in a string value.
      */
     unescapeString(raw: string): string {
-        return raw.replace(/\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})|\\(.)/g, (match, u4: string | undefined, u8: string | undefined, ch: string | undefined) => {
-            if (u4) return String.fromCodePoint(parseInt(u4, 16));
-            if (u8) return String.fromCodePoint(parseInt(u8, 16));
-            switch (ch) {
-                case 't': return '\t';
-                case 'n': return '\n';
-                case 'r': return '\r';
-                case 'b': return '\b';
-                case 'f': return '\f';
-                case '"': return '"';
-                case "'": return "'";
-                case '\\': return '\\';
-                default: return match;
-            }
-        });
+        return unescapeRdfString(raw);
     }
 }
