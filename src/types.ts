@@ -1,53 +1,57 @@
 import type { IToken } from 'chevrotain';
-import type { Term } from '@rdfjs/types';
+import type { Quad, Quad_Subject, Quad_Predicate, Quad_Object, Quad_Graph, Term } from '@rdfjs/types';
+import dataFactory from '@rdfjs/data-model';
 
 /**
- * Associates a term with the token that defines it in the source document.
- * 
- * For different term types, the token represents:
- * - Named nodes (IRIs): IRIREF, PNAME_LN, or PNAME_NS token
- * - Blank nodes: BLANK_NODE_LABEL (_:label) or LBRACKET ([) token
- * - Literals: The string token (STRING_LITERAL_QUOTE, etc.) or numeric/boolean token
- * - `a` keyword: The A token (represents rdf:type)
+ * An extended RDF/JS Quad that includes source tokens for each component.
+ * Implements the RDFJS Quad interface, so it can be used anywhere a Quad is expected,
+ * while also providing document position information via the token properties.
  */
-export interface TermToken {
+export interface QuadTokens extends Quad {
     /**
-     * The RDF term (NamedNode, BlankNode, Literal, etc.)
+     * The token that defines the subject position in the source.
      */
-    term: Term;
+    subjectToken: IToken;
 
     /**
-     * The primary token that defines the position of this term in the source.
-     * Contains startOffset, endOffset, startLine, startColumn, endLine, endColumn.
+     * The token that defines the predicate position in the source.
      */
-    token: IToken;
+    predicateToken: IToken;
+
+    /**
+     * The token that defines the object position in the source.
+     */
+    objectToken: IToken;
+
+    /**
+     * The token that defines the graph position in the source (for TriG/N-Quads).
+     * Undefined for triples in the default graph.
+     */
+    graphToken?: IToken;
 }
 
 /**
- * Information about a quad including the source tokens for each component.
- * This allows associating document positions with the RDF data model.
+ * Creates a QuadTokens instance from individual term and token components.
+ * The resulting object is a proper RDFJS Quad with additional token metadata.
  */
-export interface QuadTokens {
-    /**
-     * The subject term and its defining token.
-     */
-    subject: TermToken;
-
-    /**
-     * The predicate term and its defining token.
-     */
-    predicate: TermToken;
-
-    /**
-     * The object term and its defining token.
-     */
-    object: TermToken;
-
-    /**
-     * The graph term and its defining token (for TriG/N-Quads).
-     * Undefined for triples in the default graph.
-     */
-    graph?: TermToken;
+export function toQuadTokens(
+    subject: Term, subjectToken: IToken,
+    predicate: Term, predicateToken: IToken,
+    object: Term, objectToken: IToken,
+    graph?: Term, graphToken?: IToken,
+): QuadTokens {
+    const quad = dataFactory.quad(
+        subject as Quad_Subject,
+        predicate as Quad_Predicate,
+        object as Quad_Object,
+        graph as Quad_Graph | undefined,
+    );
+    return Object.assign(quad, {
+        subjectToken,
+        predicateToken,
+        objectToken,
+        graphToken,
+    }) as QuadTokens;
 }
 
 /**

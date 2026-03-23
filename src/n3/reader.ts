@@ -3,7 +3,8 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term, Variable } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { N3Parser } from './parser.js';
-import type { QuadTokens, TermToken } from '../types.js';
+import type { QuadTokens } from '../types.js';
+import { toQuadTokens } from '../types.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new N3Parser().getBaseCstVisitorConstructor();
@@ -138,7 +139,7 @@ interface PredicateObjectResult {
  * Result from parsing a verb with token info.
  */
 interface VerbInfoResult {
-    predicate: TermToken;
+    predicate;
     inversePredicate?: boolean;
 }
 
@@ -146,8 +147,8 @@ interface VerbInfoResult {
  * Result from parsing a predicate-object pair with token info.
  */
 interface PredicateObjectInfoResult {
-    predicate: TermToken;
-    object: TermToken;
+    predicate;
+    object;
     inversePredicate?: boolean;
 }
 
@@ -266,17 +267,9 @@ export class N3Reader extends BaseVisitor {
             for (const { predicate, object, inversePredicate } of this.predicateObjectListInfo(context.predicateObjectList[0], quads, nestedInfoResults)) {
                 if (inversePredicate) {
                     // For `<- pred`, the object becomes the subject and vice versa
-                    infoResults.push({
-                        subject: object,
-                        predicate,
-                        object: subjectToken
-                    });
+                    infoResults.push(toQuadTokens(object.term, object.token, predicate.term, predicate.token, subjectToken.term, subjectToken.token));
                 } else {
-                    infoResults.push({
-                        subject: subjectToken,
-                        predicate,
-                        object
-                    });
+                    infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         }
@@ -288,7 +281,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get subject term and token.
      */
-    protected subjectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
+    protected subjectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
         const context = this.getChildren(ctx);
         return this.expressionInfo(context.expression![0], quads, infoResults);
     }
@@ -296,7 +289,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get expression term and token.
      */
-    protected expressionInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
+    protected expressionInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
         const context = this.getChildren(ctx);
         return this.pathInfo(context.path![0], quads, infoResults);
     }
@@ -304,7 +297,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get path term and token.
      */
-    protected pathInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
+    protected pathInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
         const context = this.getChildren(ctx);
         let nodeToken = this.pathItemInfo(context.pathItem![0], quads, infoResults);
 
@@ -328,7 +321,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get pathItem term and token.
      */
-    protected pathItemInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
+    protected pathItemInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
         const context = this.getChildren(ctx);
         if (context.formula) {
             return this.formulaInfo(context.formula[0], quads, infoResults);
@@ -428,9 +421,9 @@ export class N3Reader extends BaseVisitor {
     /**
      * Process object list and return info with tokens.
      */
-    protected objectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken[] {
+    protected objectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): any[] {
         const context = this.getChildren(ctx);
-        const results: TermToken[] = [];
+        const results: any[] = [];
 
         if (context.object) {
             for (const obj of context.object) {
@@ -444,7 +437,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get object term and token.
      */
-    protected objectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
+    protected objectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
         const context = this.getChildren(ctx);
         return this.expressionInfo(context.expression![0], quads, infoResults);
     }
@@ -452,7 +445,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get IRI term and token.
      */
-    protected iriInfo(ctx: CstContext): TermToken {
+    protected iriInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.prefixedName) {
             return this.prefixedNameInfo(context.prefixedName[0]);
@@ -468,7 +461,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get prefixed name term and token.
      */
-    protected prefixedNameInfo(ctx: CstContext): TermToken {
+    protected prefixedNameInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = context.PNAME_LN ? context.PNAME_LN[0] : context.PNAME_NS![0];
         const pname = token.image;
@@ -498,7 +491,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get blank node term and token.
      */
-    protected blankNodeInfo(ctx: CstContext): TermToken {
+    protected blankNodeInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.BLANK_NODE_LABEL) {
             return {
@@ -521,30 +514,22 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get blank node property list info.
      */
-    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
+    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
         const context = this.getChildren(ctx);
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
         // Use pre-assigned ID from LBRACKET token
         const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
         const subject = dataFactory.blankNode(blankNodeId);
-        const subjectToken: TermToken = { term: subject, token };
+        const subjectToken = { term: subject, token };
 
         if (context.predicateObjectList) {
             for (const { predicate, object, inversePredicate } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
                 if (inversePredicate) {
                     quads.push(dataFactory.quad(object.term as NamedNode | BlankNode, predicate.term as NamedNode, subject));
-                    infoResults.push({
-                        subject: object,
-                        predicate,
-                        object: subjectToken
-                    });
+                    infoResults.push(toQuadTokens(object.term, object.token, predicate.term, predicate.token, subjectToken.term, subjectToken.token));
                 } else {
                     quads.push(dataFactory.quad(subject, predicate.term as NamedNode, object.term as NamedNode | BlankNode | Literal));
-                    infoResults.push({
-                        subject: subjectToken,
-                        predicate,
-                        object
-                    });
+                    infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         }
@@ -555,7 +540,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get literal term and token.
      */
-    protected literalInfo(ctx: CstContext): TermToken {
+    protected literalInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.stringLiteral) {
             return this.stringLiteralInfo(context.stringLiteral[0]);
@@ -570,7 +555,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get string literal term and token.
      */
-    protected stringLiteralInfo(ctx: CstContext): TermToken {
+    protected stringLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const stringCtx = context.string![0];
         const token = this.findStringToken(stringCtx)!;
@@ -593,7 +578,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get numeric literal term and token.
      */
-    protected numericLiteralInfo(ctx: CstContext): TermToken {
+    protected numericLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.INTEGER) {
             return {
@@ -617,7 +602,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get boolean literal term and token.
      */
-    protected booleanLiteralInfo(ctx: CstContext): TermToken {
+    protected booleanLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.true) {
             return {
@@ -636,7 +621,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get collection info.
      */
-    protected collectionInfo(ctx: CstContext, quads: Quad[]): TermToken {
+    protected collectionInfo(ctx: CstContext, quads: Quad[]) {
         const context = this.getChildren(ctx);
         const token = context.LPARENT ? context.LPARENT[0] : this.findFirstToken(context)!;
         const objectNodes = context.object ?? [];
@@ -672,7 +657,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get formula info.
      */
-    protected formulaInfo(ctx: CstContext, parentQuads: Quad[], infoResults: QuadTokens[]): TermToken {
+    protected formulaInfo(ctx: CstContext, parentQuads: Quad[], infoResults: QuadTokens[]) {
         const context = this.getChildren(ctx);
         const token = context.LCURLY ? context.LCURLY[0] : this.findFirstToken(context)!;
         const formulaQuads: Quad[] = [];
@@ -710,7 +695,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get quick variable info.
      */
-    protected quickVarInfo(ctx: CstContext): TermToken {
+    protected quickVarInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = context.QUICK_VAR![0];
         const name = token.image.slice(1);

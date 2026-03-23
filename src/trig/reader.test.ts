@@ -451,17 +451,17 @@ ex:g { ex:s ex:p ex:o . }`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].subject.term.value).toBe('http://example.org/s');
-        expect(infos[0].predicate.term.value).toBe('http://example.org/p');
-        expect(infos[0].object.term.value).toBe('http://example.org/o');
-        expect(infos[0].graph).toBeDefined();
-        expect(infos[0].graph!.term.value).toBe('http://example.org/g');
+        expect(infos[0].subject.value).toBe('http://example.org/s');
+        expect(infos[0].predicate.value).toBe('http://example.org/p');
+        expect(infos[0].object.value).toBe('http://example.org/o');
+        expect(infos[0].graphToken).toBeDefined();
+        expect(infos[0].graph.value).toBe('http://example.org/g');
         
         // Verify tokens have position info
-        expect(infos[0].subject.token.startOffset).toBeDefined();
-        expect(infos[0].predicate.token.startOffset).toBeDefined();
-        expect(infos[0].object.token.startOffset).toBeDefined();
-        expect(infos[0].graph!.token.startOffset).toBeDefined();
+        expect(infos[0].subjectToken.startOffset).toBeDefined();
+        expect(infos[0].predicateToken.startOffset).toBeDefined();
+        expect(infos[0].objectToken.startOffset).toBeDefined();
+        expect(infos[0].graphToken!.startOffset).toBeDefined();
     });
 
     it('returns QuadTokens without graph for triple in default graph', () => {
@@ -474,7 +474,7 @@ ex:s ex:p ex:o .`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].graph).toBeUndefined();
+        expect(infos[0].graphToken).toBeUndefined();
     });
 
     it('returns correct token for GRAPH keyword', () => {
@@ -487,8 +487,8 @@ GRAPH ex:g { ex:s ex:p ex:o . }`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].graph).toBeDefined();
-        expect(infos[0].graph!.term.value).toBe('http://example.org/g');
+        expect(infos[0].graphToken).toBeDefined();
+        expect(infos[0].graph.value).toBe('http://example.org/g');
     });
 
     it('handles multiple triples in named graph', () => {
@@ -504,10 +504,10 @@ ex:g {
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
-        expect(infos[0].subject.term.value).toBe('http://example.org/s1');
-        expect(infos[1].subject.term.value).toBe('http://example.org/s2');
+        expect(infos[0].subject.value).toBe('http://example.org/s1');
+        expect(infos[1].subject.value).toBe('http://example.org/s2');
         // Both should have the same graph
-        expect(infos[0].graph!.term.value).toBe(infos[1].graph!.term.value);
+        expect(infos[0].graph.value).toBe(infos[1].graph.value);
     });
 
     it('returns correct token for rdf:type shorthand (a)', () => {
@@ -520,8 +520,8 @@ ex:s a ex:Class .`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].predicate.term.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
-        expect(infos[0].predicate.token.image).toBe('a');
+        expect(infos[0].predicate.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+        expect(infos[0].predicateToken.image).toBe('a');
     });
 
     it('returns LBRACKET token for anonymous blank node property list', () => {
@@ -536,8 +536,8 @@ ex:s a ex:Class .`;
         // Should have quads from blank node property list
         expect(infos.length).toBeGreaterThanOrEqual(2);
         
-        const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
+        const blankNodeInfo = infos.find(i => i.subject.termType === 'BlankNode');
         expect(blankNodeInfo).toBeDefined();
-        expect(blankNodeInfo!.subject.token.image).toBe('[');
+        expect(blankNodeInfo!.subjectToken.image).toBe('[');
     });
 });

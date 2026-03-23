@@ -375,62 +375,62 @@ describe("N3Reader.readQuadTokens", () => {
     it('+ returns QuadTokens with correct tokens for simple triple', () => {
         const infos = readQuadTokens(null, '<http://example.org/s> <http://example.org/p> <http://example.org/o> .');
         expect(infos.length).toBe(1);
-        expect(infos[0].subject.token.image).toBe('<http://example.org/s>');
-        expect(infos[0].predicate.token.image).toBe('<http://example.org/p>');
-        expect(infos[0].object.token.image).toBe('<http://example.org/o>');
+        expect(infos[0].subjectToken.image).toBe('<http://example.org/s>');
+        expect(infos[0].predicateToken.image).toBe('<http://example.org/p>');
+        expect(infos[0].objectToken.image).toBe('<http://example.org/o>');
     });
 
     it('+ returns QuadTokens with prefixed name tokens', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :a :b :c .');
         expect(infos.length).toBe(1);
-        expect(infos[0].subject.token.image).toBe(':a');
-        expect(infos[0].predicate.token.image).toBe(':b');
-        expect(infos[0].object.token.image).toBe(':c');
+        expect(infos[0].subjectToken.image).toBe(':a');
+        expect(infos[0].predicateToken.image).toBe(':b');
+        expect(infos[0].objectToken.image).toBe(':c');
     });
 
     it('+ returns correct token for rdf:type shorthand (a)', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :s a :Class .');
         expect(infos.length).toBe(1);
-        expect(infos[0].predicate.token.image).toBe('a');
-        expect(infos[0].predicate.term.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+        expect(infos[0].predicateToken.image).toBe('a');
+        expect(infos[0].predicate.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
     });
 
     it('+ returns LBRACKET token for blank node property list', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :a :b [ :c :d ] .');
         expect(infos.length).toBe(2);
         // First quad: :a :b _:b0
-        expect(infos[0].subject.token.image).toBe(':a');
-        expect(infos[0].predicate.token.image).toBe(':b');
-        expect(infos[0].object.token.image).toBe('[');
+        expect(infos[0].subjectToken.image).toBe(':a');
+        expect(infos[0].predicateToken.image).toBe(':b');
+        expect(infos[0].objectToken.image).toBe('[');
         // Second quad: _:b0 :c :d
-        expect(infos[1].subject.token.image).toBe('[');
-        expect(infos[1].predicate.token.image).toBe(':c');
+        expect(infos[1].subjectToken.image).toBe('[');
+        expect(infos[1].predicateToken.image).toBe(':c');
     });
 
     it('+ returns correct token for blank node label', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . _:b0 :p :o .');
         expect(infos.length).toBe(1);
-        expect(infos[0].subject.token.image).toBe('_:b0');
-        expect(infos[0].subject.term.termType).toBe('BlankNode');
+        expect(infos[0].subjectToken.image).toBe('_:b0');
+        expect(infos[0].subject.termType).toBe('BlankNode');
     });
 
     it('+ returns correct token for string literal', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :s :p "hello" .');
         expect(infos.length).toBe(1);
-        expect(infos[0].object.token.image).toBe('"hello"');
-        expect(infos[0].object.term.value).toBe('hello');
+        expect(infos[0].objectToken.image).toBe('"hello"');
+        expect(infos[0].object.value).toBe('hello');
     });
 
     it('+ returns correct token for numeric literal', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :s :p 42 .');
         expect(infos.length).toBe(1);
-        expect(infos[0].object.token.image).toBe('42');
+        expect(infos[0].objectToken.image).toBe('42');
     });
 
     it('+ returns correct token for boolean literal', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :s :p true .');
         expect(infos.length).toBe(1);
-        expect(infos[0].object.token.image).toBe('true');
+        expect(infos[0].objectToken.image).toBe('true');
     });
 
     it('+ handles quick variables (?x)', () => {
@@ -438,7 +438,7 @@ describe("N3Reader.readQuadTokens", () => {
         // 3 quads: 2 formula triples + 1 implies
         expect(infos.length).toBe(3);
         // Check quick var tokens in formulas
-        const formulaQuads = infos.filter(i => i.subject.term.termType === 'Variable' || i.object.term.termType === 'Variable');
+        const formulaQuads = infos.filter(i => i.subject.termType === 'Variable' || i.object.termType === 'Variable');
         expect(formulaQuads.length).toBeGreaterThan(0);
     });
 
@@ -446,41 +446,41 @@ describe("N3Reader.readQuadTokens", () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :a is :p of :b .');
         expect(infos.length).toBe(1);
         // In N3, "is :p of" means :b :p :a (reversed)
-        expect(infos[0].subject.token.image).toBe(':b');
-        expect(infos[0].predicate.token.image).toBe(':p');
-        expect(infos[0].object.token.image).toBe(':a');
+        expect(infos[0].subjectToken.image).toBe(':b');
+        expect(infos[0].predicateToken.image).toBe(':p');
+        expect(infos[0].objectToken.image).toBe(':a');
     });
 
     it('+ handles has predicate', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :a has :p :b .');
         expect(infos.length).toBe(1);
-        expect(infos[0].subject.token.image).toBe(':a');
-        expect(infos[0].predicate.token.image).toBe(':p');
-        expect(infos[0].object.token.image).toBe(':b');
+        expect(infos[0].subjectToken.image).toBe(':a');
+        expect(infos[0].predicateToken.image).toBe(':p');
+        expect(infos[0].objectToken.image).toBe(':b');
     });
 
     it('+ handles = as owl:sameAs', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :a = :b .');
         expect(infos.length).toBe(1);
-        expect(infos[0].predicate.token.image).toBe('=');
-        expect(infos[0].predicate.term.value).toBe('http://www.w3.org/2002/07/owl#sameAs');
+        expect(infos[0].predicateToken.image).toBe('=');
+        expect(infos[0].predicate.value).toBe('http://www.w3.org/2002/07/owl#sameAs');
     });
 
     it('+ handles formula as subject', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . { :a :b :c } :p :o .');
         expect(infos.length).toBe(2);
         // One quad inside formula, one with formula as subject
-        const formulaSubjectQuad = infos.find(i => i.predicate.token.image === ':p');
+        const formulaSubjectQuad = infos.find(i => i.predicateToken.image === ':p');
         expect(formulaSubjectQuad).toBeDefined();
-        expect(formulaSubjectQuad!.subject.token.image).toBe('{');
+        expect(formulaSubjectQuad!.subjectToken.image).toBe('{');
     });
 
     it('+ returns start positions for tokens', () => {
         const infos = readQuadTokens(null, '@prefix : <http://example.org/> . :s :p :o .');
         expect(infos.length).toBe(1);
-        expect(infos[0].subject.token.startLine).toBe(1);
-        expect(infos[0].subject.token.startColumn).toBeDefined();
-        expect(infos[0].predicate.token.startColumn).toBeDefined();
-        expect(infos[0].object.token.startColumn).toBeDefined();
+        expect(infos[0].subjectToken.startLine).toBe(1);
+        expect(infos[0].subjectToken.startColumn).toBeDefined();
+        expect(infos[0].predicateToken.startColumn).toBeDefined();
+        expect(infos[0].objectToken.startColumn).toBeDefined();
     });
 });

@@ -366,17 +366,17 @@ describe("NQuadsReader.readQuadTokens", () => {
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].subject.term.value).toBe('http://example.org/s');
-        expect(infos[0].predicate.term.value).toBe('http://example.org/p');
-        expect(infos[0].object.term.value).toBe('http://example.org/o');
-        expect(infos[0].graph).toBeDefined();
-        expect(infos[0].graph!.term.value).toBe('http://example.org/g');
+        expect(infos[0].subject.value).toBe('http://example.org/s');
+        expect(infos[0].predicate.value).toBe('http://example.org/p');
+        expect(infos[0].object.value).toBe('http://example.org/o');
+        expect(infos[0].graphToken).toBeDefined();
+        expect(infos[0].graph.value).toBe('http://example.org/g');
         
         // Verify tokens have position info
-        expect(infos[0].subject.token.startOffset).toBeDefined();
-        expect(infos[0].predicate.token.startOffset).toBeDefined();
-        expect(infos[0].object.token.startOffset).toBeDefined();
-        expect(infos[0].graph!.token.startOffset).toBeDefined();
+        expect(infos[0].subjectToken.startOffset).toBeDefined();
+        expect(infos[0].predicateToken.startOffset).toBeDefined();
+        expect(infos[0].objectToken.startOffset).toBeDefined();
+        expect(infos[0].graphToken!.startOffset).toBeDefined();
     });
 
     it('returns QuadTokens without graph for triple in default graph', () => {
@@ -388,7 +388,7 @@ describe("NQuadsReader.readQuadTokens", () => {
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].graph).toBeUndefined();
+        expect(infos[0].graphToken).toBeUndefined();
     });
 
     it('returns correct token for blank node graph', () => {
@@ -400,9 +400,9 @@ describe("NQuadsReader.readQuadTokens", () => {
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].graph).toBeDefined();
-        expect(infos[0].graph!.term.termType).toBe('BlankNode');
-        expect(infos[0].graph!.token.image).toBe('_:g1');
+        expect(infos[0].graphToken).toBeDefined();
+        expect(infos[0].graph.termType).toBe('BlankNode');
+        expect(infos[0].graphToken!.image).toBe('_:g1');
     });
 
     it('handles multiple quads', () => {
@@ -415,9 +415,9 @@ describe("NQuadsReader.readQuadTokens", () => {
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
-        expect(infos[0].subject.term.value).toBe('http://example.org/s1');
-        expect(infos[0].graph!.term.value).toBe('http://example.org/g1');
-        expect(infos[1].subject.term.value).toBe('http://example.org/s2');
-        expect(infos[1].graph!.term.value).toBe('http://example.org/g2');
+        expect(infos[0].subject.value).toBe('http://example.org/s1');
+        expect(infos[0].graph.value).toBe('http://example.org/g1');
+        expect(infos[1].subject.value).toBe('http://example.org/s2');
+        expect(infos[1].graph.value).toBe('http://example.org/g2');
     });
 });

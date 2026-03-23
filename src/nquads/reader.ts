@@ -3,7 +3,8 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NQuadsParser } from './parser.js';
-import type { QuadTokens, TermToken } from '../types.js';
+import type { QuadTokens } from '../types.js';
+import { toQuadTokens } from '../types.js';
 
 interface CstContext {
     [key: string]: CstContext[] | IToken[] | undefined;
@@ -87,17 +88,18 @@ export class NQuadsReader extends BaseVisitor {
         const object = this.objectInfo(context.object![0]);
         const graph = context.graphLabel ? this.graphLabelInfo(context.graphLabel[0]) : undefined;
 
-        const quadInfo: QuadTokens = { subject, predicate, object };
-        if (graph) {
-            quadInfo.graph = graph;
-        }
-        return quadInfo;
+        return toQuadTokens(
+            subject.term, subject.token,
+            predicate.term, predicate.token,
+            object.term, object.token,
+            graph?.term, graph?.token,
+        );
     }
 
     /**
      * Get subject term and token.
      */
-    protected subjectInfo(ctx: CstContext): TermToken {
+    protected subjectInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.IRIREF_ABS) {
             return {
@@ -116,7 +118,7 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Get predicate term and token.
      */
-    protected predicateInfo(ctx: CstContext): TermToken {
+    protected predicateInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.IRIREF_ABS) {
             return {
@@ -130,7 +132,7 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Get object term and token.
      */
-    protected objectInfo(ctx: CstContext): TermToken {
+    protected objectInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.IRIREF_ABS) {
             return {
@@ -153,7 +155,7 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Get literal term and token.
      */
-    protected literalInfo(ctx: CstContext): TermToken {
+    protected literalInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = context.STRING_LITERAL_QUOTE![0];
         const value = this.getLiteralValue(context);
@@ -175,7 +177,7 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Get triple term info.
      */
-    protected tripleTermInfo(ctx: CstContext): TermToken {
+    protected tripleTermInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const subject = this.visit(context.subject![0]) as NamedNode | BlankNode;
         const predicate = this.visit(context.predicate![0]) as NamedNode;
@@ -192,7 +194,7 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Get graph label term and token.
      */
-    protected graphLabelInfo(ctx: CstContext): TermToken {
+    protected graphLabelInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.IRIREF_ABS) {
             return {

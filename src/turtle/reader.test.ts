@@ -595,14 +595,14 @@ ex:subject ex:predicate ex:object .`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].subject.term.value).toBe('http://example.org/subject');
-        expect(infos[0].predicate.term.value).toBe('http://example.org/predicate');
-        expect(infos[0].object.term.value).toBe('http://example.org/object');
+        expect(infos[0].subject.value).toBe('http://example.org/subject');
+        expect(infos[0].predicate.value).toBe('http://example.org/predicate');
+        expect(infos[0].object.value).toBe('http://example.org/object');
         
         // Verify tokens have position info
-        expect(infos[0].subject.token.startOffset).toBeDefined();
-        expect(infos[0].predicate.token.startOffset).toBeDefined();
-        expect(infos[0].object.token.startOffset).toBeDefined();
+        expect(infos[0].subjectToken.startOffset).toBeDefined();
+        expect(infos[0].predicateToken.startOffset).toBeDefined();
+        expect(infos[0].objectToken.startOffset).toBeDefined();
     });
 
     it('returns correct token for rdf:type shorthand (a)', () => {
@@ -615,8 +615,8 @@ ex:subject a ex:Class .`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].predicate.term.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
-        expect(infos[0].predicate.token.image).toBe('a');
+        expect(infos[0].predicate.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+        expect(infos[0].predicateToken.image).toBe('a');
     });
 
     it('returns correct token for blank node with identifier', () => {
@@ -629,8 +629,8 @@ _:b1 ex:predicate "value" .`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].subject.term.termType).toBe('BlankNode');
-        expect(infos[0].subject.token.image).toBe('_:b1');
+        expect(infos[0].subject.termType).toBe('BlankNode');
+        expect(infos[0].subjectToken.image).toBe('_:b1');
     });
 
     it('returns LBRACKET token for anonymous blank node property list', () => {
@@ -646,9 +646,9 @@ _:b1 ex:predicate "value" .`;
         expect(infos.length).toBeGreaterThanOrEqual(2);
         
         // The blank node subject should have '[' as token
-        const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
+        const blankNodeInfo = infos.find(i => i.subject.termType === 'BlankNode');
         expect(blankNodeInfo).toBeDefined();
-        expect(blankNodeInfo!.subject.token.image).toBe('[');
+        expect(blankNodeInfo!.subjectToken.image).toBe('[');
     });
 
     it('returns correct token for string literal', () => {
@@ -661,9 +661,9 @@ ex:s ex:p "hello world" .`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].object.term.termType).toBe('Literal');
-        expect(infos[0].object.term.value).toBe('hello world');
-        expect(infos[0].object.token.image).toBe('"hello world"');
+        expect(infos[0].object.termType).toBe('Literal');
+        expect(infos[0].object.value).toBe('hello world');
+        expect(infos[0].objectToken.image).toBe('"hello world"');
     });
 
     it('returns correct token for numeric literal', () => {
@@ -676,8 +676,8 @@ ex:s ex:p 42 .`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].object.term.value).toBe('42');
-        expect(infos[0].object.token.image).toBe('42');
+        expect(infos[0].object.value).toBe('42');
+        expect(infos[0].objectToken.image).toBe('42');
     });
 
     it('handles multiple triples', () => {
@@ -691,8 +691,8 @@ ex:s2 ex:p2 ex:o2 .`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
-        expect(infos[0].subject.term.value).toBe('http://example.org/s1');
-        expect(infos[1].subject.term.value).toBe('http://example.org/s2');
+        expect(infos[0].subject.value).toBe('http://example.org/s1');
+        expect(infos[1].subject.value).toBe('http://example.org/s2');
     });
 
     it('handles predicate-object list', () => {
@@ -706,9 +706,9 @@ ex:s ex:p1 ex:o1 ; ex:p2 ex:o2 .`;
         
         expect(infos).toHaveLength(2);
         // Both quads share the same subject
-        expect(infos[0].subject.term.value).toBe(infos[1].subject.term.value);
-        expect(infos[0].predicate.term.value).toBe('http://example.org/p1');
-        expect(infos[1].predicate.term.value).toBe('http://example.org/p2');
+        expect(infos[0].subject.value).toBe(infos[1].subject.value);
+        expect(infos[0].predicate.value).toBe('http://example.org/p1');
+        expect(infos[1].predicate.value).toBe('http://example.org/p2');
     });
 
     it('handles object list', () => {
@@ -722,10 +722,10 @@ ex:s ex:p ex:o1, ex:o2 .`;
         
         expect(infos).toHaveLength(2);
         // Both quads share same subject and predicate
-        expect(infos[0].subject.term.value).toBe(infos[1].subject.term.value);
-        expect(infos[0].predicate.term.value).toBe(infos[1].predicate.term.value);
-        expect(infos[0].object.term.value).toBe('http://example.org/o1');
-        expect(infos[1].object.term.value).toBe('http://example.org/o2');
+        expect(infos[0].subject.value).toBe(infos[1].subject.value);
+        expect(infos[0].predicate.value).toBe(infos[1].predicate.value);
+        expect(infos[0].object.value).toBe('http://example.org/o1');
+        expect(infos[1].object.value).toBe('http://example.org/o2');
     });
 
     it('returns IRIREF token for full IRI', () => {
@@ -737,9 +737,9 @@ ex:s ex:p ex:o1, ex:o2 .`;
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].subject.token.image).toBe('<http://example.org/s>');
-        expect(infos[0].predicate.token.image).toBe('<http://example.org/p>');
-        expect(infos[0].object.token.image).toBe('<http://example.org/o>');
+        expect(infos[0].subjectToken.image).toBe('<http://example.org/s>');
+        expect(infos[0].predicateToken.image).toBe('<http://example.org/p>');
+        expect(infos[0].objectToken.image).toBe('<http://example.org/o>');
     });
 });
 describe("TurtleReader - Blank Node ID Pre-assignment", () => {
@@ -753,14 +753,14 @@ describe("TurtleReader - Blank Node ID Pre-assignment", () => {
         const infos = reader.readQuadTokens(cst);
         
         // Find the blank node subject
-        const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
+        const blankNodeInfo = infos.find(i => i.subject.termType === 'BlankNode');
         expect(blankNodeInfo).toBeDefined();
         
         // The blank node ID should match the pre-assigned ID from the LBRACKET token
         const lbracketToken = lexResult.tokens.find(t => t.tokenType.name === 'LBRACKET');
         expect(lbracketToken).toBeDefined();
         expect(lbracketToken!.payload?.blankNodeId).toBeDefined();
-        expect(blankNodeInfo!.subject.term.value).toBe(lbracketToken!.payload.blankNodeId);
+        expect(blankNodeInfo!.subject.value).toBe(lbracketToken!.payload.blankNodeId);
     });
 
     it('collection blank node IDs are derived from LPARENT token payload', () => {
@@ -800,8 +800,8 @@ ex:s ex:p (1 2) .`;
         expect(lbracketTokens).toHaveLength(2);
         
         // Find the blank node subjects
-        const blankNodeInfos = infos.filter(i => i.subject.term.termType === 'BlankNode');
-        const blankNodeValues = new Set(blankNodeInfos.map(i => i.subject.term.value));
+        const blankNodeInfos = infos.filter(i => i.subject.termType === 'BlankNode');
+        const blankNodeValues = new Set(blankNodeInfos.map(i => i.subject.value));
         
         // Should have 2 distinct blank node IDs
         expect(blankNodeValues.size).toBe(2);
@@ -825,11 +825,11 @@ ex:s ex:p (1 2) .`;
         const infos = reader.readQuadTokens(cst);
         
         // Find the blank node subject
-        const blankNodeInfo = infos.find(i => i.subject.term.termType === 'BlankNode');
+        const blankNodeInfo = infos.find(i => i.subject.termType === 'BlankNode');
         expect(blankNodeInfo).toBeDefined();
         
         // The blank node ID should use the custom format
-        expect(blankNodeInfo!.subject.term.value).toBe('my-custom-0');
+        expect(blankNodeInfo!.subject.value).toBe('my-custom-0');
     });
 });
 
@@ -844,7 +844,7 @@ ex:Alice ex:knows ex:Bob .`;
         const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].subject.term.value).toBe('http://example.org/Alice');
+        expect(infos[0].subject.value).toBe('http://example.org/Alice');
         expect(infos[0].leadingComments).toHaveLength(0);
         expect(infos[0].trailingComment).toBeUndefined();
     });
@@ -912,13 +912,13 @@ ex:Carol ex:knows ex:Dave . # End of Carol`;
         expect(infos).toHaveLength(2);
         
         // First statement
-        expect(infos[0].subject.term.value).toBe('http://example.org/Alice');
+        expect(infos[0].subject.value).toBe('http://example.org/Alice');
         expect(infos[0].leadingComments).toHaveLength(1);
         expect(infos[0].leadingComments[0].image).toBe('# Comment for Alice');
         expect(infos[0].trailingComment).toBeUndefined();
         
         // Second statement
-        expect(infos[1].subject.term.value).toBe('http://example.org/Carol');
+        expect(infos[1].subject.value).toBe('http://example.org/Carol');
         expect(infos[1].leadingComments).toHaveLength(1);
         expect(infos[1].leadingComments[0].image).toBe('# Comment for Carol');
         expect(infos[1].trailingComment).toBeDefined();
@@ -939,13 +939,13 @@ ex:Alice ex:knows ex:Bob ;
         expect(infos).toHaveLength(2);
         
         // First quad gets the leading comment
-        expect(infos[0].predicate.term.value).toBe('http://example.org/knows');
+        expect(infos[0].predicate.value).toBe('http://example.org/knows');
         expect(infos[0].leadingComments).toHaveLength(1);
         expect(infos[0].leadingComments[0].image).toBe('# About Alice');
         expect(infos[0].trailingComment).toBeUndefined();
         
         // Last quad gets the trailing comment
-        expect(infos[1].predicate.term.value).toBe('http://example.org/likes');
+        expect(infos[1].predicate.value).toBe('http://example.org/likes');
         expect(infos[1].leadingComments).toHaveLength(0);
         expect(infos[1].trailingComment).toBeDefined();
         expect(infos[1].trailingComment!.image).toBe('# End of Alice');

@@ -3,7 +3,8 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NTriplesParser } from './parser.js';
-import type { QuadTokens, TermToken } from '../types.js';
+import type { QuadTokens } from '../types.js';
+import { toQuadTokens } from '../types.js';
 
 const BaseVisitor = new NTriplesParser().getBaseCstVisitorConstructor();
 
@@ -85,13 +86,13 @@ export class NTriplesReader extends BaseVisitor {
         const predicate = this.predicateInfo(context.predicate![0]);
         const object = this.objectInfo(context.object![0]);
 
-        return { subject, predicate, object };
+        return toQuadTokens(subject.term, subject.token, predicate.term, predicate.token, object.term, object.token);
     }
 
     /**
      * Get subject term and token.
      */
-    protected subjectInfo(ctx: CstContext): TermToken {
+    protected subjectInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.IRIREF_ABS) {
             return {
@@ -110,7 +111,7 @@ export class NTriplesReader extends BaseVisitor {
     /**
      * Get predicate term and token.
      */
-    protected predicateInfo(ctx: CstContext): TermToken {
+    protected predicateInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.IRIREF_ABS) {
             return {
@@ -124,7 +125,7 @@ export class NTriplesReader extends BaseVisitor {
     /**
      * Get object term and token.
      */
-    protected objectInfo(ctx: CstContext): TermToken {
+    protected objectInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.IRIREF_ABS) {
             return {
@@ -147,7 +148,7 @@ export class NTriplesReader extends BaseVisitor {
     /**
      * Get literal term and token.
      */
-    protected literalInfo(ctx: CstContext): TermToken {
+    protected literalInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = context.STRING_LITERAL_QUOTE![0];
         const value = this.getLiteralValue(context);
@@ -169,7 +170,7 @@ export class NTriplesReader extends BaseVisitor {
     /**
      * Get triple term info.
      */
-    protected tripleTermInfo(ctx: CstContext): TermToken {
+    protected tripleTermInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const subject = this.visit(context.subject![0]) as NamedNode | BlankNode;
         const predicate = this.visit(context.predicate![0]) as NamedNode;

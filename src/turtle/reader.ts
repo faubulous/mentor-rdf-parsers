@@ -3,7 +3,8 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TurtleParser } from './parser.js';
-import type { QuadTokens, TermToken, QuadContext } from '../types.js';
+import type { QuadTokens, QuadContext } from '../types.js';
+import { toQuadTokens } from '../types.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new TurtleParser().getBaseCstVisitorConstructor();
@@ -115,8 +116,8 @@ interface ObjectListResult {
  * Result from parsing a predicate-object pair with token info.
  */
 interface PredicateObjectInfoResult {
-    predicate: TermToken;
-    object: TermToken;
+    predicate: any;
+    object: any;
     annotationCtx?: CstContext;
 }
 
@@ -124,7 +125,7 @@ interface PredicateObjectInfoResult {
  * Result from parsing an object list item with token info.
  */
 interface ObjectListInfoResult {
-    objectTokens: TermToken[];
+    objectTokens: any[];
     annotationCtx?: CstContext;
 }
 
@@ -203,13 +204,13 @@ export class TurtleReader extends BaseVisitor {
     }
 
     protected getStatementSpan(triplesInfos: QuadTokens[]): { startOffset: number; endOffset: number; endLine: number } {
-        const startOffset = triplesInfos[0].subject.token.startOffset;
+        const startOffset = triplesInfos[0].subjectToken.startOffset;
 
         let endOffset = 0;
         let endLine = 1;
 
         for (const info of triplesInfos) {
-            const objToken = info.object.token;
+            const objToken = info.objectToken;
             const objEndOffset = objToken.endOffset ?? (objToken.startOffset + objToken.image.length - 1);
             const objEndLine = objToken.endLine ?? objToken.startLine ?? 1;
 
@@ -349,22 +350,14 @@ export class TurtleReader extends BaseVisitor {
             }
 
             for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                result.push({
-                    subject: subjectToken,
-                    predicate,
-                    object
-                });
+                result.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
             }
         } else if (context.blankNodePropertyList) {
             const subjectToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, result);
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    result.push({
-                        subject: subjectToken,
-                        predicate,
-                        object
-                    });
+                    result.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         } else if (context.reifiedTriple) {
@@ -372,11 +365,7 @@ export class TurtleReader extends BaseVisitor {
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    result.push({
-                        subject: reifierToken,
-                        predicate,
-                        object
-                    });
+                    result.push(toQuadTokens(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         } else {
@@ -389,7 +378,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get subject term and token.
      */
-    protected subjectInfo(ctx: CstContext, quads: Quad[]): TermToken {
+    protected subjectInfo(ctx: CstContext, quads: Quad[]) {
         const context = this.getChildren(ctx);
         if (context.iri) {
             return this.iriInfo(context.iri[0]);
@@ -404,7 +393,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get predicate term and token.
      */
-    protected predicateInfo(ctx: CstContext): TermToken {
+    protected predicateInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.iri) {
             const iriInfo = this.iriInfo(context.iri[0]);
@@ -421,7 +410,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get object term and token.
      */
-    protected objectInfo(ctx: CstContext, quads: Quad[]): TermToken {
+    protected objectInfo(ctx: CstContext, quads: Quad[]) {
         const context = this.getChildren(ctx);
         if (context.iri) {
             return this.iriInfo(context.iri[0]);
@@ -447,7 +436,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get IRI term and token.
      */
-    protected iriInfo(ctx: CstContext): TermToken {
+    protected iriInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.prefixedName) {
             return this.prefixedNameInfo(context.prefixedName[0]);
@@ -463,7 +452,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get prefixed name term and token.
      */
-    protected prefixedNameInfo(ctx: CstContext): TermToken {
+    protected prefixedNameInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = context.PNAME_LN ? context.PNAME_LN[0] : context.PNAME_NS![0];
         const pname = token.image;
@@ -488,7 +477,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get blank node term and token.
      */
-    protected blankNodeInfo(ctx: CstContext): TermToken {
+    protected blankNodeInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.BLANK_NODE_LABEL) {
             return {
@@ -512,23 +501,19 @@ export class TurtleReader extends BaseVisitor {
      * Get blank node property list info. Returns the blank node subject and
      * populates infoResults with QuadTokens for internal triples.
      */
-    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
+    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
         const context = this.getChildren(ctx);
         // The LBRACKET token marks the start of this blank node
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
         // Use pre-assigned ID from LBRACKET token payload if available
         const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
         const subject = dataFactory.blankNode(blankNodeId);
-        const subjectToken: TermToken = { term: subject, token };
+        const subjectToken = { term: subject, token };
 
         if (context.predicateObjectList) {
             for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
                 quads.push(dataFactory.quad(subject, predicate.term as NamedNode, object.term));
-                infoResults.push({
-                    subject: subjectToken,
-                    predicate,
-                    object
-                });
+                infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
             }
         }
 
@@ -538,7 +523,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get literal term and token.
      */
-    protected literalInfo(ctx: CstContext): TermToken {
+    protected literalInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.stringLiteral) {
             return this.stringLiteralInfo(context.stringLiteral[0]);
@@ -553,7 +538,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get string literal term and token.
      */
-    protected stringLiteralInfo(ctx: CstContext): TermToken {
+    protected stringLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const stringCtx = context.string![0];
         const token = this.findStringToken(stringCtx)!;
@@ -576,7 +561,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get numeric literal term and token.
      */
-    protected numericLiteralInfo(ctx: CstContext): TermToken {
+    protected numericLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.INTEGER) {
             return {
@@ -600,7 +585,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get boolean literal term and token.
      */
-    protected booleanLiteralInfo(ctx: CstContext): TermToken {
+    protected booleanLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         if (context.true) {
             return {
@@ -619,7 +604,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get collection info. Returns the head node token (LPARENT).
      */
-    protected collectionInfo(ctx: CstContext, quads: Quad[]): TermToken {
+    protected collectionInfo(ctx: CstContext, quads: Quad[]) {
         const context = this.getChildren(ctx);
         const token = context.LPARENT ? context.LPARENT[0] : this.findFirstToken(context)!;
         const nil = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
@@ -658,7 +643,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get triple term info.
      */
-    protected tripleTermInfo(ctx: CstContext): TermToken {
+    protected tripleTermInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
         const token = this.findFirstToken(context)!;
         const subject = this.visit(context.ttSubject![0] as any) as NamedNode | BlankNode;
@@ -674,7 +659,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get reified triple info.
      */
-    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): TermToken {
+    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
         const context = this.getChildren(ctx);
         const token = this.findFirstToken(context)!;
         const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');

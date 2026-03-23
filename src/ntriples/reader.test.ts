@@ -306,14 +306,14 @@ describe("NTriplesReader.readQuadTokens", () => {
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].subject.term.value).toBe('http://example.org/s');
-        expect(infos[0].predicate.term.value).toBe('http://example.org/p');
-        expect(infos[0].object.term.value).toBe('http://example.org/o');
+        expect(infos[0].subject.value).toBe('http://example.org/s');
+        expect(infos[0].predicate.value).toBe('http://example.org/p');
+        expect(infos[0].object.value).toBe('http://example.org/o');
         
         // Verify tokens have position info
-        expect(infos[0].subject.token.startOffset).toBeDefined();
-        expect(infos[0].predicate.token.startOffset).toBeDefined();
-        expect(infos[0].object.token.startOffset).toBeDefined();
+        expect(infos[0].subjectToken.startOffset).toBeDefined();
+        expect(infos[0].predicateToken.startOffset).toBeDefined();
+        expect(infos[0].objectToken.startOffset).toBeDefined();
     });
 
     it('returns correct token for blank node', () => {
@@ -325,8 +325,8 @@ describe("NTriplesReader.readQuadTokens", () => {
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].subject.term.termType).toBe('BlankNode');
-        expect(infos[0].subject.token.image).toBe('_:b1');
+        expect(infos[0].subject.termType).toBe('BlankNode');
+        expect(infos[0].subjectToken.image).toBe('_:b1');
     });
 
     it('returns correct token for string literal', () => {
@@ -338,9 +338,9 @@ describe("NTriplesReader.readQuadTokens", () => {
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].object.term.termType).toBe('Literal');
-        expect(infos[0].object.term.value).toBe('hello world');
-        expect(infos[0].object.token.image).toBe('"hello world"');
+        expect(infos[0].object.termType).toBe('Literal');
+        expect(infos[0].object.value).toBe('hello world');
+        expect(infos[0].objectToken.image).toBe('"hello world"');
     });
 
     it('handles multiple triples', () => {
@@ -353,7 +353,7 @@ describe("NTriplesReader.readQuadTokens", () => {
         const infos = reader.readQuadTokens(cst);
         
         expect(infos).toHaveLength(2);
-        expect(infos[0].subject.term.value).toBe('http://example.org/s1');
-        expect(infos[1].subject.term.value).toBe('http://example.org/s2');
+        expect(infos[0].subject.value).toBe('http://example.org/s1');
+        expect(infos[1].subject.value).toBe('http://example.org/s2');
     });
 });
