@@ -584,15 +584,15 @@ describe("TurtleReader", () => {
     });
 });
 
-describe("TurtleReader.readQuadTokens", () => {
-    it('returns QuadTokens with correct tokens for simple triple', () => {
+describe("TurtleReader.readQuadContexts", () => {
+    it('returns QuadContext objects with correct tokens for simple triple', () => {
         const input = `@prefix ex: <http://example.org/> .
 ex:subject ex:predicate ex:object .`;
         
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subject.value).toBe('http://example.org/subject');
@@ -612,7 +612,7 @@ ex:subject a ex:Class .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].predicate.value).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
@@ -626,7 +626,7 @@ _:b1 ex:predicate "value" .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subject.termType).toBe('BlankNode');
@@ -640,7 +640,7 @@ _:b1 ex:predicate "value" .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         // Should have 2 quads: internal blank node property and outer triple
         expect(infos.length).toBeGreaterThanOrEqual(2);
@@ -658,7 +658,7 @@ ex:s ex:p "hello world" .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].object.termType).toBe('Literal');
@@ -673,7 +673,7 @@ ex:s ex:p 42 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].object.value).toBe('42');
@@ -688,7 +688,7 @@ ex:s2 ex:p2 ex:o2 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         expect(infos).toHaveLength(2);
         expect(infos[0].subject.value).toBe('http://example.org/s1');
@@ -702,7 +702,7 @@ ex:s ex:p1 ex:o1 ; ex:p2 ex:o2 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         expect(infos).toHaveLength(2);
         // Both quads share the same subject
@@ -718,7 +718,7 @@ ex:s ex:p ex:o1, ex:o2 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         expect(infos).toHaveLength(2);
         // Both quads share same subject and predicate
@@ -734,7 +734,7 @@ ex:s ex:p ex:o1, ex:o2 .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         expect(infos).toHaveLength(1);
         expect(infos[0].subjectToken.image).toBe('<http://example.org/s>');
@@ -750,7 +750,7 @@ describe("TurtleReader - Blank Node ID Pre-assignment", () => {
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         // Find the blank node subject
         const blankNodeInfo = infos.find(i => i.subject.termType === 'BlankNode');
@@ -793,7 +793,7 @@ ex:s ex:p (1 2) .`;
         const lexResult = new TurtleLexer().tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         // Get all the LBRACKET tokens
         const lbracketTokens = lexResult.tokens.filter(t => t.tokenType.name === 'LBRACKET');
@@ -822,7 +822,7 @@ ex:s ex:p (1 2) .`;
         const lexResult = lexer.tokenize(input);
         const cst = new TurtleParser().parse(lexResult.tokens);
         const reader = new TurtleReader();
-        const infos = reader.readQuadTokens(cst);
+        const infos = reader.readQuadContexts(cst);
         
         // Find the blank node subject
         const blankNodeInfo = infos.find(i => i.subject.termType === 'BlankNode');
@@ -1000,7 +1000,7 @@ ex:Alice ex:knows ex:Bob .
         expect(infos).toHaveLength(0);
     });
 
-    it('includes endOffset and endLine in QuadContext', () => {
+    it('does not expose internal statement span fields in QuadContext', () => {
         const input = `@prefix ex: <http://example.org/> .
 ex:Alice ex:knows ex:Bob .`;
         
@@ -1010,7 +1010,7 @@ ex:Alice ex:knows ex:Bob .`;
         const infos = reader.readQuadContexts(cst, lexResult.tokens);
         
         expect(infos).toHaveLength(1);
-        expect(infos[0].endOffset).toBeGreaterThan(0);
-        expect(infos[0].endLine).toBe(2);
+        expect('endOffset' in infos[0]).toBe(false);
+        expect('endLine' in infos[0]).toBe(false);
     });
 });

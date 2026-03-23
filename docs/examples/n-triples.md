@@ -86,52 +86,46 @@ console.log(quads[0].subject.termType); // "BlankNode"
 console.log(quads[0].subject.value);    // "b0"
 ```
 
-## QuadTokens: Accessing Source Positions
+## QuadContext: Accessing Source Positions
 
-For IDE features that need to associate positions with triples, use `readQuadTokens()` to get `QuadTokens` objects. Each `QuadTokens` contains the subject, predicate, and object with their source tokens:
+For IDE features that need to associate positions with triples, use `readQuadContexts()` to get `QuadContext` objects. Each `QuadContext` contains the subject, predicate, and object with their source tokens:
 
 ```typescript
 import { NTriplesLexer, NTriplesParser, NTriplesReader } from '@faubulous/mentor-rdf-parsers';
-import type { QuadTokens } from '@faubulous/mentor-rdf-parsers';
+import type { QuadContext } from '@faubulous/mentor-rdf-parsers';
 
 const input = '<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .\n';
 
 const lexResult = new NTriplesLexer().tokenize(input);
 const cst = new NTriplesParser().parse(lexResult.tokens);
 const reader = new NTriplesReader();
-const quadTokens: QuadTokens[] = reader.readQuadTokens(cst);
+const quadContexts: QuadContext[] = reader.readQuadContexts(cst);
 
-for (const info of quadTokens) {
-    console.log(`Subject: ${info.subject.term.value}`);
-    console.log(`  Token position: line ${info.subject.token.startLine}, column ${info.subject.token.startColumn}`);
+for (const info of quadContexts) {
+  console.log(`Subject: ${info.subject.value}`);
+  console.log(`  Token position: line ${info.subjectToken.startLine}, column ${info.subjectToken.startColumn}`);
     
-    console.log(`Predicate: ${info.predicate.term.value}`);
-    console.log(`  Token position: line ${info.predicate.token.startLine}, column ${info.predicate.token.startColumn}`);
+  console.log(`Predicate: ${info.predicate.value}`);
+  console.log(`  Token position: line ${info.predicateToken.startLine}, column ${info.predicateToken.startColumn}`);
     
-    console.log(`Object: ${info.object.term.value}`);
-    console.log(`  Token position: line ${info.object.token.startLine}, column ${info.object.token.startColumn}`);
+  console.log(`Object: ${info.object.value}`);
+  console.log(`  Token position: line ${info.objectToken.startLine}, column ${info.objectToken.startColumn}`);
 }
 ```
 
 ### Token Information
 
-Each `TermToken` in a `QuadTokens` provides:
-- `term`: The RDF/JS term (NamedNode, BlankNode, Literal)
-- `token`: The Chevrotain token with position information:
-  - `startOffset`, `endOffset`: Character offsets in the input
-  - `startLine`, `endLine`: Line numbers (1-based)
-  - `startColumn`, `endColumn`: Column numbers (1-based)
-  - `image`: The original text of the token
+Each `QuadContext` provides RDF terms directly on `subject`, `predicate`, and `object`, plus token metadata on `subjectToken`, `predicateToken`, and `objectToken`.
 
 ```typescript
-const info = quadTokens[0];
+const info = quadContexts[0];
 
 // Get the exact text span for highlighting
 const subjectSpan = {
-    start: info.subject.token.startOffset,
-    end: info.subject.token.endOffset,
-    text: info.subject.token.image
+  start: info.subjectToken.startOffset,
+  end: info.subjectToken.endOffset,
+  text: info.subjectToken.image
 };
 
-console.log(`Subject "${info.subject.term.value}" spans characters ${subjectSpan.start}-${subjectSpan.end}`);
+console.log(`Subject "${info.subject.value}" spans characters ${subjectSpan.start}-${subjectSpan.end}`);
 ```

@@ -3,8 +3,8 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term, DefaultGraph } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TrigParser } from './parser.js';
-import type { QuadTokens } from '../types.js';
-import { toQuadTokens } from '../types.js';
+import type { QuadContext } from '../types.js';
+import { toQuadContext } from '../types.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new TrigParser().getBaseCstVisitorConstructor();
@@ -221,12 +221,12 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Parse the document and return quad information with source tokens.
+     * Parse the document and return quad context information with source tokens.
      * This is useful for IDE features that need to associate positions with triples.
      */
-    readQuadTokens(ctx: CstNode): QuadTokens[] {
+    readQuadContexts(ctx: CstNode): QuadContext[] {
         const context = this.getChildren(ctx);
-        const result: QuadTokens[] = [];
+        const result: QuadContext[] = [];
         const quads: Quad[] = []; // For internal quad generation
 
         // Collect all directives and blocks with their source offsets
@@ -270,9 +270,9 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process block and collect QuadTokens.
+    * Process block and collect QuadContext objects.
      */
-    protected blockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): void {
+    protected blockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
         const context = this.getChildren(ctx);
         if (context.triplesOrGraph) {
             this.triplesOrGraphInfo(context.triplesOrGraph[0], quads, infoResults);
@@ -290,9 +290,9 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process triplesOrGraph and collect QuadTokens.
+    * Process triplesOrGraph and collect QuadContext objects.
      */
-    protected triplesOrGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): void {
+    protected triplesOrGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
         const context = this.getChildren(ctx);
         if (context.labelOrSubject) {
             const labelOrSubjectToken = this.labelOrSubjectInfo(context.labelOrSubject[0]);
@@ -305,7 +305,7 @@ export class TrigReader extends BaseVisitor {
                 const subjectToken = labelOrSubjectToken;
 
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
+                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         } else if (context.reifiedTriple) {
@@ -314,16 +314,16 @@ export class TrigReader extends BaseVisitor {
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadTokens(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token));
+                    infoResults.push(toQuadContext(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         }
     }
 
     /**
-     * Process wrappedGraph and collect QuadTokens.
+    * Process wrappedGraph and collect QuadContext objects.
      */
-    protected wrappedGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: any): void {
+    protected wrappedGraphInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[], graphToken?: any): void {
         const context = this.getChildren(ctx);
         if (context.triplesBlock) {
             this.triplesBlockInfo(context.triplesBlock[0], quads, infoResults, graphToken);
@@ -331,9 +331,9 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process triplesBlock and collect QuadTokens.
+    * Process triplesBlock and collect QuadContext objects.
      */
-    protected triplesBlockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: any): void {
+    protected triplesBlockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[], graphToken?: any): void {
         const context = this.getChildren(ctx);
         if (context.triples) {
             this.triplesInfo(context.triples[0], quads, infoResults, graphToken);
@@ -345,16 +345,16 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process triples and collect QuadTokens.
+    * Process triples and collect QuadContext objects.
      */
-    protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: any): void {
+    protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[], graphToken?: any): void {
         const context = this.getChildren(ctx);
         if (context.subject) {
             const subjectToken = this.subjectInfo(context.subject[0], quads);
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
+                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
                 }
             }
         } else if (context.blankNodePropertyList) {
@@ -362,7 +362,7 @@ export class TrigReader extends BaseVisitor {
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
+                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
                 }
             }
         } else if (context.reifiedTriple) {
@@ -370,23 +370,23 @@ export class TrigReader extends BaseVisitor {
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadTokens(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
+                    infoResults.push(toQuadContext(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
                 }
             }
         }
     }
 
     /**
-     * Process triples2 and collect QuadTokens.
+    * Process triples2 and collect QuadContext objects.
      */
-    protected triples2Info(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: any): void {
+    protected triples2Info(ctx: CstContext, quads: Quad[], infoResults: QuadContext[], graphToken?: any): void {
         const context = this.getChildren(ctx);
         if (context.blankNodePropertyList) {
             const subjectToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, graphToken);
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
+                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
                 }
             }
         } else if (context.collection) {
@@ -394,7 +394,7 @@ export class TrigReader extends BaseVisitor {
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
+                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
                 }
             }
         }
@@ -473,14 +473,14 @@ export class TrigReader extends BaseVisitor {
         } else if (context.blank) {
             return this.blankInfo(context.blank[0], quads);
         } else if (context.blankNodePropertyList) {
-            const infoResults: QuadTokens[] = [];
+            const infoResults: QuadContext[] = [];
             return this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, undefined);
         } else if (context.collection) {
             return this.collectionInfo(context.collection[0], quads);
         } else if (context.tripleTerm) {
             return this.tripleTermInfo(context.tripleTerm[0]);
         } else if (context.reifiedTriple) {
-            const infoResults: QuadTokens[] = [];
+            const infoResults: QuadContext[] = [];
             return this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
         }
         throw new Error('Invalid object: ' + JSON.stringify(context));
@@ -553,7 +553,7 @@ export class TrigReader extends BaseVisitor {
     /**
      * Get blank node property list info.
      */
-    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[], graphToken?: any) {
+    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[], graphToken?: any) {
         const context = this.getChildren(ctx);
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
         // Use pre-assigned ID from LBRACKET token
@@ -564,7 +564,7 @@ export class TrigReader extends BaseVisitor {
         if (context.predicateObjectList) {
             for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
                 this._emitQuad(quads, subject, predicate.term as NamedNode, object.term);
-                infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
+                infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
             }
         }
 
@@ -712,7 +712,7 @@ export class TrigReader extends BaseVisitor {
     /**
      * Get reified triple info.
      */
-    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
+    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         const token = this.findFirstToken(context)!;
         const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');

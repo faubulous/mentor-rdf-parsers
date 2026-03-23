@@ -3,8 +3,8 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NTriplesParser } from './parser.js';
-import type { QuadTokens } from '../types.js';
-import { toQuadTokens } from '../types.js';
+import type { QuadContext } from '../types.js';
+import { toQuadContext } from '../types.js';
 
 const BaseVisitor = new NTriplesParser().getBaseCstVisitorConstructor();
 
@@ -61,9 +61,9 @@ export class NTriplesReader extends BaseVisitor {
      * Parse the document and return quad information with source tokens.
      * This is useful for IDE features that need to associate positions with triples.
      */
-    readQuadTokens(ctx: CstNode): QuadTokens[] {
+    readQuadContexts(ctx: CstNode): QuadContext[] {
         const context = this.getChildren(ctx);
-        const result: QuadTokens[] = [];
+        const result: QuadContext[] = [];
 
         if (context.triple) {
             for (const tripleCtx of context.triple) {
@@ -80,13 +80,13 @@ export class NTriplesReader extends BaseVisitor {
     /**
      * Get triple info with tokens.
      */
-    protected tripleInfo(ctx: CstContext): QuadTokens | undefined {
+    protected tripleInfo(ctx: CstContext): QuadContext | undefined {
         const context = this.getChildren(ctx);
         const subject = this.subjectInfo(context.subject![0]);
         const predicate = this.predicateInfo(context.predicate![0]);
         const object = this.objectInfo(context.object![0]);
 
-        return toQuadTokens(subject.term, subject.token, predicate.term, predicate.token, object.term, object.token);
+        return toQuadContext(subject.term, subject.token, predicate.term, predicate.token, object.term, object.token);
     }
 
     /**

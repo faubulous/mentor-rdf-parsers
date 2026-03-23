@@ -3,8 +3,8 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term, Variable } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { N3Parser } from './parser.js';
-import type { QuadTokens } from '../types.js';
-import { toQuadTokens } from '../types.js';
+import type { QuadContext } from '../types.js';
+import { toQuadContext } from '../types.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new N3Parser().getBaseCstVisitorConstructor();
@@ -219,9 +219,9 @@ export class N3Reader extends BaseVisitor {
      * Parse the document and return quad information with source tokens.
      * This is useful for IDE features that need to associate positions with triples.
      */
-    readQuadTokens(ctx: CstNode): QuadTokens[] {
+    readQuadContexts(ctx: CstNode): QuadContext[] {
         const context = this.getChildren(ctx);
-        const result: QuadTokens[] = [];
+        const result: QuadContext[] = [];
         const quads: Quad[] = []; // For internal quad generation
 
         // Process sparql directives
@@ -242,9 +242,9 @@ export class N3Reader extends BaseVisitor {
     }
 
     /**
-     * Process n3Statement and collect QuadTokens.
+    * Process n3Statement and collect QuadContext objects.
      */
-    protected n3StatementInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): void {
+    protected n3StatementInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
         const context = this.getChildren(ctx);
         if (context.n3Directive) {
             const res = this.visit(context.n3Directive[0] as any) as DirectiveResult;
@@ -255,21 +255,21 @@ export class N3Reader extends BaseVisitor {
     }
 
     /**
-     * Process triples and collect QuadTokens.
+     * Process triples and collect QuadContext objects.
      */
-    protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): void {
+    protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
         const context = this.getChildren(ctx);
         // Collect nested triples in a local array first, so we can add main triples before them
-        const nestedInfoResults: QuadTokens[] = [];
+        const nestedInfoResults: QuadContext[] = [];
         const subjectToken = this.subjectInfo(context.subject![0], quads, nestedInfoResults);
 
         if (context.predicateObjectList) {
             for (const { predicate, object, inversePredicate } of this.predicateObjectListInfo(context.predicateObjectList[0], quads, nestedInfoResults)) {
                 if (inversePredicate) {
                     // For `<- pred`, the object becomes the subject and vice versa
-                    infoResults.push(toQuadTokens(object.term, object.token, predicate.term, predicate.token, subjectToken.term, subjectToken.token));
+                    infoResults.push(toQuadContext(object.term, object.token, predicate.term, predicate.token, subjectToken.term, subjectToken.token));
                 } else {
-                    infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
+                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         }
@@ -281,7 +281,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get subject term and token.
      */
-    protected subjectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
+    protected subjectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         return this.expressionInfo(context.expression![0], quads, infoResults);
     }
@@ -289,7 +289,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get expression term and token.
      */
-    protected expressionInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
+    protected expressionInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         return this.pathInfo(context.path![0], quads, infoResults);
     }
@@ -297,7 +297,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get path term and token.
      */
-    protected pathInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
+    protected pathInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         let nodeToken = this.pathItemInfo(context.pathItem![0], quads, infoResults);
 
@@ -321,7 +321,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get pathItem term and token.
      */
-    protected pathItemInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
+    protected pathItemInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         if (context.formula) {
             return this.formulaInfo(context.formula[0], quads, infoResults);
@@ -345,7 +345,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Process predicate-object list and return info with tokens.
      */
-    protected predicateObjectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): PredicateObjectInfoResult[] {
+    protected predicateObjectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): PredicateObjectInfoResult[] {
         const context = this.getChildren(ctx);
         const result: PredicateObjectInfoResult[] = [];
 
@@ -373,7 +373,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get verb term and token.
      */
-    protected verbInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): VerbInfoResult {
+    protected verbInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): VerbInfoResult {
         const context = this.getChildren(ctx);
         if (context.A) {
             return {
@@ -408,7 +408,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get predicate term and token for N3.
      */
-    protected predicateInfoN3(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): VerbInfoResult {
+    protected predicateInfoN3(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): VerbInfoResult {
         const context = this.getChildren(ctx);
         if (context.INVERSE_OF) {
             const predToken = this.expressionInfo(context.expression![0], quads, infoResults);
@@ -421,7 +421,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Process object list and return info with tokens.
      */
-    protected objectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): any[] {
+    protected objectListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): any[] {
         const context = this.getChildren(ctx);
         const results: any[] = [];
 
@@ -437,7 +437,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get object term and token.
      */
-    protected objectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
+    protected objectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         return this.expressionInfo(context.expression![0], quads, infoResults);
     }
@@ -514,7 +514,7 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get blank node property list info.
      */
-    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
+    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
         // Use pre-assigned ID from LBRACKET token
@@ -526,10 +526,10 @@ export class N3Reader extends BaseVisitor {
             for (const { predicate, object, inversePredicate } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
                 if (inversePredicate) {
                     quads.push(dataFactory.quad(object.term as NamedNode | BlankNode, predicate.term as NamedNode, subject));
-                    infoResults.push(toQuadTokens(object.term, object.token, predicate.term, predicate.token, subjectToken.term, subjectToken.token));
+                    infoResults.push(toQuadContext(object.term, object.token, predicate.term, predicate.token, subjectToken.term, subjectToken.token));
                 } else {
                     quads.push(dataFactory.quad(subject, predicate.term as NamedNode, object.term as NamedNode | BlankNode | Literal));
-                    infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
+                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         }
@@ -657,13 +657,13 @@ export class N3Reader extends BaseVisitor {
     /**
      * Get formula info.
      */
-    protected formulaInfo(ctx: CstContext, parentQuads: Quad[], infoResults: QuadTokens[]) {
+    protected formulaInfo(ctx: CstContext, parentQuads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         const token = context.LCURLY ? context.LCURLY[0] : this.findFirstToken(context)!;
         const formulaQuads: Quad[] = [];
 
         if (context.formulaContent) {
-            // Process formula content and collect QuadTokens
+            // Process formula content and collect QuadContext objects
             this.formulaContentInfo(context.formulaContent[0], formulaQuads, infoResults);
         }
 
@@ -679,9 +679,9 @@ export class N3Reader extends BaseVisitor {
     }
 
     /**
-     * Process formula content and collect QuadTokens.
+    * Process formula content and collect QuadContext objects.
      */
-    protected formulaContentInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]): void {
+    protected formulaContentInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]): void {
         const context = this.getChildren(ctx);
         
         // Process n3Statements within formula

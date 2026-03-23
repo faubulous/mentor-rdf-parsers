@@ -3,8 +3,8 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NQuadsParser } from './parser.js';
-import type { QuadTokens } from '../types.js';
-import { toQuadTokens } from '../types.js';
+import type { QuadContext } from '../types.js';
+import { toQuadContext } from '../types.js';
 
 interface CstContext {
     [key: string]: CstContext[] | IToken[] | undefined;
@@ -62,9 +62,9 @@ export class NQuadsReader extends BaseVisitor {
      * Parse the document and return quad information with source tokens.
      * This is useful for IDE features that need to associate positions with quads.
      */
-    readQuadTokens(ctx: CstNode): QuadTokens[] {
+    readQuadContexts(ctx: CstNode): QuadContext[] {
         const context = this.getChildren(ctx);
-        const result: QuadTokens[] = [];
+        const result: QuadContext[] = [];
 
         if (context.statement) {
             for (const statementCtx of context.statement) {
@@ -81,14 +81,14 @@ export class NQuadsReader extends BaseVisitor {
     /**
      * Get statement info with tokens.
      */
-    protected statementInfo(ctx: CstContext): QuadTokens | undefined {
+    protected statementInfo(ctx: CstContext): QuadContext | undefined {
         const context = this.getChildren(ctx);
         const subject = this.subjectInfo(context.subject![0]);
         const predicate = this.predicateInfo(context.predicate![0]);
         const object = this.objectInfo(context.object![0]);
         const graph = context.graphLabel ? this.graphLabelInfo(context.graphLabel[0]) : undefined;
 
-        return toQuadTokens(
+        return toQuadContext(
             subject.term, subject.token,
             predicate.term, predicate.token,
             object.term, object.token,

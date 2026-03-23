@@ -80,57 +80,51 @@ console.log(quads[0].graph.termType); // "BlankNode"
 console.log(quads[0].graph.value);    // "g1"
 ```
 
-## QuadTokens: Accessing Source Positions
+## QuadContext: Accessing Source Positions
 
-For IDE features that need to associate positions with quads, use `readQuadTokens()` to get `QuadTokens` objects. Each `QuadTokens` contains the subject, predicate, object, and graph with their source tokens:
+For IDE features that need to associate positions with quads, use `readQuadContexts()` to get `QuadContext` objects. Each `QuadContext` contains the subject, predicate, object, and graph with their source tokens:
 
 ```typescript
 import { NQuadsLexer, NQuadsParser, NQuadsReader } from '@faubulous/mentor-rdf-parsers';
-import type { QuadTokens } from '@faubulous/mentor-rdf-parsers';
+import type { QuadContext } from '@faubulous/mentor-rdf-parsers';
 
 const input = '<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> <http://example.org/graph1> .\n';
 
 const lexResult = new NQuadsLexer().tokenize(input);
 const cst = new NQuadsParser().parse(lexResult.tokens);
 const reader = new NQuadsReader();
-const quadTokens: QuadTokens[] = reader.readQuadTokens(cst);
+const quadContexts: QuadContext[] = reader.readQuadContexts(cst);
 
-for (const info of quadTokens) {
-    console.log(`Subject: ${info.subject.term.value}`);
-    console.log(`  Token position: line ${info.subject.token.startLine}, column ${info.subject.token.startColumn}`);
+for (const info of quadContexts) {
+    console.log(`Subject: ${info.subject.value}`);
+    console.log(`  Token position: line ${info.subjectToken.startLine}, column ${info.subjectToken.startColumn}`);
     
-    console.log(`Predicate: ${info.predicate.term.value}`);
-    console.log(`Object: ${info.object.term.value}`);
+    console.log(`Predicate: ${info.predicate.value}`);
+    console.log(`Object: ${info.object.value}`);
     
     // Graph info is available for N-Quads
-    if (info.graph) {
-        console.log(`Graph: ${info.graph.term.value}`);
-        console.log(`  Token position: line ${info.graph.token.startLine}, column ${info.graph.token.startColumn}`);
+    if (info.graphToken) {
+        console.log(`Graph: ${info.graph.value}`);
+        console.log(`  Token position: line ${info.graphToken.startLine}, column ${info.graphToken.startColumn}`);
     }
 }
 ```
 
 ### Token Information
 
-Each `TermToken` in a `QuadTokens` provides:
-- `term`: The RDF/JS term (NamedNode, BlankNode, Literal, DefaultGraph)
-- `token`: The Chevrotain token with position information:
-  - `startOffset`, `endOffset`: Character offsets in the input
-  - `startLine`, `endLine`: Line numbers (1-based)
-  - `startColumn`, `endColumn`: Column numbers (1-based)
-  - `image`: The original text of the token
+Each `QuadContext` provides RDF terms directly plus token metadata on `subjectToken`, `predicateToken`, `objectToken`, and optionally `graphToken`.
 
 ```typescript
-const info = quadTokens[0];
+const info = quadContexts[0];
 
 // Get the exact text span for highlighting
-if (info.graph) {
+if (info.graphToken) {
     const graphSpan = {
-        start: info.graph.token.startOffset,
-        end: info.graph.token.endOffset,
-        text: info.graph.token.image
+        start: info.graphToken.startOffset,
+        end: info.graphToken.endOffset,
+        text: info.graphToken.image
     };
     
-    console.log(`Graph "${info.graph.term.value}" spans characters ${graphSpan.start}-${graphSpan.end}`);
+    console.log(`Graph "${info.graph.value}" spans characters ${graphSpan.start}-${graphSpan.end}`);
 }
 ```

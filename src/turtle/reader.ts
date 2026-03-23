@@ -3,8 +3,8 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TurtleParser } from './parser.js';
-import type { QuadTokens, QuadContext } from '../types.js';
-import { toQuadTokens } from '../types.js';
+import type { QuadContext } from '../types.js';
+import { toQuadContext } from '../types.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
 
 const BaseVisitor = new TurtleParser().getBaseCstVisitorConstructor();
@@ -203,7 +203,7 @@ export class TurtleReader extends BaseVisitor {
             .sort((a, b) => a.startOffset - b.startOffset);
     }
 
-    protected getStatementSpan(triplesInfos: QuadTokens[]): { startOffset: number; endOffset: number; endLine: number } {
+    protected getStatementSpan(triplesInfos: QuadContext[]): { startOffset: number; endOffset: number; endLine: number } {
         const startOffset = triplesInfos[0].subjectToken.startOffset;
 
         let endOffset = 0;
@@ -227,102 +227,70 @@ export class TurtleReader extends BaseVisitor {
      * Parse the document and return quad information with source tokens.
      * This is useful for IDE features that need to associate positions with triples.
      */
-    readQuadTokens(ctx: CstNode): QuadTokens[] {
+    readQuadContexts(ctx: CstNode, tokens?: IToken[]): QuadContext[] {
         const context = this.getChildren(ctx);
 
         // First process directives to populate namespaces and base IRI
         this.processDirectives(context);
 
-        const result: QuadTokens[] = [];
-        const quads: Quad[] = []; // For internal quad generation (collections, etc.)
-
-        if (context.triples) {
-            for (const triple of context.triples) {
-                for (const info of this.triplesInfo(triple, quads)) {
-                    result.push(info);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * Parse the document and return statement information with associated comments.
-     * This is more efficient than calling readQuadTokens() and then grouping comments
-     * externally, as it performs comment association during a single CST traversal.
-     *
-     * @param ctx The CST root node.
-     * @param tokens The full token array from the lexer (must include COMMENT tokens).
-     * @returns An array of statements with leading/trailing comments attached.
-     */
-    readQuadContexts(ctx: CstNode, tokens: IToken[]): QuadContext[] {
-        const context = this.getChildren(ctx);
-
-        // First process directives to populate namespaces and base IRI
-        this.processDirectives(context);
-
-        const comments = this.getSortedCommentTokens(tokens);
+        const comments = tokens ? this.getSortedCommentTokens(tokens) : [];
 
         const result: QuadContext[] = [];
         const quads: Quad[] = []; // For internal quad generation (collections, etc.)
-
         let commentIdx = 0;
         let previousStatementEnd = -1;
+        let lastStatementEndLine = -1;
 
         if (context.triples) {
             for (const triple of context.triples) {
                 const triplesInfos = this.triplesInfo(triple, quads);
                 if (triplesInfos.length === 0) continue;
 
-                const { startOffset: firstSubjectOffset, endOffset: statementEndOffset, endLine: statementEndLine } =
-                    this.getStatementSpan(triplesInfos);
+                if (tokens) {
+                    const { startOffset: firstSubjectOffset, endOffset: statementEndOffset, endLine: statementEndLine } =
+                        this.getStatementSpan(triplesInfos);
 
-                // Collect leading comments: between previousStatementEnd and firstSubjectOffset
-                const leading: IToken[] = [];
-                while (commentIdx < comments.length) {
-                    const c = comments[commentIdx];
-                    if (c.startOffset < firstSubjectOffset && c.startOffset > previousStatementEnd) {
-                        leading.push(c);
-                        commentIdx++;
-                    } else {
-                        break;
+                    const leading: IToken[] = [];
+                    while (commentIdx < comments.length) {
+                        const c = comments[commentIdx];
+                        if (c.startOffset < firstSubjectOffset && c.startOffset > previousStatementEnd) {
+                            leading.push(c);
+                            commentIdx++;
+                        } else {
+                            break;
+                        }
                     }
-                }
 
-                // Collect trailing comment: on the same line as the statement end
-                let trailing: IToken | undefined;
-                if (
-                    commentIdx < comments.length &&
-                    comments[commentIdx].startOffset > statementEndOffset &&
-                    comments[commentIdx].startLine === statementEndLine
-                ) {
-                    trailing = comments[commentIdx];
-                    commentIdx++;
-                }
+                    let trailing: IToken | undefined;
+                    if (
+                        commentIdx < comments.length &&
+                        comments[commentIdx].startOffset > statementEndOffset &&
+                        comments[commentIdx].startLine === statementEndLine
+                    ) {
+                        trailing = comments[commentIdx];
+                        commentIdx++;
+                    }
 
-                // Create QuadContext for each quad
-                // Only first gets leading comments; only last gets trailing comment
-                for (let i = 0; i < triplesInfos.length; i++) {
-                    result.push({
-                        ...triplesInfos[i],
-                        leadingComments: i === 0 ? leading : [],
-                        trailingComment: i === triplesInfos.length - 1 ? trailing : undefined,
-                        endOffset: statementEndOffset,
-                        endLine: statementEndLine
-                    });
-                }
+                    for (let i = 0; i < triplesInfos.length; i++) {
+                        result.push({
+                            ...triplesInfos[i],
+                            leadingComments: i === 0 ? leading : [],
+                            trailingComment: i === triplesInfos.length - 1 ? trailing : undefined,
+                        });
+                    }
 
-                previousStatementEnd = statementEndOffset;
+                    previousStatementEnd = statementEndOffset;
+                    lastStatementEndLine = statementEndLine;
+                } else {
+                    result.push(...triplesInfos);
+                }
             }
         }
 
-        // Handle remaining trailing comments (document footer)
-        if (commentIdx < comments.length && result.length > 0) {
+        if (tokens && commentIdx < comments.length && result.length > 0) {
             const last = result[result.length - 1];
-            const lastEndLine = last.endLine;
             while (commentIdx < comments.length) {
-                if (!last.trailingComment && comments[commentIdx].startLine === lastEndLine) {
+                if (!last.trailingComment && comments[commentIdx].startLine === lastStatementEndLine) {
                     last.trailingComment = comments[commentIdx];
                 } else {
                     // Append as leading comments on last statement (document footer)
@@ -336,11 +304,11 @@ export class TurtleReader extends BaseVisitor {
     }
 
     /**
-     * Process triples and return QuadTokens with token information.
+     * Process triples and return QuadContext objects with token information.
      */
-    protected triplesInfo(ctx: CstContext, quads: Quad[]): QuadTokens[] {
+    protected triplesInfo(ctx: CstContext, quads: Quad[]): QuadContext[] {
         const context = this.getChildren(ctx);
-        const result: QuadTokens[] = [];
+        const result: QuadContext[] = [];
 
         if (context.subject) {
             const subjectToken = this.subjectInfo(context.subject[0], quads);
@@ -350,14 +318,14 @@ export class TurtleReader extends BaseVisitor {
             }
 
             for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                result.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
+                result.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
             }
         } else if (context.blankNodePropertyList) {
             const subjectToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, result);
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    result.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
+                    result.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         } else if (context.reifiedTriple) {
@@ -365,7 +333,7 @@ export class TurtleReader extends BaseVisitor {
 
             if (context.predicateObjectList) {
                 for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    result.push(toQuadTokens(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token));
+                    result.push(toQuadContext(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
         } else {
@@ -419,7 +387,7 @@ export class TurtleReader extends BaseVisitor {
         } else if (context.blankNode) {
             return this.blankNodeInfo(context.blankNode[0]);
         } else if (context.blankNodePropertyList) {
-            const infoResults: QuadTokens[] = [];
+            const infoResults: QuadContext[] = [];
             const termToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults);
             return termToken;
         } else if (context.collection) {
@@ -427,7 +395,7 @@ export class TurtleReader extends BaseVisitor {
         } else if (context.tripleTerm) {
             return this.tripleTermInfo(context.tripleTerm[0]);
         } else if (context.reifiedTriple) {
-            const infoResults: QuadTokens[] = [];
+            const infoResults: QuadContext[] = [];
             return this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
         }
         throw new Error('Invalid object: ' + JSON.stringify(context));
@@ -499,9 +467,9 @@ export class TurtleReader extends BaseVisitor {
 
     /**
      * Get blank node property list info. Returns the blank node subject and
-     * populates infoResults with QuadTokens for internal triples.
+    * populates infoResults with QuadContext objects for internal triples.
      */
-    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
+    protected blankNodePropertyListInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         // The LBRACKET token marks the start of this blank node
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
@@ -513,7 +481,7 @@ export class TurtleReader extends BaseVisitor {
         if (context.predicateObjectList) {
             for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
                 quads.push(dataFactory.quad(subject, predicate.term as NamedNode, object.term));
-                infoResults.push(toQuadTokens(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
+                infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
             }
         }
 
@@ -659,7 +627,7 @@ export class TurtleReader extends BaseVisitor {
     /**
      * Get reified triple info.
      */
-    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadTokens[]) {
+    protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         const token = this.findFirstToken(context)!;
         const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
