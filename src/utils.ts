@@ -150,6 +150,27 @@ export function getTokenAtOffset(tokens: IToken[], offset: number): IToken[] {
 }
 
 /**
+ * Gets the source position from a token.
+ */
+export function getTokenPosition(token: IToken): {
+    startOffset: number;
+    endOffset: number;
+    startLine?: number;
+    startColumn?: number;
+    endLine?: number;
+    endColumn?: number;
+} {
+    return {
+        startOffset: token.startOffset,
+        endOffset: token.endOffset ?? token.startOffset + token.image.length - 1,
+        startLine: token.startLine,
+        startColumn: token.startColumn,
+        endLine: token.endLine,
+        endColumn: token.endColumn
+    };
+}
+
+/**
  * Indicates whether the token is a variable.
  * @param token A token.
  * @returns `true` if the token is a variable, `false` otherwise.

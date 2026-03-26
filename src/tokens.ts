@@ -12,9 +12,11 @@ type PatternInput = RegExp | string;
  */
 function createTokenWithMetadata(config: ITokenConfig, metadata?: TokenMetadata): TokenType {
     const token = createToken(config);
+
     if (metadata) {
         Object.assign(token, metadata);
     }
+    
     return token;
 }
 
