@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     include: ['src/**/*.{test,spec}.ts'],
     environment: 'node',
-    globals: true
+    globals: true,
+    coverage: {
+      reporter: ['html', 'json-summary']
+    }
   }
 });
