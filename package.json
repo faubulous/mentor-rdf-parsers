@@ -60,6 +60,7 @@
     "command-line-args": "^6.0.2",
     "n3": "^2.0.3",
     "tsx": "^4.21.0",
+    "typedoc": "^0.28.18",
     "typescript": "^6.0.2",
     "vitest": "^4.1.3"
   }
