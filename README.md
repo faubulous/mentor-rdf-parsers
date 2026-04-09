@@ -72,8 +72,6 @@ flowchart LR
 
 ## Documentation
 
-📚 **[Full Documentation](docs/README.md)**
-
 ### Examples by Language
 
 | Language | Guide |
