@@ -194,6 +194,39 @@ export class TurtleReader extends BaseVisitor {
             }
         }
 
+        // Blank-node property lists and collections that appear in object position
+        // generate quads into the side-effect `quads` array but don't add them to
+        // `result`. The serializer needs all quads (including these inner ones) to
+        // correctly count blank-node references for inline-blank-node decisions.
+        // Append them now as synthetic QuadContexts (no real token positions), skipping
+        // any that are already present in `result` to avoid double-counting.
+        if (quads.length > 0) {
+            const syntheticToken: IToken = {
+                image: '',
+                startOffset: Infinity,
+                endOffset: Infinity,
+                startLine: Infinity,
+                endLine: Infinity,
+                startColumn: Infinity,
+                endColumn: Infinity,
+                tokenType: { name: 'SYNTHETIC' },
+                tokenTypeIdx: -1,
+            };
+
+            const resultKeys = new Set<string>();
+            for (const ctx of result) {
+                resultKeys.add(`${ctx.subject.termType}\0${ctx.subject.value}\0${ctx.predicate.value}\0${ctx.object.termType}\0${ctx.object.value}`);
+            }
+
+            for (const quad of quads) {
+                const key = `${quad.subject.termType}\0${quad.subject.value}\0${quad.predicate.value}\0${quad.object.termType}\0${quad.object.value}`;
+                if (!resultKeys.has(key)) {
+                    resultKeys.add(key);
+                    result.push(toQuadContext(quad.subject, syntheticToken, quad.predicate, syntheticToken, quad.object, syntheticToken));
+                }
+            }
+        }
+
         return result;
     }
 
@@ -488,7 +521,10 @@ export class TurtleReader extends BaseVisitor {
             quads.push(dataFactory.quad(current, first, element));
 
             if (i < objectNodes.length - 1) {
-                const next = dataFactory.blankNode();
+                // Derive rest-node IDs from the head ID so they never collide with
+                // pre-assigned token blank-node IDs or @rdfjs/data-model counters.
+                const restId = headBlankNodeId ? `${headBlankNodeId}-rest-${i + 1}` : undefined;
+                const next = dataFactory.blankNode(restId);
                 quads.push(dataFactory.quad(current, rest, next));
                 current = next;
             } else {
