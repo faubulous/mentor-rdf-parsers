@@ -10,6 +10,7 @@ export { NQuadsReader } from './nquads/reader.js';
 export { NTriplesLexer, NTriplesParser, NTriplesTokens } from './ntriples/parser.js';
 export { NTriplesReader } from './ntriples/reader.js';
 export { SparqlLexer, SparqlParser, SparqlVariableParser, SparqlTokens } from './sparql/parser.js';
+export { extractFromClauseGraphUris } from './sparql/sparql-query-utils.js';
 export { TrigLexer, TrigParser, TrigTokens } from './trig/parser.js';
 export { TrigReader } from './trig/reader.js';
 export { TurtleLexer, TurtleParser, TurtleTokens } from './turtle/parser.js';

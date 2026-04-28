@@ -1,0 +1,6 @@
+SELECT ?s ?p ?o
+FROM <http://example.org/graph>
+FROM <http://example.org/graph>
+WHERE {
+    ?s ?p ?o
+}

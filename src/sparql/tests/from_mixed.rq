@@ -1,0 +1,7 @@
+SELECT ?s ?p ?o
+FROM <http://example.org/default>
+FROM NAMED <http://example.org/named>
+WHERE {
+    OPTIONAL { GRAPH <http://example.org/named> { ?s ?p ?o } }
+    ?s ?p ?o
+}

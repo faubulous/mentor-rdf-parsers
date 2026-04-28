@@ -1,0 +1,5 @@
+CONSTRUCT { ?s ?p ?o }
+FROM <http://example.org/graph>
+WHERE {
+    ?s ?p ?o
+}
