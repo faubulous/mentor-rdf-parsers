@@ -12,7 +12,9 @@ import {
     isUpperCaseToken,
     getPrefixFromToken,
     getBlankNodeIdFromToken,
-    BLANK_NODE_TOKEN_NAMES
+    BLANK_NODE_TOKEN_NAMES,
+    createFileBlankNodeIdGenerator,
+    defaultBlankNodeIdGenerator,
 } from './utils.js';
 
 describe('Utils', () => {
@@ -438,5 +440,64 @@ describe('Utils', () => {
             expect(getBlankNodeIdFromToken(lcurlys[0])).toBe('b0');
             expect(getBlankNodeIdFromToken(lcurlys[1])).toBe('b1');
         });
+    });
+});
+
+describe('createFileBlankNodeIdGenerator', () => {
+    const uriA = 'file:///workspace/ontologies/person.ttl';
+    const uriB = 'file:///workspace/ontologies/organization.ttl';
+
+    it('produces the same IDs for the same URI', () => {
+        const genA1 = createFileBlankNodeIdGenerator(uriA);
+        const genA2 = createFileBlankNodeIdGenerator(uriA);
+        const lexer = new TurtleLexer(genA1);
+        const lexer2 = new TurtleLexer(genA2);
+        const r1 = lexer.tokenize('[ <http://example.org/p> "v" ] .');
+        const r2 = lexer2.tokenize('[ <http://example.org/p> "v" ] .');
+        const id1 = getBlankNodeIdFromToken(r1.tokens.find(t => t.tokenType.name === 'LBRACKET')!);
+        const id2 = getBlankNodeIdFromToken(r2.tokens.find(t => t.tokenType.name === 'LBRACKET')!);
+        expect(id1).toBe(id2);
+    });
+
+    it('produces disjoint IDs for different URIs', () => {
+        const genA = createFileBlankNodeIdGenerator(uriA);
+        const genB = createFileBlankNodeIdGenerator(uriB);
+        const input = '[ <http://example.org/p> "v" ] . _:foo <http://example.org/p> "v" .';
+        const r1 = new TurtleLexer(genA).tokenize(input);
+        const r2 = new TurtleLexer(genB).tokenize(input);
+        const idsA = new Set(r1.tokens.filter(t => BLANK_NODE_TOKEN_NAMES.has(t.tokenType.name)).map(t => getBlankNodeIdFromToken(t)));
+        const idsB = new Set(r2.tokens.filter(t => BLANK_NODE_TOKEN_NAMES.has(t.tokenType.name)).map(t => getBlankNodeIdFromToken(t)));
+        const intersection = [...idsA].filter(id => idsB.has(id));
+        expect(intersection).toHaveLength(0);
+    });
+
+    it('assigns the same scoped ID to repeated occurrences of the same named blank node', () => {
+        const gen = createFileBlankNodeIdGenerator(uriA);
+        const lexer = new TurtleLexer(gen);
+        const result = lexer.tokenize('_:foo <http://example.org/p> "v" . _:foo <http://example.org/p> "v2" .');
+        const labels = result.tokens.filter(t => t.tokenType.name === 'BLANK_NODE_LABEL');
+        expect(labels).toHaveLength(2);
+        const id0 = getBlankNodeIdFromToken(labels[0]);
+        const id1 = getBlankNodeIdFromToken(labels[1]);
+        expect(id0).toBe(id1);
+        expect(id0).toMatch(/^[0-9a-z]+_foo$/);
+    });
+
+    it('assigns different scoped IDs for the same named blank node label in different files', () => {
+        const genA = createFileBlankNodeIdGenerator(uriA);
+        const genB = createFileBlankNodeIdGenerator(uriB);
+        const input = '_:foo <http://example.org/p> "v" .';
+        const rA = new TurtleLexer(genA).tokenize(input);
+        const rB = new TurtleLexer(genB).tokenize(input);
+        const idA = getBlankNodeIdFromToken(rA.tokens.find(t => t.tokenType.name === 'BLANK_NODE_LABEL')!);
+        const idB = getBlankNodeIdFromToken(rB.tokens.find(t => t.tokenType.name === 'BLANK_NODE_LABEL')!);
+        expect(idA).not.toBe(idB);
+    });
+
+    it('defaultBlankNodeIdGenerator strips _: prefix for named blank nodes', () => {
+        const lexer = new TurtleLexer(defaultBlankNodeIdGenerator);
+        const result = lexer.tokenize('_:foo <http://example.org/p> "v" .');
+        const label = result.tokens.find(t => t.tokenType.name === 'BLANK_NODE_LABEL')!;
+        expect(getBlankNodeIdFromToken(label)).toBe('foo');
     });
 });

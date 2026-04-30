@@ -12,6 +12,7 @@ export const BLANK_NODE_TOKEN_NAMES = new Set([
     'TILDE',         // Anonymous reifier marker ~
     'OPEN_REIFIED_TRIPLE', // Anonymous reified triples <<
     'LCURLY',        // Formulas in N3 syntax { ... }
+    'BLANK_NODE_LABEL', // Explicitly named blank nodes _:foo
 ]);
 
 /**
@@ -24,9 +25,15 @@ export type BlankNodeIdGenerator = (counter: number, token: IToken) => string;
 
 /**
  * The default blank node ID generator.
- * Generates IDs in the format 'b0', 'b1', 'b2', etc.
+ * Generates IDs in the format 'b0', 'b1', 'b2', etc. for anonymous blank nodes.
+ * For named blank nodes (_:foo), strips the '_:' prefix and returns the label as-is.
  */
-export const defaultBlankNodeIdGenerator: BlankNodeIdGenerator = (counter: number) => `b${counter}`;
+export const defaultBlankNodeIdGenerator: BlankNodeIdGenerator = (counter: number, token: IToken) => {
+    if (token.tokenType.name === 'BLANK_NODE_LABEL') {
+        return token.image.substring(2);
+    }
+    return `b${counter}`;
+};
 
 /**
  * Assigns pre-generated blank node IDs to tokens that can generate blank nodes.
@@ -38,15 +45,50 @@ export const defaultBlankNodeIdGenerator: BlankNodeIdGenerator = (counter: numbe
  */
 export function assignBlankNodeIds(tokens: IToken[], generator: BlankNodeIdGenerator = defaultBlankNodeIdGenerator): IToken[] {
     let counter = 0;
+    const labelMap = new Map<string, string>();
 
     for (const token of tokens) {
         if (BLANK_NODE_TOKEN_NAMES.has(token.tokenType.name)) {
-            const id = generator(counter++, token);
+            let id: string;
+            if (token.tokenType.name === 'BLANK_NODE_LABEL') {
+                // Reuse the same ID for repeated occurrences of the same label within one file.
+                const label = token.image;
+                if (labelMap.has(label)) {
+                    id = labelMap.get(label)!;
+                } else {
+                    id = generator(counter++, token);
+                    labelMap.set(label, id);
+                }
+            } else {
+                id = generator(counter++, token);
+            }
             token.payload = { ...token.payload, blankNodeId: id };
         }
     }
 
     return tokens;
+}
+
+/**
+ * Creates a blank node ID generator scoped to a specific file URI.
+ * All blank node IDs produced by this generator are prefixed with a short
+ * deterministic hash of the URI, preventing collisions across files.
+ *
+ * @param fileUri The URI of the file (used to derive the prefix).
+ * @returns A BlankNodeIdGenerator that produces file-scoped blank node IDs.
+ */
+export function createFileBlankNodeIdGenerator(fileUri: string): BlankNodeIdGenerator {
+    let h = 5381;
+    for (let i = 0; i < fileUri.length; i++) {
+        h = (h * 33 ^ fileUri.charCodeAt(i)) | 0;
+    }
+    const prefix = (h >>> 0).toString(36);
+    return (counter: number, token: IToken) => {
+        if (token.tokenType.name === 'BLANK_NODE_LABEL') {
+            return `${prefix}_${token.image.substring(2)}`;
+        }
+        return `${prefix}_b${counter}`;
+    };
 }
 
 /**

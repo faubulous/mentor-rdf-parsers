@@ -382,9 +382,11 @@ export class N3Reader extends BaseVisitor {
         const context = this.getChildren(ctx);
 
         if (context.BLANK_NODE_LABEL) {
+            const token = context.BLANK_NODE_LABEL[0];
+            
             return {
-                term: dataFactory.blankNode(context.BLANK_NODE_LABEL[0].image),
-                token: context.BLANK_NODE_LABEL[0]
+                term: dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2)),
+                token
             };
         } else if (context.anon) {
             const anonCtx = context.anon[0];
@@ -1122,9 +1124,8 @@ export class N3Reader extends BaseVisitor {
 
     getBlankNode(ctx: CstContext): BlankNode {
         if (ctx.BLANK_NODE_LABEL !== undefined) {
-            const value = ctx.BLANK_NODE_LABEL[0].image;
-
-            return dataFactory.blankNode(value);
+            const token = ctx.BLANK_NODE_LABEL[0];
+            return dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
         } else {
             // Use pre-assigned ID from LBRACKET token
             const lbracketToken = ctx.LBRACKET?.[0];

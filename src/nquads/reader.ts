@@ -5,6 +5,7 @@ import type { CstNode, IToken } from 'chevrotain';
 import { NQuadsParser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
+import { getBlankNodeIdFromToken } from '../utils.js';
 import { getCstChildren, findFirstTokenInCst, unescapeRdfString } from '../reader-helpers.js';
 import type { NQuadsReaderCstContext as CstContext } from '../reader-cst-types.js';
 
@@ -312,7 +313,9 @@ export class NQuadsReader extends BaseVisitor {
     }
 
     getBlankNode(ctx: CstContext): BlankNode {
-        return dataFactory.blankNode(ctx.BLANK_NODE_LABEL![0].image);
+        const token = ctx.BLANK_NODE_LABEL![0];
+        
+        return dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
     }
 
     getLiteralValue(ctx: CstContext): string {

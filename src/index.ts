@@ -26,6 +26,7 @@ export {
     assignBlankNodeIds,
     getBlankNodeIdFromToken,
     defaultBlankNodeIdGenerator,
+    createFileBlankNodeIdGenerator,
     BLANK_NODE_TOKEN_NAMES,
     type BlankNodeIdGenerator,
 } from './utils.js';

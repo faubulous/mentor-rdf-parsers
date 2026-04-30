@@ -371,21 +371,26 @@ export class TurtleReader extends BaseVisitor {
      */
     protected blankNodeInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.BLANK_NODE_LABEL) {
+            const token = context.BLANK_NODE_LABEL[0];
+
             return {
-                term: dataFactory.blankNode(context.BLANK_NODE_LABEL[0].image),
-                token: context.BLANK_NODE_LABEL[0]
+                term: dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2)),
+                token
             };
         } else if (context.anon) {
             // Anonymous blank node - return the LBRACKET token from the anon rule
             // The anon rule parses [ ] so we need to find the bracket token
             const anonCtx = context.anon[0];
             const token = this.findFirstToken(anonCtx);
+
             return {
                 term: dataFactory.blankNode(),
                 token: token!
             };
         }
+
         throw new Error('Invalid blank node: ' + JSON.stringify(context));
     }
 
@@ -417,6 +422,7 @@ export class TurtleReader extends BaseVisitor {
      */
     protected literalInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.stringLiteral) {
             return this.stringLiteralInfo(context.stringLiteral[0]);
         } else if (context.numericLiteral) {
@@ -424,6 +430,7 @@ export class TurtleReader extends BaseVisitor {
         } else if (context.booleanLiteral) {
             return this.booleanLiteralInfo(context.booleanLiteral[0]);
         }
+
         throw new Error('Invalid literal: ' + JSON.stringify(context));
     }
 
@@ -437,8 +444,10 @@ export class TurtleReader extends BaseVisitor {
         const value = this.visit(stringCtx as any) as string;
 
         let literal: Literal;
+
         if (context.datatype) {
             const datatype = this.visit(context.datatype[0] as any) as NamedNode;
+
             literal = dataFactory.literal(value, datatype);
         } else if (context.LANGTAG) {
             const langtag = context.LANGTAG[0].image.slice(1);
@@ -455,6 +464,7 @@ export class TurtleReader extends BaseVisitor {
      */
     protected numericLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.INTEGER) {
             return {
                 term: dataFactory.literal(context.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
@@ -471,6 +481,7 @@ export class TurtleReader extends BaseVisitor {
                 token: context.DOUBLE[0]
             };
         }
+
         throw new Error('Invalid numeric literal: ' + JSON.stringify(context));
     }
 
@@ -479,6 +490,7 @@ export class TurtleReader extends BaseVisitor {
      */
     protected booleanLiteralInfo(ctx: CstContext) {
         const context = this.getChildren(ctx);
+
         if (context.true) {
             return {
                 term: dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
@@ -490,6 +502,7 @@ export class TurtleReader extends BaseVisitor {
                 token: context.false[0]
             };
         }
+
         throw new Error('Invalid boolean literal: ' + JSON.stringify(context));
     }
 
@@ -502,7 +515,6 @@ export class TurtleReader extends BaseVisitor {
         const nil = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
         const rest = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
         const first = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
-
         const objectNodes = context.object ?? [];
 
         if (objectNodes.length === 0) {
@@ -564,6 +576,7 @@ export class TurtleReader extends BaseVisitor {
         const object = this.visit(context.rtObject![0], quads as any) as Term;
 
         let reifierNode: NamedNode | BlankNode;
+
         if (context.reifier) {
             reifierNode = this.visit(context.reifier[0] as any) as NamedNode | BlankNode;
         } else {
@@ -1238,9 +1251,9 @@ export class TurtleReader extends BaseVisitor {
 
     getBlankNode(ctx: CstContext): BlankNode {
         if (ctx.BLANK_NODE_LABEL !== undefined) {
-            const value = ctx.BLANK_NODE_LABEL[0].image;
+            const token = ctx.BLANK_NODE_LABEL[0];
 
-            return dataFactory.blankNode(value);
+            return dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
         } else {
             // Use pre-assigned ID from LBRACKET token
             const lbracketToken = ctx.LBRACKET?.[0];
