@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import { IToken } from 'chevrotain';
 import { TurtleLexer } from './turtle/parser.js';
 import { SparqlLexer } from './sparql/parser.js';
@@ -15,9 +16,10 @@ import {
     BLANK_NODE_TOKEN_NAMES,
     createFileBlankNodeIdGenerator,
     defaultBlankNodeIdGenerator,
+    extractFromClauseGraphUris
 } from './utils.js';
 
-describe('Utils', () => {
+describe('utils', () => {
     const tokenize = (input: string): IToken[] => {
         const lexer = new TurtleLexer();
         const result = lexer.tokenize(input);
@@ -441,63 +443,184 @@ describe('Utils', () => {
             expect(getBlankNodeIdFromToken(lcurlys[1])).toBe('b1');
         });
     });
-});
 
-describe('createFileBlankNodeIdGenerator', () => {
-    const uriA = 'file:///workspace/ontologies/person.ttl';
-    const uriB = 'file:///workspace/ontologies/organization.ttl';
+    describe('createFileBlankNodeIdGenerator', () => {
+        const uriA = 'file:///workspace/ontologies/person.ttl';
+        const uriB = 'file:///workspace/ontologies/organization.ttl';
 
-    it('produces the same IDs for the same URI', () => {
-        const genA1 = createFileBlankNodeIdGenerator(uriA);
-        const genA2 = createFileBlankNodeIdGenerator(uriA);
-        const lexer = new TurtleLexer(genA1);
-        const lexer2 = new TurtleLexer(genA2);
-        const r1 = lexer.tokenize('[ <http://example.org/p> "v" ] .');
-        const r2 = lexer2.tokenize('[ <http://example.org/p> "v" ] .');
-        const id1 = getBlankNodeIdFromToken(r1.tokens.find(t => t.tokenType.name === 'LBRACKET')!);
-        const id2 = getBlankNodeIdFromToken(r2.tokens.find(t => t.tokenType.name === 'LBRACKET')!);
-        expect(id1).toBe(id2);
+        it('produces the same IDs for the same URI', () => {
+            const genA1 = createFileBlankNodeIdGenerator(uriA);
+            const genA2 = createFileBlankNodeIdGenerator(uriA);
+            const lexer = new TurtleLexer(genA1);
+            const lexer2 = new TurtleLexer(genA2);
+            const r1 = lexer.tokenize('[ <http://example.org/p> "v" ] .');
+            const r2 = lexer2.tokenize('[ <http://example.org/p> "v" ] .');
+            const id1 = getBlankNodeIdFromToken(r1.tokens.find(t => t.tokenType.name === 'LBRACKET')!);
+            const id2 = getBlankNodeIdFromToken(r2.tokens.find(t => t.tokenType.name === 'LBRACKET')!);
+            expect(id1).toBe(id2);
+        });
+
+        it('produces disjoint IDs for different URIs', () => {
+            const genA = createFileBlankNodeIdGenerator(uriA);
+            const genB = createFileBlankNodeIdGenerator(uriB);
+            const input = '[ <http://example.org/p> "v" ] . _:foo <http://example.org/p> "v" .';
+            const r1 = new TurtleLexer(genA).tokenize(input);
+            const r2 = new TurtleLexer(genB).tokenize(input);
+            const idsA = new Set(r1.tokens.filter(t => BLANK_NODE_TOKEN_NAMES.has(t.tokenType.name)).map(t => getBlankNodeIdFromToken(t)));
+            const idsB = new Set(r2.tokens.filter(t => BLANK_NODE_TOKEN_NAMES.has(t.tokenType.name)).map(t => getBlankNodeIdFromToken(t)));
+            const intersection = [...idsA].filter(id => idsB.has(id));
+            expect(intersection).toHaveLength(0);
+        });
+
+        it('assigns the same scoped ID to repeated occurrences of the same named blank node', () => {
+            const gen = createFileBlankNodeIdGenerator(uriA);
+            const lexer = new TurtleLexer(gen);
+            const result = lexer.tokenize('_:foo <http://example.org/p> "v" . _:foo <http://example.org/p> "v2" .');
+            const labels = result.tokens.filter(t => t.tokenType.name === 'BLANK_NODE_LABEL');
+            expect(labels).toHaveLength(2);
+            const id0 = getBlankNodeIdFromToken(labels[0]);
+            const id1 = getBlankNodeIdFromToken(labels[1]);
+            expect(id0).toBe(id1);
+            expect(id0).toMatch(/^[0-9a-z]+_foo$/);
+        });
+
+        it('assigns different scoped IDs for the same named blank node label in different files', () => {
+            const genA = createFileBlankNodeIdGenerator(uriA);
+            const genB = createFileBlankNodeIdGenerator(uriB);
+            const input = '_:foo <http://example.org/p> "v" .';
+            const rA = new TurtleLexer(genA).tokenize(input);
+            const rB = new TurtleLexer(genB).tokenize(input);
+            const idA = getBlankNodeIdFromToken(rA.tokens.find(t => t.tokenType.name === 'BLANK_NODE_LABEL')!);
+            const idB = getBlankNodeIdFromToken(rB.tokens.find(t => t.tokenType.name === 'BLANK_NODE_LABEL')!);
+            expect(idA).not.toBe(idB);
+        });
+
+        it('defaultBlankNodeIdGenerator strips _: prefix for named blank nodes', () => {
+            const lexer = new TurtleLexer(defaultBlankNodeIdGenerator);
+            const result = lexer.tokenize('_:foo <http://example.org/p> "v" .');
+            const label = result.tokens.find(t => t.tokenType.name === 'BLANK_NODE_LABEL')!;
+            expect(getBlankNodeIdFromToken(label)).toBe('foo');
+        });
+
+        it('should return empty array for undefined input', () => {
+            expect(extractFromClauseGraphUris(undefined)).toEqual([]);
+        });
+
+        it('should return empty array for empty string', () => {
+            expect(extractFromClauseGraphUris('')).toEqual([]);
+        });
+
+        it('should return empty array for whitespace-only string', () => {
+            expect(extractFromClauseGraphUris('   \n\t  ')).toEqual([]);
+        });
     });
 
-    it('produces disjoint IDs for different URIs', () => {
-        const genA = createFileBlankNodeIdGenerator(uriA);
-        const genB = createFileBlankNodeIdGenerator(uriB);
-        const input = '[ <http://example.org/p> "v" ] . _:foo <http://example.org/p> "v" .';
-        const r1 = new TurtleLexer(genA).tokenize(input);
-        const r2 = new TurtleLexer(genB).tokenize(input);
-        const idsA = new Set(r1.tokens.filter(t => BLANK_NODE_TOKEN_NAMES.has(t.tokenType.name)).map(t => getBlankNodeIdFromToken(t)));
-        const idsB = new Set(r2.tokens.filter(t => BLANK_NODE_TOKEN_NAMES.has(t.tokenType.name)).map(t => getBlankNodeIdFromToken(t)));
-        const intersection = [...idsA].filter(id => idsB.has(id));
-        expect(intersection).toHaveLength(0);
-    });
+    describe('extractFromClauseGraphUris', () => {
+        const load = (file: string): string => {
+            const resolved = new URL(`./sparql/tests/${file}`, import.meta.url).pathname;
+            return fs.readFileSync(resolved, 'utf-8');
+        };
 
-    it('assigns the same scoped ID to repeated occurrences of the same named blank node', () => {
-        const gen = createFileBlankNodeIdGenerator(uriA);
-        const lexer = new TurtleLexer(gen);
-        const result = lexer.tokenize('_:foo <http://example.org/p> "v" . _:foo <http://example.org/p> "v2" .');
-        const labels = result.tokens.filter(t => t.tokenType.name === 'BLANK_NODE_LABEL');
-        expect(labels).toHaveLength(2);
-        const id0 = getBlankNodeIdFromToken(labels[0]);
-        const id1 = getBlankNodeIdFromToken(labels[1]);
-        expect(id0).toBe(id1);
-        expect(id0).toMatch(/^[0-9a-z]+_foo$/);
-    });
+        // No FROM clauses
 
-    it('assigns different scoped IDs for the same named blank node label in different files', () => {
-        const genA = createFileBlankNodeIdGenerator(uriA);
-        const genB = createFileBlankNodeIdGenerator(uriB);
-        const input = '_:foo <http://example.org/p> "v" .';
-        const rA = new TurtleLexer(genA).tokenize(input);
-        const rB = new TurtleLexer(genB).tokenize(input);
-        const idA = getBlankNodeIdFromToken(rA.tokens.find(t => t.tokenType.name === 'BLANK_NODE_LABEL')!);
-        const idB = getBlankNodeIdFromToken(rB.tokens.find(t => t.tokenType.name === 'BLANK_NODE_LABEL')!);
-        expect(idA).not.toBe(idB);
-    });
+        it('should return empty array when query has no FROM clause', () => {
+            expect(extractFromClauseGraphUris(load('select_star.rq'))).toEqual([]);
+        });
 
-    it('defaultBlankNodeIdGenerator strips _: prefix for named blank nodes', () => {
-        const lexer = new TurtleLexer(defaultBlankNodeIdGenerator);
-        const result = lexer.tokenize('_:foo <http://example.org/p> "v" .');
-        const label = result.tokens.find(t => t.tokenType.name === 'BLANK_NODE_LABEL')!;
-        expect(getBlankNodeIdFromToken(label)).toBe('foo');
+        it('should return empty array for a CONSTRUCT query without FROM', () => {
+            expect(extractFromClauseGraphUris(load('construct_basic.rq'))).toEqual([]);
+        });
+
+        it('should return empty array for an ASK query without FROM', () => {
+            expect(extractFromClauseGraphUris(load('ask_basic.rq'))).toEqual([]);
+        });
+
+        // Single FROM clause
+
+        it('should extract graph IRI from a single FROM clause', () => {
+            expect(extractFromClauseGraphUris(load('from_clause.rq'))).toEqual([
+                'http://example.org/graph1',
+            ]);
+        });
+
+        it('should extract graph IRI from a CONSTRUCT query with a single FROM clause', () => {
+            expect(extractFromClauseGraphUris(load('construct_from.rq'))).toEqual([
+                'http://example.org/graph',
+            ]);
+        });
+
+        // FROM NAMED clause
+
+        it('should extract graph IRI from a FROM NAMED clause', () => {
+            expect(extractFromClauseGraphUris(load('from_named.rq'))).toEqual([
+                'http://example.org/graph1',
+            ]);
+        });
+
+        // Multiple FROM / FROM NAMED clauses
+
+        it('should extract all graph IRIs from multiple FROM clauses', () => {
+            expect(extractFromClauseGraphUris(load('from_multiple.rq'))).toEqual([
+                'http://example.org/graph-a',
+                'http://example.org/graph-b',
+            ]);
+        });
+
+        it('should extract graph IRIs from mixed FROM and FROM NAMED clauses', () => {
+            expect(extractFromClauseGraphUris(load('from_mixed.rq'))).toEqual([
+                'http://example.org/default',
+                'http://example.org/named',
+            ]);
+        });
+
+        // Deduplication
+
+        it('should deduplicate repeated graph IRIs', () => {
+            expect(extractFromClauseGraphUris(load('from_duplicate.rq'))).toEqual([
+                'http://example.org/graph',
+            ]);
+        });
+
+        it('should deduplicate identical IRIs across FROM and FROM NAMED', () => {
+            const query = `
+            SELECT ?s ?p ?o
+            FROM <http://example.org/g>
+            FROM NAMED <http://example.org/g>
+            WHERE { ?s ?p ?o }
+        `;
+            expect(extractFromClauseGraphUris(query)).toEqual([
+                'http://example.org/g',
+            ]);
+        });
+
+        // Inline query variations
+
+        it('should be case-insensitive for FROM keyword', () => {
+            const query = `SELECT ?s FROM <http://example.org/g> WHERE { ?s ?p ?o }`;
+            expect(extractFromClauseGraphUris(query)).toEqual(['http://example.org/g']);
+        });
+
+        it('should be case-insensitive for FROM NAMED keyword', () => {
+            const query = `SELECT ?s from named <http://example.org/g> WHERE { GRAPH <http://example.org/g> { ?s ?p ?o } }`;
+            expect(extractFromClauseGraphUris(query)).toEqual(['http://example.org/g']);
+        });
+
+        it('should preserve insertion order for multiple distinct FROM clauses', () => {
+            const query = `
+            SELECT *
+            FROM <http://example.org/z>
+            FROM <http://example.org/a>
+            WHERE { ?s ?p ?o }
+        `;
+            expect(extractFromClauseGraphUris(query)).toEqual([
+                'http://example.org/z',
+                'http://example.org/a',
+            ]);
+        });
+
+        it('should ignore FROM inside string literals', () => {
+            const query = `SELECT ("FROM <http://not-a-clause>" AS ?x) WHERE { ?s ?p ?o }`;
+            expect(extractFromClauseGraphUris(query)).toEqual([]);
+        });
     });
 });
