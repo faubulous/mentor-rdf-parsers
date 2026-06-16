@@ -1,0 +1,20 @@
+# Expected RDF representation of select_with_prefix.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b29 a sps:SelectQuery .
+_:b30 a sps:Variable ;
+      sps:varName "name" .
+_:b31 rdf:first _:b30 ;
+      rdf:rest rdf:nil .
+_:b29 sps:projection _:b31 .
+_:b32 a sps:Variable ;
+      sps:varName "s" .
+_:b33 a sps:TriplePattern ;
+      sps:subject _:b32 ;
+      sps:predicate <http://xmlns.com/foaf/0.1/name> ;
+      sps:object _:b30 .
+_:b34 rdf:first _:b33 ;
+      rdf:rest rdf:nil .
+_:b29 sps:where _:b34 .

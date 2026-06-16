@@ -1,0 +1,24 @@
+# Expected RDF representation of property_path_sequence.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b548 a sps:SelectQuery .
+_:b549 a sps:Variable ;
+       sps:varName "person" .
+_:b550 rdf:first _:b549 ;
+       rdf:rest rdf:nil .
+_:b548 sps:projection _:b550 .
+_:b551 a sps:SeqPath .
+_:b552 rdf:first <http://xmlns.com/foaf/0.1/knows> ;
+       rdf:rest _:b553 .
+_:b553 rdf:first <http://xmlns.com/foaf/0.1/name> ;
+       rdf:rest rdf:nil .
+_:b551 sps:pathElements _:b552 .
+_:b554 a sps:TriplePattern ;
+       sps:subject _:b549 ;
+       sps:predicate _:b551 ;
+       sps:object "Alice" .
+_:b555 rdf:first _:b554 ;
+       rdf:rest rdf:nil .
+_:b548 sps:where _:b555 .

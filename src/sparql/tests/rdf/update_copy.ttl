@@ -1,0 +1,12 @@
+# Expected RDF representation of update_copy.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b690 a sps:Update .
+_:b691 a sps:Copy ;
+       sps:fromGraph sps:DefaultGraph ;
+       sps:toGraph <http://example.org/backup> .
+_:b692 rdf:first _:b691 ;
+       rdf:rest rdf:nil .
+_:b690 sps:operations _:b692 .

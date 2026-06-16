@@ -1,0 +1,26 @@
+# Expected RDF representation of construct_basic.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b44 a sps:ConstructQuery .
+_:b45 a sps:Variable ;
+      sps:varName "s" .
+_:b46 a sps:Variable ;
+      sps:varName "p" .
+_:b47 a sps:Variable ;
+      sps:varName "o" .
+_:b48 a sps:TriplePattern ;
+      sps:subject _:b45 ;
+      sps:predicate _:b46 ;
+      sps:object _:b47 .
+_:b49 rdf:first _:b48 ;
+      rdf:rest rdf:nil .
+_:b44 sps:template _:b49 .
+_:b50 a sps:TriplePattern ;
+      sps:subject _:b45 ;
+      sps:predicate _:b46 ;
+      sps:object _:b47 .
+_:b51 rdf:first _:b50 ;
+      rdf:rest rdf:nil .
+_:b44 sps:where _:b51 .

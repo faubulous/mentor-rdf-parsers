@@ -1,0 +1,22 @@
+# Expected RDF representation of construct_where.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b52 a sps:ConstructQuery .
+_:b53 a sps:Variable ;
+      sps:varName "s" .
+_:b54 a sps:Variable ;
+      sps:varName "p" .
+_:b55 a sps:Variable ;
+      sps:varName "o" .
+_:b56 a sps:TriplePattern ;
+      sps:subject _:b53 ;
+      sps:predicate _:b54 ;
+      sps:object _:b55 .
+_:b57 rdf:first _:b56 ;
+      rdf:rest rdf:nil .
+_:b52 sps:template _:b57 .
+_:b58 rdf:first _:b56 ;
+      rdf:rest rdf:nil .
+_:b52 sps:where _:b58 .

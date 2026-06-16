@@ -25,7 +25,13 @@ Standards-compliant, fault-tolerant parsers for RDF languages, built with [Chevr
 | Turtle | ✓ | ✓ | [RDF 1.2 Turtle](https://www.w3.org/TR/rdf12-turtle/) |
 | TriG | ✓ | ✓ | [RDF 1.2 TriG](https://www.w3.org/TR/rdf12-trig/) |
 | N3 | ✓ | ✓ | [W3C N3](https://w3c.github.io/N3/spec/) |
-| SPARQL 1.2 | ✓ | — | [SPARQL 1.2 Query](https://www.w3.org/TR/sparql12-query/) |
+| SPARQL 1.2 | ✓ | ✓ | [SPARQL 1.2 Query](https://www.w3.org/TR/sparql12-query/) |
+
+The SPARQL reader is special: SPARQL is a query language, not a data language,
+so `SparqlReader` produces an RDF *representation of the query itself* using the
+[SPARQL Syntax Vocabulary](vocab/sparql-syntax.ttl) (`https://w3id.org/sparql-syntax#`,
+prefix `sps:`) — queries become introspectable RDF in the spirit of SPIN, covering
+all SPARQL 1.2 query forms, updates and RDF 1.2 features.
 
 ## Installation
 

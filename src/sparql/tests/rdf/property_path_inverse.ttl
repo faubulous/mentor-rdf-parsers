@@ -1,0 +1,22 @@
+# Expected RDF representation of property_path_inverse.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b565 a sps:SelectQuery .
+_:b566 a sps:Variable ;
+       sps:varName "person" .
+_:b567 rdf:first _:b566 ;
+       rdf:rest rdf:nil .
+_:b565 sps:projection _:b567 .
+_:b568 a sps:Variable ;
+       sps:varName "friend" .
+_:b569 a sps:InversePath ;
+       sps:path <http://xmlns.com/foaf/0.1/knows> .
+_:b570 a sps:TriplePattern ;
+       sps:subject _:b568 ;
+       sps:predicate _:b569 ;
+       sps:object _:b566 .
+_:b571 rdf:first _:b570 ;
+       rdf:rest rdf:nil .
+_:b565 sps:where _:b571 .

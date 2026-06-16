@@ -1,0 +1,22 @@
+# Expected RDF representation of property_path_star.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b572 a sps:SelectQuery .
+_:b573 a sps:Variable ;
+       sps:varName "person" .
+_:b574 rdf:first _:b573 ;
+       rdf:rest rdf:nil .
+_:b572 sps:projection _:b574 .
+_:b575 a sps:ZeroOrMorePath ;
+       sps:path <http://xmlns.com/foaf/0.1/knows> .
+_:b576 a sps:Variable ;
+       sps:varName "friend" .
+_:b577 a sps:TriplePattern ;
+       sps:subject _:b573 ;
+       sps:predicate _:b575 ;
+       sps:object _:b576 .
+_:b578 rdf:first _:b577 ;
+       rdf:rest rdf:nil .
+_:b572 sps:where _:b578 .

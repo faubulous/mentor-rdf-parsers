@@ -1,0 +1,22 @@
+# Expected RDF representation of rdf12_triple_term.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b615 a sps:SelectQuery .
+_:b616 a sps:Variable ;
+       sps:varName "s" .
+_:b617 rdf:first _:b616 ;
+       rdf:rest rdf:nil .
+_:b615 sps:projection _:b617 .
+_:b618 a sps:TripleTerm ;
+       sps:subject <http://example.org/a> ;
+       sps:predicate <http://example.org/b> ;
+       sps:object <http://example.org/c> .
+_:b619 a sps:TriplePattern ;
+       sps:subject _:b616 ;
+       sps:predicate <http://example.org/p> ;
+       sps:object _:b618 .
+_:b620 rdf:first _:b619 ;
+       rdf:rest rdf:nil .
+_:b615 sps:where _:b620 .

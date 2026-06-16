@@ -1,0 +1,21 @@
+# Expected RDF representation of select_distinct.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b17 a sps:SelectQuery ;
+      sps:distinct "true"^^xsd:boolean .
+_:b18 a sps:Variable ;
+      sps:varName "name" .
+_:b19 rdf:first _:b18 ;
+      rdf:rest rdf:nil .
+_:b17 sps:projection _:b19 .
+_:b20 a sps:Variable ;
+      sps:varName "s" .
+_:b21 a sps:TriplePattern ;
+      sps:subject _:b20 ;
+      sps:predicate <http://example.org/name> ;
+      sps:object _:b18 .
+_:b22 rdf:first _:b21 ;
+      rdf:rest rdf:nil .
+_:b17 sps:where _:b22 .

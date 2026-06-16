@@ -33,6 +33,10 @@ export interface TokenMetadata {
     isWhitespace?: boolean;
     /** Token is a comment */
     isComment?: boolean;
+    /** Token is a Triplate template construct (frontmatter, interpolation, directive) */
+    isTemplate?: boolean;
+    /** Token is a Triplate value interpolation (`${…}` / `$<…>` / `$"…"`) standing in for a term */
+    isInterpolation?: boolean;
 }
 
 /**

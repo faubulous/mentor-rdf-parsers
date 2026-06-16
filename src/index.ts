@@ -10,10 +10,15 @@ export { NQuadsReader } from './nquads/reader.js';
 export { NTriplesLexer, NTriplesParser, NTriplesTokens } from './ntriples/parser.js';
 export { NTriplesReader } from './ntriples/reader.js';
 export { SparqlLexer, SparqlParser, SparqlVariableParser, SparqlTokens } from './sparql/parser.js';
+export { SparqlReader } from './sparql/reader.js';
+export { SPARQL_SYNTAX_NS, sps, BUILT_IN_FUNCTIONS } from './sparql/vocabulary.js';
 export { TrigLexer, TrigParser, TrigTokens } from './trig/parser.js';
 export { TrigReader } from './trig/reader.js';
 export { TurtleLexer, TurtleParser, TurtleTokens } from './turtle/parser.js';
 export { TurtleReader } from './turtle/reader.js';
+export { TriplateToken } from './triplate/tokens.js';
+export { tokenizeWithTriplate, type TriplateLexingResult } from './triplate/overlay.js';
+export { tokenizeTemplateForFormatting, type TemplateFormatTokens } from './triplate/formatting.js';
 export {
     getNextToken,
     getPreviousToken,

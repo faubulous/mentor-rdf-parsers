@@ -1,0 +1,12 @@
+# Expected RDF representation of update_move.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b751 a sps:Update .
+_:b752 a sps:Move ;
+       sps:fromGraph <http://example.org/source> ;
+       sps:toGraph <http://example.org/target> .
+_:b753 rdf:first _:b752 ;
+       rdf:rest rdf:nil .
+_:b751 sps:operations _:b753 .

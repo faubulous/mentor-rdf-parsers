@@ -1,0 +1,27 @@
+# Expected RDF representation of update_sequence.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b754 a sps:Update .
+_:b755 a sps:InsertData .
+_:b756 a sps:TriplePattern ;
+       sps:subject <http://example.org/s> ;
+       sps:predicate <http://example.org/p> ;
+       sps:object <http://example.org/o> .
+_:b757 rdf:first _:b756 ;
+       rdf:rest rdf:nil .
+_:b755 sps:data _:b757 .
+_:b758 a sps:InsertData .
+_:b759 a sps:TriplePattern ;
+       sps:subject <http://example.org/a> ;
+       sps:predicate <http://example.org/b> ;
+       sps:object <http://example.org/c> .
+_:b760 rdf:first _:b759 ;
+       rdf:rest rdf:nil .
+_:b758 sps:data _:b760 .
+_:b761 rdf:first _:b755 ;
+       rdf:rest _:b762 .
+_:b762 rdf:first _:b758 ;
+       rdf:rest rdf:nil .
+_:b754 sps:operations _:b761 .

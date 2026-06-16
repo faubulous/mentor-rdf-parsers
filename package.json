@@ -9,7 +9,7 @@
     "typescript",
     "chevrotain"
   ],
-  "version": "1.9.0",
+  "version": "1.10.0",
   "private": false,
   "author": {
     "name": "Sebastian Faubel"
@@ -17,7 +17,8 @@
   "license": "LGPL-2.1-or-later",
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "vocab"
   ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -50,7 +51,8 @@
   },
   "dependencies": {
     "@rdfjs/data-model": "^2.1.1",
-    "chevrotain": "^12.0.0"
+    "chevrotain": "^12.0.0",
+    "triplate": "^0.5.2"
   },
   "devDependencies": {
     "@rdfjs/types": "^2.0.1",

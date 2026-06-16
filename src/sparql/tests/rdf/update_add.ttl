@@ -1,0 +1,12 @@
+# Expected RDF representation of update_add.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b684 a sps:Update .
+_:b685 a sps:Add ;
+       sps:fromGraph sps:DefaultGraph ;
+       sps:toGraph <http://example.org/target> .
+_:b686 rdf:first _:b685 ;
+       rdf:rest rdf:nil .
+_:b684 sps:operations _:b686 .

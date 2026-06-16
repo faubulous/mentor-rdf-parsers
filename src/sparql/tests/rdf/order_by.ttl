@@ -1,0 +1,23 @@
+# Expected RDF representation of order_by.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b507 a sps:SelectQuery .
+_:b508 a sps:Variable ;
+       sps:varName "name" .
+_:b509 rdf:first _:b508 ;
+       rdf:rest rdf:nil .
+_:b507 sps:projection _:b509 .
+_:b510 a sps:Variable ;
+       sps:varName "s" .
+_:b511 a sps:TriplePattern ;
+       sps:subject _:b510 ;
+       sps:predicate <http://example.org/name> ;
+       sps:object _:b508 .
+_:b512 rdf:first _:b511 ;
+       rdf:rest rdf:nil .
+_:b507 sps:where _:b512 .
+_:b513 rdf:first _:b508 ;
+       rdf:rest rdf:nil .
+_:b507 sps:orderBy _:b513 .

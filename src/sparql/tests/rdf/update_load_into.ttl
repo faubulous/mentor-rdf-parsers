@@ -1,0 +1,13 @@
+# Expected RDF representation of update_load_into.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b726 a sps:Update .
+_:b727 a sps:Load ;
+       sps:silent "true"^^xsd:boolean ;
+       sps:source <http://example.org/data> ;
+       sps:into <http://example.org/target> .
+_:b728 rdf:first _:b727 ;
+       rdf:rest rdf:nil .
+_:b726 sps:operations _:b728 .

@@ -1,0 +1,11 @@
+# Expected RDF representation of update_clear.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b687 a sps:Update .
+_:b688 a sps:Clear ;
+       sps:graphTarget <http://example.org/graph> .
+_:b689 rdf:first _:b688 ;
+       rdf:rest rdf:nil .
+_:b687 sps:operations _:b689 .

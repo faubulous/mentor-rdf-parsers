@@ -1,0 +1,28 @@
+# Expected RDF representation of group_concat.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b473 a sps:SelectQuery .
+_:b474 a sps:Alias .
+_:b475 a sps:GroupConcat .
+_:b476 a sps:Variable ;
+       sps:varName "name" .
+_:b475 sps:expression _:b476 ;
+       sps:separator ", " .
+_:b474 sps:expression _:b475 .
+_:b477 a sps:Variable ;
+       sps:varName "names" .
+_:b474 sps:variable _:b477 .
+_:b478 rdf:first _:b474 ;
+       rdf:rest rdf:nil .
+_:b473 sps:projection _:b478 .
+_:b479 a sps:Variable ;
+       sps:varName "s" .
+_:b480 a sps:TriplePattern ;
+       sps:subject _:b479 ;
+       sps:predicate <http://example.org/name> ;
+       sps:object _:b476 .
+_:b481 rdf:first _:b480 ;
+       rdf:rest rdf:nil .
+_:b473 sps:where _:b481 .

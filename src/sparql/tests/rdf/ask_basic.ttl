@@ -1,0 +1,13 @@
+# Expected RDF representation of ask_basic.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b41 a sps:AskQuery .
+_:b42 a sps:TriplePattern ;
+      sps:subject <http://example.org/a> ;
+      sps:predicate <http://example.org/b> ;
+      sps:object <http://example.org/c> .
+_:b43 rdf:first _:b42 ;
+      rdf:rest rdf:nil .
+_:b41 sps:where _:b43 .

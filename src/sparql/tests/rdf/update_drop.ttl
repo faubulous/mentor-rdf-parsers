@@ -1,0 +1,11 @@
+# Expected RDF representation of update_drop.rq
+@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+_:b708 a sps:Update .
+_:b709 a sps:Drop ;
+       sps:graphTarget sps:AllGraphs .
+_:b710 rdf:first _:b709 ;
+       rdf:rest rdf:nil .
+_:b708 sps:operations _:b710 .
