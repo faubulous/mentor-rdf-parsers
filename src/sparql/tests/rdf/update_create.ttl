@@ -1,11 +1,11 @@
 # Expected RDF representation of update_create.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b693 a sps:Update .
-_:b694 a sps:Create ;
-       sps:graph <http://example.org/newgraph> .
+_:b693 a sparql:Update .
+_:b694 a sparql:Create ;
+       sparql:graph <http://example.org/newgraph> .
 _:b695 rdf:first _:b694 ;
        rdf:rest rdf:nil .
-_:b693 sps:operations _:b695 .
+_:b693 sparql:operations _:b695 .

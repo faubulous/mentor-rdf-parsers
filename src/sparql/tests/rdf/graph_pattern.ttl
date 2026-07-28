@@ -1,27 +1,27 @@
 # Expected RDF representation of graph_pattern.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b166 a sps:SelectQuery .
-_:b167 a sps:Variable ;
-       sps:varName "s" .
+_:b166 a sparql:SelectQuery .
+_:b167 a sparql:Variable ;
+       sparql:varName "s" .
 _:b168 rdf:first _:b167 ;
        rdf:rest rdf:nil .
-_:b166 sps:projection _:b168 .
-_:b169 a sps:Graph ;
-       sps:graph <http://example.org/g1> .
-_:b170 a sps:Variable ;
-       sps:varName "p" .
-_:b171 a sps:Variable ;
-       sps:varName "o" .
-_:b172 a sps:TriplePattern ;
-       sps:subject _:b167 ;
-       sps:predicate _:b170 ;
-       sps:object _:b171 .
+_:b166 sparql:projection _:b168 .
+_:b169 a sparql:Graph ;
+       sparql:graph <http://example.org/g1> .
+_:b170 a sparql:Variable ;
+       sparql:varName "p" .
+_:b171 a sparql:Variable ;
+       sparql:varName "o" .
+_:b172 a sparql:TriplePattern ;
+       sparql:subject _:b167 ;
+       sparql:predicate _:b170 ;
+       sparql:object _:b171 .
 _:b173 rdf:first _:b172 ;
        rdf:rest rdf:nil .
-_:b169 sps:elements _:b173 .
+_:b169 sparql:elements _:b173 .
 _:b174 rdf:first _:b169 ;
        rdf:rest rdf:nil .
-_:b166 sps:where _:b174 .
+_:b166 sparql:where _:b174 .

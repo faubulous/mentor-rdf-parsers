@@ -1,22 +1,22 @@
 # Expected RDF representation of property_path_optional.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b586 a sps:SelectQuery .
-_:b587 a sps:Variable ;
-       sps:varName "person" .
+_:b586 a sparql:SelectQuery .
+_:b587 a sparql:Variable ;
+       sparql:varName "person" .
 _:b588 rdf:first _:b587 ;
        rdf:rest rdf:nil .
-_:b586 sps:projection _:b588 .
-_:b589 a sps:ZeroOrOnePath ;
-       sps:path <http://xmlns.com/foaf/0.1/knows> .
-_:b590 a sps:Variable ;
-       sps:varName "friend" .
-_:b591 a sps:TriplePattern ;
-       sps:subject _:b587 ;
-       sps:predicate _:b589 ;
-       sps:object _:b590 .
+_:b586 sparql:projection _:b588 .
+_:b589 a sparql:ZeroOrOnePath ;
+       sparql:path <http://xmlns.com/foaf/0.1/knows> .
+_:b590 a sparql:Variable ;
+       sparql:varName "friend" .
+_:b591 a sparql:TriplePattern ;
+       sparql:subject _:b587 ;
+       sparql:predicate _:b589 ;
+       sparql:object _:b590 .
 _:b592 rdf:first _:b591 ;
        rdf:rest rdf:nil .
-_:b586 sps:where _:b592 .
+_:b586 sparql:where _:b592 .

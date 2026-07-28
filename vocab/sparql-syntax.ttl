@@ -1,4 +1,4 @@
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
@@ -16,10 +16,10 @@
 # - IRIs and literals occurring in a query appear as themselves (native RDF
 #   terms); prefixed names and relative IRIs are resolved against the prologue.
 #   Prefix and base declarations are not reified.
-# - Variables are blank nodes typed sps:Variable with sps:varName; one node is
+# - Variables are blank nodes typed sparql:Variable with sparql:varName; one node is
 #   shared per distinct variable name per query.
-# - Blank nodes written in query syntax are nodes typed sps:BlankNode (with
-#   sps:label when labeled), distinct from the structural blank nodes that
+# - Blank nodes written in query syntax are nodes typed sparql:BlankNode (with
+#   sparql:label when labeled), distinct from the structural blank nodes that
 #   make up the representation itself.
 # - Ordered constructs (pattern elements, projections, templates, arguments,
 #   path elements, VALUES rows, update operation sequences) use rdf:List.
@@ -27,7 +27,7 @@
 # - Syntactic sugar is desugared the way the SPARQL 1.2 spec does: collections
 #   and blank node property lists expand to triple patterns; reified triples
 #   and annotation blocks expand to rdf:reifies triple patterns. Triple terms
-#   are represented structurally as sps:TripleTerm nodes because their
+#   are represented structurally as sparql:TripleTerm nodes because their
 #   components may be variables.
 #
 
@@ -41,31 +41,31 @@
 # Query forms
 # ==========================================
 
-sps:Query a rdfs:Class ;
+sparql:Query a rdfs:Class ;
     rdfs:label "Query"@en ;
     rdfs:comment "Abstract superclass of the four SPARQL query forms."@en .
 
-sps:SelectQuery a rdfs:Class ;
-    rdfs:subClassOf sps:Query ;
+sparql:SelectQuery a rdfs:Class ;
+    rdfs:subClassOf sparql:Query ;
     rdfs:label "SELECT query"@en ;
     rdfs:comment "A SELECT query. SPARQL 1.2 grammar production [9]."@en .
 
-sps:ConstructQuery a rdfs:Class ;
-    rdfs:subClassOf sps:Query ;
+sparql:ConstructQuery a rdfs:Class ;
+    rdfs:subClassOf sparql:Query ;
     rdfs:label "CONSTRUCT query"@en ;
     rdfs:comment "A CONSTRUCT query. SPARQL 1.2 grammar production [12]."@en .
 
-sps:DescribeQuery a rdfs:Class ;
-    rdfs:subClassOf sps:Query ;
+sparql:DescribeQuery a rdfs:Class ;
+    rdfs:subClassOf sparql:Query ;
     rdfs:label "DESCRIBE query"@en ;
     rdfs:comment "A DESCRIBE query. SPARQL 1.2 grammar production [13]."@en .
 
-sps:AskQuery a rdfs:Class ;
-    rdfs:subClassOf sps:Query ;
+sparql:AskQuery a rdfs:Class ;
+    rdfs:subClassOf sparql:Query ;
     rdfs:label "ASK query"@en ;
     rdfs:comment "An ASK query. SPARQL 1.2 grammar production [14]."@en .
 
-sps:SubSelect a rdfs:Class ;
+sparql:SubSelect a rdfs:Class ;
     rdfs:label "Sub-select"@en ;
     rdfs:comment "A sub-select appearing as a group graph pattern element. SPARQL 1.2 grammar production [10]."@en .
 
@@ -73,51 +73,51 @@ sps:SubSelect a rdfs:Class ;
 # Update operations
 # ==========================================
 
-sps:Update a rdfs:Class ;
+sparql:Update a rdfs:Class ;
     rdfs:label "Update request"@en ;
     rdfs:comment "The root node of a SPARQL update request; holds the ordered sequence of update operations. SPARQL 1.2 Update grammar production [31]."@en .
 
-sps:Load a rdfs:Class ;
+sparql:Load a rdfs:Class ;
     rdfs:label "LOAD"@en ;
     rdfs:comment "A LOAD operation. SPARQL 1.2 Update grammar production [33]."@en .
 
-sps:Clear a rdfs:Class ;
+sparql:Clear a rdfs:Class ;
     rdfs:label "CLEAR"@en ;
     rdfs:comment "A CLEAR operation. SPARQL 1.2 Update grammar production [34]."@en .
 
-sps:Drop a rdfs:Class ;
+sparql:Drop a rdfs:Class ;
     rdfs:label "DROP"@en ;
     rdfs:comment "A DROP operation. SPARQL 1.2 Update grammar production [35]."@en .
 
-sps:Create a rdfs:Class ;
+sparql:Create a rdfs:Class ;
     rdfs:label "CREATE"@en ;
     rdfs:comment "A CREATE operation. SPARQL 1.2 Update grammar production [36]."@en .
 
-sps:Add a rdfs:Class ;
+sparql:Add a rdfs:Class ;
     rdfs:label "ADD"@en ;
     rdfs:comment "An ADD operation. SPARQL 1.2 Update grammar production [37]."@en .
 
-sps:Move a rdfs:Class ;
+sparql:Move a rdfs:Class ;
     rdfs:label "MOVE"@en ;
     rdfs:comment "A MOVE operation. SPARQL 1.2 Update grammar production [38]."@en .
 
-sps:Copy a rdfs:Class ;
+sparql:Copy a rdfs:Class ;
     rdfs:label "COPY"@en ;
     rdfs:comment "A COPY operation. SPARQL 1.2 Update grammar production [39]."@en .
 
-sps:InsertData a rdfs:Class ;
+sparql:InsertData a rdfs:Class ;
     rdfs:label "INSERT DATA"@en ;
     rdfs:comment "An INSERT DATA operation. SPARQL 1.2 Update grammar production [40]."@en .
 
-sps:DeleteData a rdfs:Class ;
+sparql:DeleteData a rdfs:Class ;
     rdfs:label "DELETE DATA"@en ;
     rdfs:comment "A DELETE DATA operation. SPARQL 1.2 Update grammar production [41]."@en .
 
-sps:DeleteWhere a rdfs:Class ;
+sparql:DeleteWhere a rdfs:Class ;
     rdfs:label "DELETE WHERE"@en ;
     rdfs:comment "A DELETE WHERE operation. SPARQL 1.2 Update grammar production [42]."@en .
 
-sps:Modify a rdfs:Class ;
+sparql:Modify a rdfs:Class ;
     rdfs:label "DELETE/INSERT"@en ;
     rdfs:comment "A DELETE/INSERT operation with a WHERE clause. SPARQL 1.2 Update grammar production [43]."@en .
 
@@ -125,15 +125,15 @@ sps:Modify a rdfs:Class ;
 # Terms
 # ==========================================
 
-sps:Variable a rdfs:Class ;
+sparql:Variable a rdfs:Class ;
     rdfs:label "Variable"@en ;
     rdfs:comment "A SPARQL variable (?name or $name). One node is shared per distinct variable name within a query."@en .
 
-sps:BlankNode a rdfs:Class ;
+sparql:BlankNode a rdfs:Class ;
     rdfs:label "Blank node"@en ;
     rdfs:comment "A blank node written in query syntax (_:label, [], [...] or a collection cell), as opposed to the structural blank nodes of the representation itself."@en .
 
-sps:TripleTerm a rdfs:Class ;
+sparql:TripleTerm a rdfs:Class ;
     rdfs:label "Triple term"@en ;
     rdfs:comment "An RDF 1.2 triple term <<( s p o )>>. Represented structurally because its components may be variables. SPARQL 1.2 grammar production [113]."@en .
 
@@ -141,53 +141,53 @@ sps:TripleTerm a rdfs:Class ;
 # Graph pattern elements
 # ==========================================
 
-sps:TriplePattern a rdfs:Class ;
+sparql:TriplePattern a rdfs:Class ;
     rdfs:label "Triple pattern"@en ;
     rdfs:comment "A single subject-predicate-object pattern or template triple."@en .
 
-sps:Group a rdfs:Class ;
+sparql:Group a rdfs:Class ;
     rdfs:label "Group"@en ;
     rdfs:comment "An explicit nested group graph pattern { ... }, including the branches of a UNION. SPARQL 1.2 grammar production [55]."@en .
 
-sps:Optional a rdfs:Class ;
+sparql:Optional a rdfs:Class ;
     rdfs:label "OPTIONAL"@en ;
     rdfs:comment "An OPTIONAL graph pattern. SPARQL 1.2 grammar production [60]."@en .
 
-sps:Union a rdfs:Class ;
+sparql:Union a rdfs:Class ;
     rdfs:label "UNION"@en ;
     rdfs:comment "A UNION of two or more group graph patterns. SPARQL 1.2 grammar production [70]."@en .
 
-sps:Minus a rdfs:Class ;
+sparql:Minus a rdfs:Class ;
     rdfs:label "MINUS"@en ;
     rdfs:comment "A MINUS graph pattern. SPARQL 1.2 grammar production [69]."@en .
 
-sps:Graph a rdfs:Class ;
+sparql:Graph a rdfs:Class ;
     rdfs:label "GRAPH"@en ;
     rdfs:comment "A GRAPH graph pattern, also used for GRAPH blocks inside update quad templates. SPARQL 1.2 grammar production [61]."@en .
 
-sps:Service a rdfs:Class ;
+sparql:Service a rdfs:Class ;
     rdfs:label "SERVICE"@en ;
     rdfs:comment "A SERVICE graph pattern. SPARQL 1.2 grammar production [62]."@en .
 
-sps:Filter a rdfs:Class ;
+sparql:Filter a rdfs:Class ;
     rdfs:label "FILTER"@en ;
     rdfs:comment "A FILTER constraint. SPARQL 1.2 grammar production [71]."@en .
 
-sps:Bind a rdfs:Class ;
+sparql:Bind a rdfs:Class ;
     rdfs:label "BIND"@en ;
     rdfs:comment "A BIND assignment. SPARQL 1.2 grammar production [63]."@en .
 
-sps:Values a rdfs:Class ;
+sparql:Values a rdfs:Class ;
     rdfs:label "VALUES"@en ;
     rdfs:comment "An inline data block (VALUES), either inside a group graph pattern or trailing a query. SPARQL 1.2 grammar productions [64]-[67]."@en .
 
-sps:Exists a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Exists a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "EXISTS"@en ;
     rdfs:comment "An EXISTS expression with an embedded graph pattern. SPARQL 1.2 grammar production [135]."@en .
 
-sps:NotExists a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:NotExists a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "NOT EXISTS"@en ;
     rdfs:comment "A NOT EXISTS expression with an embedded graph pattern. SPARQL 1.2 grammar production [136]."@en .
 
@@ -195,31 +195,31 @@ sps:NotExists a rdfs:Class ;
 # Property paths
 # ==========================================
 
-sps:SeqPath a rdfs:Class ;
+sparql:SeqPath a rdfs:Class ;
     rdfs:label "Sequence path"@en ;
     rdfs:comment "A property path sequence (elt1 / elt2). SPARQL 1.2 grammar production [93]."@en .
 
-sps:AltPath a rdfs:Class ;
+sparql:AltPath a rdfs:Class ;
     rdfs:label "Alternative path"@en ;
     rdfs:comment "A property path alternative (elt1 | elt2). SPARQL 1.2 grammar production [92]."@en .
 
-sps:InversePath a rdfs:Class ;
+sparql:InversePath a rdfs:Class ;
     rdfs:label "Inverse path"@en ;
     rdfs:comment "An inverse property path (^elt). SPARQL 1.2 grammar production [95]."@en .
 
-sps:ZeroOrMorePath a rdfs:Class ;
+sparql:ZeroOrMorePath a rdfs:Class ;
     rdfs:label "Zero-or-more path"@en ;
     rdfs:comment "A property path with the * modifier. SPARQL 1.2 grammar production [96]."@en .
 
-sps:OneOrMorePath a rdfs:Class ;
+sparql:OneOrMorePath a rdfs:Class ;
     rdfs:label "One-or-more path"@en ;
     rdfs:comment "A property path with the + modifier. SPARQL 1.2 grammar production [96]."@en .
 
-sps:ZeroOrOnePath a rdfs:Class ;
+sparql:ZeroOrOnePath a rdfs:Class ;
     rdfs:label "Zero-or-one path"@en ;
     rdfs:comment "A property path with the ? modifier. SPARQL 1.2 grammar production [96]."@en .
 
-sps:NegatedPath a rdfs:Class ;
+sparql:NegatedPath a rdfs:Class ;
     rdfs:label "Negated property set"@en ;
     rdfs:comment "A negated property set (!iri or !(iri1 | ^iri2 | ...)). SPARQL 1.2 grammar production [98]."@en .
 
@@ -227,106 +227,106 @@ sps:NegatedPath a rdfs:Class ;
 # Expressions
 # ==========================================
 
-sps:Expression a rdfs:Class ;
+sparql:Expression a rdfs:Class ;
     rdfs:label "Expression"@en ;
     rdfs:comment "Abstract superclass of all compound SPARQL expressions. Atomic expressions (variables, IRIs, literals) appear directly as terms."@en .
 
-sps:Or a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Or a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Logical or"@en ;
     rdfs:comment "A logical || expression."@en .
 
-sps:And a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:And a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Logical and"@en ;
     rdfs:comment "A logical && expression."@en .
 
-sps:Eq a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Eq a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Equal"@en ;
     rdfs:comment "An = comparison."@en .
 
-sps:Neq a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Neq a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Not equal"@en ;
     rdfs:comment "A != comparison."@en .
 
-sps:Lt a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Lt a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Less than"@en ;
     rdfs:comment "A < comparison."@en .
 
-sps:Gt a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Gt a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Greater than"@en ;
     rdfs:comment "A > comparison."@en .
 
-sps:Leq a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Leq a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Less than or equal"@en ;
     rdfs:comment "A <= comparison."@en .
 
-sps:Geq a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Geq a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Greater than or equal"@en ;
     rdfs:comment "A >= comparison."@en .
 
-sps:In a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:In a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "IN"@en ;
-    rdfs:comment "An IN expression; sps:arg1 holds the tested expression, sps:args the list of candidates."@en .
+    rdfs:comment "An IN expression; sparql:arg1 holds the tested expression, sparql:args the list of candidates."@en .
 
-sps:NotIn a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:NotIn a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "NOT IN"@en ;
-    rdfs:comment "A NOT IN expression; sps:arg1 holds the tested expression, sps:args the list of candidates."@en .
+    rdfs:comment "A NOT IN expression; sparql:arg1 holds the tested expression, sparql:args the list of candidates."@en .
 
-sps:Addition a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Addition a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Addition"@en ;
     rdfs:comment "An arithmetic + expression."@en .
 
-sps:Subtraction a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Subtraction a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Subtraction"@en ;
     rdfs:comment "An arithmetic - expression."@en .
 
-sps:Multiplication a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Multiplication a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Multiplication"@en ;
     rdfs:comment "An arithmetic * expression."@en .
 
-sps:Division a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Division a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Division"@en ;
     rdfs:comment "An arithmetic / expression."@en .
 
-sps:UnaryNot a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:UnaryNot a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Unary not"@en ;
     rdfs:comment "A unary ! expression."@en .
 
-sps:UnaryPlus a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:UnaryPlus a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Unary plus"@en ;
     rdfs:comment "A unary + expression."@en .
 
-sps:UnaryMinus a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:UnaryMinus a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Unary minus"@en ;
     rdfs:comment "A unary - expression."@en .
 
-sps:FunctionCall a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:FunctionCall a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Function call"@en ;
     rdfs:comment "A call of a custom function identified by IRI. SPARQL 1.2 grammar production [73]."@en .
 
-sps:BuiltInCall a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:BuiltInCall a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Built-in call"@en ;
-    rdfs:comment "A call of a SPARQL built-in function; sps:function points to the built-in function individual. SPARQL 1.2 grammar production [131]."@en .
+    rdfs:comment "A call of a SPARQL built-in function; sparql:function points to the built-in function individual. SPARQL 1.2 grammar production [131]."@en .
 
-sps:BuiltInFunction a rdfs:Class ;
+sparql:BuiltInFunction a rdfs:Class ;
     rdfs:label "Built-in function"@en ;
     rdfs:comment "The class of SPARQL built-in function individuals."@en .
 
@@ -334,52 +334,52 @@ sps:BuiltInFunction a rdfs:Class ;
 # Aggregates
 # ==========================================
 
-sps:Aggregate a rdfs:Class ;
-    rdfs:subClassOf sps:Expression ;
+sparql:Aggregate a rdfs:Class ;
+    rdfs:subClassOf sparql:Expression ;
     rdfs:label "Aggregate"@en ;
     rdfs:comment "Abstract superclass of the SPARQL aggregates. SPARQL 1.2 grammar production [137]."@en .
 
-sps:Count a rdfs:Class ;
-    rdfs:subClassOf sps:Aggregate ;
+sparql:Count a rdfs:Class ;
+    rdfs:subClassOf sparql:Aggregate ;
     rdfs:label "COUNT"@en .
 
-sps:Sum a rdfs:Class ;
-    rdfs:subClassOf sps:Aggregate ;
+sparql:Sum a rdfs:Class ;
+    rdfs:subClassOf sparql:Aggregate ;
     rdfs:label "SUM"@en .
 
-sps:Min a rdfs:Class ;
-    rdfs:subClassOf sps:Aggregate ;
+sparql:Min a rdfs:Class ;
+    rdfs:subClassOf sparql:Aggregate ;
     rdfs:label "MIN"@en .
 
-sps:Max a rdfs:Class ;
-    rdfs:subClassOf sps:Aggregate ;
+sparql:Max a rdfs:Class ;
+    rdfs:subClassOf sparql:Aggregate ;
     rdfs:label "MAX"@en .
 
-sps:Avg a rdfs:Class ;
-    rdfs:subClassOf sps:Aggregate ;
+sparql:Avg a rdfs:Class ;
+    rdfs:subClassOf sparql:Aggregate ;
     rdfs:label "AVG"@en .
 
-sps:Sample a rdfs:Class ;
-    rdfs:subClassOf sps:Aggregate ;
+sparql:Sample a rdfs:Class ;
+    rdfs:subClassOf sparql:Aggregate ;
     rdfs:label "SAMPLE"@en .
 
-sps:GroupConcat a rdfs:Class ;
-    rdfs:subClassOf sps:Aggregate ;
+sparql:GroupConcat a rdfs:Class ;
+    rdfs:subClassOf sparql:Aggregate ;
     rdfs:label "GROUP_CONCAT"@en .
 
 # ==========================================
 # Miscellaneous structure
 # ==========================================
 
-sps:Alias a rdfs:Class ;
+sparql:Alias a rdfs:Class ;
     rdfs:label "Alias"@en ;
     rdfs:comment "An (expression AS ?variable) alias in a SELECT clause or GROUP BY condition."@en .
 
-sps:Asc a rdfs:Class ;
+sparql:Asc a rdfs:Class ;
     rdfs:label "Ascending"@en ;
     rdfs:comment "An explicit ASC(...) order condition."@en .
 
-sps:Desc a rdfs:Class ;
+sparql:Desc a rdfs:Class ;
     rdfs:label "Descending"@en ;
     rdfs:comment "A DESC(...) order condition."@en .
 
@@ -387,19 +387,19 @@ sps:Desc a rdfs:Class ;
 # Named individuals
 # ==========================================
 
-sps:undef a rdfs:Resource ;
+sparql:undef a rdfs:Resource ;
     rdfs:label "UNDEF"@en ;
     rdfs:comment "The UNDEF marker in a VALUES binding row."@en .
 
-sps:DefaultGraph a rdfs:Resource ;
+sparql:DefaultGraph a rdfs:Resource ;
     rdfs:label "DEFAULT"@en ;
     rdfs:comment "The default graph as target of an update operation (DEFAULT keyword)."@en .
 
-sps:NamedGraphs a rdfs:Resource ;
+sparql:NamedGraphs a rdfs:Resource ;
     rdfs:label "NAMED"@en ;
     rdfs:comment "All named graphs as target of CLEAR or DROP (NAMED keyword)."@en .
 
-sps:AllGraphs a rdfs:Resource ;
+sparql:AllGraphs a rdfs:Resource ;
     rdfs:label "ALL"@en ;
     rdfs:comment "All graphs as target of CLEAR or DROP (ALL keyword)."@en .
 
@@ -407,315 +407,315 @@ sps:AllGraphs a rdfs:Resource ;
 # Properties
 # ==========================================
 
-sps:version a rdf:Property ;
+sparql:version a rdf:Property ;
     rdfs:label "version"@en ;
     rdfs:comment "The version string of a VERSION declaration. SPARQL 1.2 grammar production [7]."@en ;
     rdfs:range xsd:string .
 
-sps:where a rdf:Property ;
+sparql:where a rdf:Property ;
     rdfs:label "where"@en ;
     rdfs:comment "The WHERE clause of a query, sub-select, DELETE/INSERT or DELETE WHERE operation: an rdf:List of graph pattern elements."@en ;
     rdfs:range rdf:List .
 
-sps:projection a rdf:Property ;
+sparql:projection a rdf:Property ;
     rdfs:label "projection"@en ;
-    rdfs:comment "The projection of a SELECT query: an rdf:List of sps:Variable or sps:Alias nodes."@en ;
+    rdfs:comment "The projection of a SELECT query: an rdf:List of sparql:Variable or sparql:Alias nodes."@en ;
     rdfs:range rdf:List .
 
-sps:star a rdf:Property ;
+sparql:star a rdf:Property ;
     rdfs:label "star"@en ;
     rdfs:comment "True if the query uses SELECT * or DESCRIBE *."@en ;
     rdfs:range xsd:boolean .
 
-sps:distinct a rdf:Property ;
+sparql:distinct a rdf:Property ;
     rdfs:label "distinct"@en ;
     rdfs:comment "True if the SELECT clause, aggregate or argument list carries the DISTINCT modifier."@en ;
     rdfs:range xsd:boolean .
 
-sps:reduced a rdf:Property ;
+sparql:reduced a rdf:Property ;
     rdfs:label "reduced"@en ;
     rdfs:comment "True if the SELECT clause carries the REDUCED modifier."@en ;
-    rdfs:domain sps:SelectQuery ;
+    rdfs:domain sparql:SelectQuery ;
     rdfs:range xsd:boolean .
 
-sps:template a rdf:Property ;
+sparql:template a rdf:Property ;
     rdfs:label "template"@en ;
-    rdfs:comment "The template of a CONSTRUCT query: an rdf:List of sps:TriplePattern nodes."@en ;
-    rdfs:domain sps:ConstructQuery ;
+    rdfs:comment "The template of a CONSTRUCT query: an rdf:List of sparql:TriplePattern nodes."@en ;
+    rdfs:domain sparql:ConstructQuery ;
     rdfs:range rdf:List .
 
-sps:describeTargets a rdf:Property ;
+sparql:describeTargets a rdf:Property ;
     rdfs:label "describe targets"@en ;
-    rdfs:comment "The targets of a DESCRIBE query: an rdf:List of sps:Variable nodes or IRIs."@en ;
-    rdfs:domain sps:DescribeQuery ;
+    rdfs:comment "The targets of a DESCRIBE query: an rdf:List of sparql:Variable nodes or IRIs."@en ;
+    rdfs:domain sparql:DescribeQuery ;
     rdfs:range rdf:List .
 
-sps:from a rdf:Property ;
+sparql:from a rdf:Property ;
     rdfs:label "from"@en ;
     rdfs:comment "A FROM dataset clause IRI (repeated for multiple clauses)."@en .
 
-sps:fromNamed a rdf:Property ;
+sparql:fromNamed a rdf:Property ;
     rdfs:label "from named"@en ;
     rdfs:comment "A FROM NAMED dataset clause IRI (repeated for multiple clauses)."@en .
 
-sps:subject a rdf:Property ;
+sparql:subject a rdf:Property ;
     rdfs:label "subject"@en ;
     rdfs:comment "The subject of a triple pattern or triple term."@en .
 
-sps:predicate a rdf:Property ;
+sparql:predicate a rdf:Property ;
     rdfs:label "predicate"@en ;
-    rdfs:comment "The predicate of a triple pattern or triple term: an IRI, sps:Variable, or property path node."@en .
+    rdfs:comment "The predicate of a triple pattern or triple term: an IRI, sparql:Variable, or property path node."@en .
 
-sps:object a rdf:Property ;
+sparql:object a rdf:Property ;
     rdfs:label "object"@en ;
     rdfs:comment "The object of a triple pattern or triple term."@en .
 
-sps:elements a rdf:Property ;
+sparql:elements a rdf:Property ;
     rdfs:label "elements"@en ;
     rdfs:comment "The ordered elements of a group, OPTIONAL, MINUS, GRAPH, SERVICE, EXISTS, NOT EXISTS or UNION: an rdf:List."@en ;
     rdfs:range rdf:List .
 
-sps:graph a rdf:Property ;
+sparql:graph a rdf:Property ;
     rdfs:label "graph"@en ;
     rdfs:comment "The graph name (variable or IRI) of a GRAPH pattern or graph block, or the IRI of a CREATE or GRAPH reference."@en .
 
-sps:endpoint a rdf:Property ;
+sparql:endpoint a rdf:Property ;
     rdfs:label "endpoint"@en ;
     rdfs:comment "The endpoint (variable or IRI) of a SERVICE pattern."@en ;
-    rdfs:domain sps:Service .
+    rdfs:domain sparql:Service .
 
-sps:silent a rdf:Property ;
+sparql:silent a rdf:Property ;
     rdfs:label "silent"@en ;
     rdfs:comment "True if the operation or SERVICE pattern carries the SILENT modifier."@en ;
     rdfs:range xsd:boolean .
 
-sps:expression a rdf:Property ;
+sparql:expression a rdf:Property ;
     rdfs:label "expression"@en ;
     rdfs:comment "The expression of a FILTER, BIND, alias, order condition or aggregate."@en .
 
-sps:variable a rdf:Property ;
+sparql:variable a rdf:Property ;
     rdfs:label "variable"@en ;
     rdfs:comment "The target variable of a BIND or alias."@en ;
-    rdfs:range sps:Variable .
+    rdfs:range sparql:Variable .
 
-sps:varName a rdf:Property ;
+sparql:varName a rdf:Property ;
     rdfs:label "variable name"@en ;
     rdfs:comment "The name of a variable, without the ? or $ sigil."@en ;
-    rdfs:domain sps:Variable ;
+    rdfs:domain sparql:Variable ;
     rdfs:range xsd:string .
 
-sps:label a rdf:Property ;
+sparql:label a rdf:Property ;
     rdfs:label "label"@en ;
     rdfs:comment "The label of a syntactic blank node, without the _: prefix. Absent for anonymous blank nodes."@en ;
-    rdfs:domain sps:BlankNode ;
+    rdfs:domain sparql:BlankNode ;
     rdfs:range xsd:string .
 
-sps:arg a rdf:Property ;
+sparql:arg a rdf:Property ;
     rdfs:label "argument"@en ;
     rdfs:comment "The operand of a unary operator expression."@en .
 
-sps:arg1 a rdf:Property ;
+sparql:arg1 a rdf:Property ;
     rdfs:label "first argument"@en ;
     rdfs:comment "The left operand of a binary operator expression."@en .
 
-sps:arg2 a rdf:Property ;
+sparql:arg2 a rdf:Property ;
     rdfs:label "second argument"@en ;
     rdfs:comment "The right operand of a binary operator expression."@en .
 
-sps:args a rdf:Property ;
+sparql:args a rdf:Property ;
     rdfs:label "arguments"@en ;
     rdfs:comment "The ordered arguments of a function call, built-in call, or IN/NOT IN expression: an rdf:List."@en ;
     rdfs:range rdf:List .
 
-sps:function a rdf:Property ;
+sparql:function a rdf:Property ;
     rdfs:label "function"@en ;
-    rdfs:comment "The function of a call: an IRI for custom functions, a sps:BuiltInFunction individual for built-ins."@en .
+    rdfs:comment "The function of a call: an IRI for custom functions, a sparql:BuiltInFunction individual for built-ins."@en .
 
-sps:groupBy a rdf:Property ;
+sparql:groupBy a rdf:Property ;
     rdfs:label "group by"@en ;
-    rdfs:comment "The GROUP BY conditions: an rdf:List of variables, expressions or sps:Alias nodes."@en ;
+    rdfs:comment "The GROUP BY conditions: an rdf:List of variables, expressions or sparql:Alias nodes."@en ;
     rdfs:range rdf:List .
 
-sps:having a rdf:Property ;
+sparql:having a rdf:Property ;
     rdfs:label "having"@en ;
     rdfs:comment "The HAVING conditions: an rdf:List of expressions."@en ;
     rdfs:range rdf:List .
 
-sps:orderBy a rdf:Property ;
+sparql:orderBy a rdf:Property ;
     rdfs:label "order by"@en ;
-    rdfs:comment "The ORDER BY conditions: an rdf:List of variables, expressions, or sps:Asc/sps:Desc nodes."@en ;
+    rdfs:comment "The ORDER BY conditions: an rdf:List of variables, expressions, or sparql:Asc/sparql:Desc nodes."@en ;
     rdfs:range rdf:List .
 
-sps:limit a rdf:Property ;
+sparql:limit a rdf:Property ;
     rdfs:label "limit"@en ;
     rdfs:comment "The LIMIT of a query."@en ;
     rdfs:range xsd:integer .
 
-sps:offset a rdf:Property ;
+sparql:offset a rdf:Property ;
     rdfs:label "offset"@en ;
     rdfs:comment "The OFFSET of a query."@en ;
     rdfs:range xsd:integer .
 
-sps:values a rdf:Property ;
+sparql:values a rdf:Property ;
     rdfs:label "values"@en ;
     rdfs:comment "The trailing VALUES clause of a query or sub-select."@en ;
-    rdfs:range sps:Values .
+    rdfs:range sparql:Values .
 
-sps:variables a rdf:Property ;
+sparql:variables a rdf:Property ;
     rdfs:label "variables"@en ;
-    rdfs:comment "The variables of a VALUES block: an rdf:List of sps:Variable nodes."@en ;
-    rdfs:domain sps:Values ;
+    rdfs:comment "The variables of a VALUES block: an rdf:List of sparql:Variable nodes."@en ;
+    rdfs:domain sparql:Values ;
     rdfs:range rdf:List .
 
-sps:bindings a rdf:Property ;
+sparql:bindings a rdf:Property ;
     rdfs:label "bindings"@en ;
-    rdfs:comment "The binding rows of a VALUES block: an rdf:List of rows, each row an rdf:List of terms or sps:undef."@en ;
-    rdfs:domain sps:Values ;
+    rdfs:comment "The binding rows of a VALUES block: an rdf:List of rows, each row an rdf:List of terms or sparql:undef."@en ;
+    rdfs:domain sparql:Values ;
     rdfs:range rdf:List .
 
-sps:pathElements a rdf:Property ;
+sparql:pathElements a rdf:Property ;
     rdfs:label "path elements"@en ;
     rdfs:comment "The ordered sub-paths of a sequence, alternative or negated property path: an rdf:List."@en ;
     rdfs:range rdf:List .
 
-sps:path a rdf:Property ;
+sparql:path a rdf:Property ;
     rdfs:label "path"@en ;
     rdfs:comment "The sub-path of an inverse or modified property path."@en .
 
-sps:countStar a rdf:Property ;
+sparql:countStar a rdf:Property ;
     rdfs:label "count star"@en ;
     rdfs:comment "True for COUNT(*)."@en ;
-    rdfs:domain sps:Count ;
+    rdfs:domain sparql:Count ;
     rdfs:range xsd:boolean .
 
-sps:separator a rdf:Property ;
+sparql:separator a rdf:Property ;
     rdfs:label "separator"@en ;
     rdfs:comment "The SEPARATOR of a GROUP_CONCAT aggregate."@en ;
-    rdfs:domain sps:GroupConcat ;
+    rdfs:domain sparql:GroupConcat ;
     rdfs:range xsd:string .
 
-sps:operations a rdf:Property ;
+sparql:operations a rdf:Property ;
     rdfs:label "operations"@en ;
     rdfs:comment "The ordered update operations of an update request: an rdf:List."@en ;
-    rdfs:domain sps:Update ;
+    rdfs:domain sparql:Update ;
     rdfs:range rdf:List .
 
-sps:source a rdf:Property ;
+sparql:source a rdf:Property ;
     rdfs:label "source"@en ;
     rdfs:comment "The source document IRI of a LOAD operation."@en ;
-    rdfs:domain sps:Load .
+    rdfs:domain sparql:Load .
 
-sps:into a rdf:Property ;
+sparql:into a rdf:Property ;
     rdfs:label "into"@en ;
     rdfs:comment "The target graph IRI of a LOAD ... INTO GRAPH operation."@en ;
-    rdfs:domain sps:Load .
+    rdfs:domain sparql:Load .
 
-sps:graphTarget a rdf:Property ;
+sparql:graphTarget a rdf:Property ;
     rdfs:label "graph target"@en ;
-    rdfs:comment "The target of a CLEAR or DROP operation: a graph IRI, sps:DefaultGraph, sps:NamedGraphs or sps:AllGraphs."@en .
+    rdfs:comment "The target of a CLEAR or DROP operation: a graph IRI, sparql:DefaultGraph, sparql:NamedGraphs or sparql:AllGraphs."@en .
 
-sps:fromGraph a rdf:Property ;
+sparql:fromGraph a rdf:Property ;
     rdfs:label "from graph"@en ;
-    rdfs:comment "The source graph of an ADD, MOVE or COPY operation: a graph IRI or sps:DefaultGraph."@en .
+    rdfs:comment "The source graph of an ADD, MOVE or COPY operation: a graph IRI or sparql:DefaultGraph."@en .
 
-sps:toGraph a rdf:Property ;
+sparql:toGraph a rdf:Property ;
     rdfs:label "to graph"@en ;
-    rdfs:comment "The target graph of an ADD, MOVE or COPY operation: a graph IRI or sps:DefaultGraph."@en .
+    rdfs:comment "The target graph of an ADD, MOVE or COPY operation: a graph IRI or sparql:DefaultGraph."@en .
 
-sps:data a rdf:Property ;
+sparql:data a rdf:Property ;
     rdfs:label "data"@en ;
-    rdfs:comment "The quad data of an INSERT DATA or DELETE DATA operation: an rdf:List of sps:TriplePattern and sps:Graph nodes."@en ;
+    rdfs:comment "The quad data of an INSERT DATA or DELETE DATA operation: an rdf:List of sparql:TriplePattern and sparql:Graph nodes."@en ;
     rdfs:range rdf:List .
 
-sps:deleteTemplate a rdf:Property ;
+sparql:deleteTemplate a rdf:Property ;
     rdfs:label "delete template"@en ;
-    rdfs:comment "The DELETE template of a DELETE/INSERT operation: an rdf:List of sps:TriplePattern and sps:Graph nodes."@en ;
-    rdfs:domain sps:Modify ;
+    rdfs:comment "The DELETE template of a DELETE/INSERT operation: an rdf:List of sparql:TriplePattern and sparql:Graph nodes."@en ;
+    rdfs:domain sparql:Modify ;
     rdfs:range rdf:List .
 
-sps:insertTemplate a rdf:Property ;
+sparql:insertTemplate a rdf:Property ;
     rdfs:label "insert template"@en ;
-    rdfs:comment "The INSERT template of a DELETE/INSERT operation: an rdf:List of sps:TriplePattern and sps:Graph nodes."@en ;
-    rdfs:domain sps:Modify ;
+    rdfs:comment "The INSERT template of a DELETE/INSERT operation: an rdf:List of sparql:TriplePattern and sparql:Graph nodes."@en ;
+    rdfs:domain sparql:Modify ;
     rdfs:range rdf:List .
 
-sps:withGraph a rdf:Property ;
+sparql:withGraph a rdf:Property ;
     rdfs:label "with graph"@en ;
     rdfs:comment "The WITH graph IRI of a DELETE/INSERT operation."@en ;
-    rdfs:domain sps:Modify .
+    rdfs:domain sparql:Modify .
 
-sps:using a rdf:Property ;
+sparql:using a rdf:Property ;
     rdfs:label "using"@en ;
     rdfs:comment "A USING clause IRI of a DELETE/INSERT operation (repeated for multiple clauses)."@en ;
-    rdfs:domain sps:Modify .
+    rdfs:domain sparql:Modify .
 
-sps:usingNamed a rdf:Property ;
+sparql:usingNamed a rdf:Property ;
     rdfs:label "using named"@en ;
     rdfs:comment "A USING NAMED clause IRI of a DELETE/INSERT operation (repeated for multiple clauses)."@en ;
-    rdfs:domain sps:Modify .
+    rdfs:domain sparql:Modify .
 
 # ==========================================
 # Built-in function individuals
 # ==========================================
 
-sps:STR a sps:BuiltInFunction ; rdfs:label "STR" .
-sps:LANG a sps:BuiltInFunction ; rdfs:label "LANG" .
-sps:LANGMATCHES a sps:BuiltInFunction ; rdfs:label "LANGMATCHES" .
-sps:LANGDIR a sps:BuiltInFunction ; rdfs:label "LANGDIR" .
-sps:DATATYPE a sps:BuiltInFunction ; rdfs:label "DATATYPE" .
-sps:IRI a sps:BuiltInFunction ; rdfs:label "IRI" .
-sps:URI a sps:BuiltInFunction ; rdfs:label "URI" .
-sps:BNODE a sps:BuiltInFunction ; rdfs:label "BNODE" .
-sps:BOUND a sps:BuiltInFunction ; rdfs:label "BOUND" .
-sps:STRLEN a sps:BuiltInFunction ; rdfs:label "STRLEN" .
-sps:UCASE a sps:BuiltInFunction ; rdfs:label "UCASE" .
-sps:LCASE a sps:BuiltInFunction ; rdfs:label "LCASE" .
-sps:ENCODE_FOR_URI a sps:BuiltInFunction ; rdfs:label "ENCODE_FOR_URI" .
-sps:CONTAINS a sps:BuiltInFunction ; rdfs:label "CONTAINS" .
-sps:STRSTARTS a sps:BuiltInFunction ; rdfs:label "STRSTARTS" .
-sps:CONCAT a sps:BuiltInFunction ; rdfs:label "CONCAT" .
-sps:STRENDS a sps:BuiltInFunction ; rdfs:label "STRENDS" .
-sps:STRBEFORE a sps:BuiltInFunction ; rdfs:label "STRBEFORE" .
-sps:STRAFTER a sps:BuiltInFunction ; rdfs:label "STRAFTER" .
-sps:STRLANG a sps:BuiltInFunction ; rdfs:label "STRLANG" .
-sps:STRLANGDIR a sps:BuiltInFunction ; rdfs:label "STRLANGDIR" .
-sps:STRDT a sps:BuiltInFunction ; rdfs:label "STRDT" .
-sps:ABS a sps:BuiltInFunction ; rdfs:label "ABS" .
-sps:CEIL a sps:BuiltInFunction ; rdfs:label "CEIL" .
-sps:FLOOR a sps:BuiltInFunction ; rdfs:label "FLOOR" .
-sps:ROUND a sps:BuiltInFunction ; rdfs:label "ROUND" .
-sps:RAND a sps:BuiltInFunction ; rdfs:label "RAND" .
-sps:YEAR a sps:BuiltInFunction ; rdfs:label "YEAR" .
-sps:MONTH a sps:BuiltInFunction ; rdfs:label "MONTH" .
-sps:DAY a sps:BuiltInFunction ; rdfs:label "DAY" .
-sps:HOURS a sps:BuiltInFunction ; rdfs:label "HOURS" .
-sps:MINUTES a sps:BuiltInFunction ; rdfs:label "MINUTES" .
-sps:SECONDS a sps:BuiltInFunction ; rdfs:label "SECONDS" .
-sps:TIMEZONE a sps:BuiltInFunction ; rdfs:label "TIMEZONE" .
-sps:TZ a sps:BuiltInFunction ; rdfs:label "TZ" .
-sps:NOW a sps:BuiltInFunction ; rdfs:label "NOW" .
-sps:MD5 a sps:BuiltInFunction ; rdfs:label "MD5" .
-sps:SHA1 a sps:BuiltInFunction ; rdfs:label "SHA1" .
-sps:SHA256 a sps:BuiltInFunction ; rdfs:label "SHA256" .
-sps:SHA384 a sps:BuiltInFunction ; rdfs:label "SHA384" .
-sps:SHA512 a sps:BuiltInFunction ; rdfs:label "SHA512" .
-sps:sameTerm a sps:BuiltInFunction ; rdfs:label "sameTerm" .
-sps:isIRI a sps:BuiltInFunction ; rdfs:label "isIRI" .
-sps:isURI a sps:BuiltInFunction ; rdfs:label "isURI" .
-sps:isBLANK a sps:BuiltInFunction ; rdfs:label "isBLANK" .
-sps:isLITERAL a sps:BuiltInFunction ; rdfs:label "isLITERAL" .
-sps:isNUMERIC a sps:BuiltInFunction ; rdfs:label "isNUMERIC" .
-sps:COALESCE a sps:BuiltInFunction ; rdfs:label "COALESCE" .
-sps:IF a sps:BuiltInFunction ; rdfs:label "IF" .
-sps:UUID a sps:BuiltInFunction ; rdfs:label "UUID" .
-sps:STRUUID a sps:BuiltInFunction ; rdfs:label "STRUUID" .
-sps:isTRIPLE a sps:BuiltInFunction ; rdfs:label "isTRIPLE" .
-sps:TRIPLE a sps:BuiltInFunction ; rdfs:label "TRIPLE" .
-sps:SUBJECT a sps:BuiltInFunction ; rdfs:label "SUBJECT" .
-sps:PREDICATE a sps:BuiltInFunction ; rdfs:label "PREDICATE" .
-sps:OBJECT a sps:BuiltInFunction ; rdfs:label "OBJECT" .
-sps:hasLANG a sps:BuiltInFunction ; rdfs:label "hasLANG" .
-sps:hasLANGDIR a sps:BuiltInFunction ; rdfs:label "hasLANGDIR" .
-sps:REGEX a sps:BuiltInFunction ; rdfs:label "REGEX" .
-sps:SUBSTR a sps:BuiltInFunction ; rdfs:label "SUBSTR" .
-sps:REPLACE a sps:BuiltInFunction ; rdfs:label "REPLACE" .
+sparql:STR a sparql:BuiltInFunction ; rdfs:label "STR" .
+sparql:LANG a sparql:BuiltInFunction ; rdfs:label "LANG" .
+sparql:LANGMATCHES a sparql:BuiltInFunction ; rdfs:label "LANGMATCHES" .
+sparql:LANGDIR a sparql:BuiltInFunction ; rdfs:label "LANGDIR" .
+sparql:DATATYPE a sparql:BuiltInFunction ; rdfs:label "DATATYPE" .
+sparql:IRI a sparql:BuiltInFunction ; rdfs:label "IRI" .
+sparql:URI a sparql:BuiltInFunction ; rdfs:label "URI" .
+sparql:BNODE a sparql:BuiltInFunction ; rdfs:label "BNODE" .
+sparql:BOUND a sparql:BuiltInFunction ; rdfs:label "BOUND" .
+sparql:STRLEN a sparql:BuiltInFunction ; rdfs:label "STRLEN" .
+sparql:UCASE a sparql:BuiltInFunction ; rdfs:label "UCASE" .
+sparql:LCASE a sparql:BuiltInFunction ; rdfs:label "LCASE" .
+sparql:ENCODE_FOR_URI a sparql:BuiltInFunction ; rdfs:label "ENCODE_FOR_URI" .
+sparql:CONTAINS a sparql:BuiltInFunction ; rdfs:label "CONTAINS" .
+sparql:STRSTARTS a sparql:BuiltInFunction ; rdfs:label "STRSTARTS" .
+sparql:CONCAT a sparql:BuiltInFunction ; rdfs:label "CONCAT" .
+sparql:STRENDS a sparql:BuiltInFunction ; rdfs:label "STRENDS" .
+sparql:STRBEFORE a sparql:BuiltInFunction ; rdfs:label "STRBEFORE" .
+sparql:STRAFTER a sparql:BuiltInFunction ; rdfs:label "STRAFTER" .
+sparql:STRLANG a sparql:BuiltInFunction ; rdfs:label "STRLANG" .
+sparql:STRLANGDIR a sparql:BuiltInFunction ; rdfs:label "STRLANGDIR" .
+sparql:STRDT a sparql:BuiltInFunction ; rdfs:label "STRDT" .
+sparql:ABS a sparql:BuiltInFunction ; rdfs:label "ABS" .
+sparql:CEIL a sparql:BuiltInFunction ; rdfs:label "CEIL" .
+sparql:FLOOR a sparql:BuiltInFunction ; rdfs:label "FLOOR" .
+sparql:ROUND a sparql:BuiltInFunction ; rdfs:label "ROUND" .
+sparql:RAND a sparql:BuiltInFunction ; rdfs:label "RAND" .
+sparql:YEAR a sparql:BuiltInFunction ; rdfs:label "YEAR" .
+sparql:MONTH a sparql:BuiltInFunction ; rdfs:label "MONTH" .
+sparql:DAY a sparql:BuiltInFunction ; rdfs:label "DAY" .
+sparql:HOURS a sparql:BuiltInFunction ; rdfs:label "HOURS" .
+sparql:MINUTES a sparql:BuiltInFunction ; rdfs:label "MINUTES" .
+sparql:SECONDS a sparql:BuiltInFunction ; rdfs:label "SECONDS" .
+sparql:TIMEZONE a sparql:BuiltInFunction ; rdfs:label "TIMEZONE" .
+sparql:TZ a sparql:BuiltInFunction ; rdfs:label "TZ" .
+sparql:NOW a sparql:BuiltInFunction ; rdfs:label "NOW" .
+sparql:MD5 a sparql:BuiltInFunction ; rdfs:label "MD5" .
+sparql:SHA1 a sparql:BuiltInFunction ; rdfs:label "SHA1" .
+sparql:SHA256 a sparql:BuiltInFunction ; rdfs:label "SHA256" .
+sparql:SHA384 a sparql:BuiltInFunction ; rdfs:label "SHA384" .
+sparql:SHA512 a sparql:BuiltInFunction ; rdfs:label "SHA512" .
+sparql:sameTerm a sparql:BuiltInFunction ; rdfs:label "sameTerm" .
+sparql:isIRI a sparql:BuiltInFunction ; rdfs:label "isIRI" .
+sparql:isURI a sparql:BuiltInFunction ; rdfs:label "isURI" .
+sparql:isBLANK a sparql:BuiltInFunction ; rdfs:label "isBLANK" .
+sparql:isLITERAL a sparql:BuiltInFunction ; rdfs:label "isLITERAL" .
+sparql:isNUMERIC a sparql:BuiltInFunction ; rdfs:label "isNUMERIC" .
+sparql:COALESCE a sparql:BuiltInFunction ; rdfs:label "COALESCE" .
+sparql:IF a sparql:BuiltInFunction ; rdfs:label "IF" .
+sparql:UUID a sparql:BuiltInFunction ; rdfs:label "UUID" .
+sparql:STRUUID a sparql:BuiltInFunction ; rdfs:label "STRUUID" .
+sparql:isTRIPLE a sparql:BuiltInFunction ; rdfs:label "isTRIPLE" .
+sparql:TRIPLE a sparql:BuiltInFunction ; rdfs:label "TRIPLE" .
+sparql:SUBJECT a sparql:BuiltInFunction ; rdfs:label "SUBJECT" .
+sparql:PREDICATE a sparql:BuiltInFunction ; rdfs:label "PREDICATE" .
+sparql:OBJECT a sparql:BuiltInFunction ; rdfs:label "OBJECT" .
+sparql:hasLANG a sparql:BuiltInFunction ; rdfs:label "hasLANG" .
+sparql:hasLANGDIR a sparql:BuiltInFunction ; rdfs:label "hasLANGDIR" .
+sparql:REGEX a sparql:BuiltInFunction ; rdfs:label "REGEX" .
+sparql:SUBSTR a sparql:BuiltInFunction ; rdfs:label "SUBSTR" .
+sparql:REPLACE a sparql:BuiltInFunction ; rdfs:label "REPLACE" .

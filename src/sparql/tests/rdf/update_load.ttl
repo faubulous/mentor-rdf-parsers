@@ -1,11 +1,11 @@
 # Expected RDF representation of update_load.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b723 a sps:Update .
-_:b724 a sps:Load ;
-       sps:source <http://example.org/data> .
+_:b723 a sparql:Update .
+_:b724 a sparql:Load ;
+       sparql:source <http://example.org/data> .
 _:b725 rdf:first _:b724 ;
        rdf:rest rdf:nil .
-_:b723 sps:operations _:b725 .
+_:b723 sparql:operations _:b725 .

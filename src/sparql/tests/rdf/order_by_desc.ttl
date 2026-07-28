@@ -1,25 +1,25 @@
 # Expected RDF representation of order_by_desc.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b522 a sps:SelectQuery .
-_:b523 a sps:Variable ;
-       sps:varName "name" .
+_:b522 a sparql:SelectQuery .
+_:b523 a sparql:Variable ;
+       sparql:varName "name" .
 _:b524 rdf:first _:b523 ;
        rdf:rest rdf:nil .
-_:b522 sps:projection _:b524 .
-_:b525 a sps:Variable ;
-       sps:varName "s" .
-_:b526 a sps:TriplePattern ;
-       sps:subject _:b525 ;
-       sps:predicate <http://example.org/name> ;
-       sps:object _:b523 .
+_:b522 sparql:projection _:b524 .
+_:b525 a sparql:Variable ;
+       sparql:varName "s" .
+_:b526 a sparql:TriplePattern ;
+       sparql:subject _:b525 ;
+       sparql:predicate <http://example.org/name> ;
+       sparql:object _:b523 .
 _:b527 rdf:first _:b526 ;
        rdf:rest rdf:nil .
-_:b522 sps:where _:b527 .
-_:b528 a sps:Desc ;
-       sps:expression _:b523 .
+_:b522 sparql:where _:b527 .
+_:b528 a sparql:Desc ;
+       sparql:expression _:b523 .
 _:b529 rdf:first _:b528 ;
        rdf:rest rdf:nil .
-_:b522 sps:orderBy _:b529 .
+_:b522 sparql:orderBy _:b529 .

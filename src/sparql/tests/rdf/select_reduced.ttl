@@ -1,21 +1,21 @@
 # Expected RDF representation of select_reduced.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b23 a sps:SelectQuery ;
-      sps:reduced "true"^^xsd:boolean .
-_:b24 a sps:Variable ;
-      sps:varName "name" .
+_:b23 a sparql:SelectQuery ;
+      sparql:reduced "true"^^xsd:boolean .
+_:b24 a sparql:Variable ;
+      sparql:varName "name" .
 _:b25 rdf:first _:b24 ;
       rdf:rest rdf:nil .
-_:b23 sps:projection _:b25 .
-_:b26 a sps:Variable ;
-      sps:varName "s" .
-_:b27 a sps:TriplePattern ;
-      sps:subject _:b26 ;
-      sps:predicate <http://example.org/name> ;
-      sps:object _:b24 .
+_:b23 sparql:projection _:b25 .
+_:b26 a sparql:Variable ;
+      sparql:varName "s" .
+_:b27 a sparql:TriplePattern ;
+      sparql:subject _:b26 ;
+      sparql:predicate <http://example.org/name> ;
+      sparql:object _:b24 .
 _:b28 rdf:first _:b27 ;
       rdf:rest rdf:nil .
-_:b23 sps:where _:b28 .
+_:b23 sparql:where _:b28 .

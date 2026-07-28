@@ -1,33 +1,33 @@
 # Expected RDF representation of filter_in.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b314 a sps:SelectQuery .
-_:b315 a sps:Variable ;
-       sps:varName "name" .
+_:b314 a sparql:SelectQuery .
+_:b315 a sparql:Variable ;
+       sparql:varName "name" .
 _:b316 rdf:first _:b315 ;
        rdf:rest rdf:nil .
-_:b314 sps:projection _:b316 .
-_:b317 a sps:Variable ;
-       sps:varName "s" .
-_:b318 a sps:TriplePattern ;
-       sps:subject _:b317 ;
-       sps:predicate <http://example.org/name> ;
-       sps:object _:b315 .
-_:b319 a sps:Filter .
-_:b320 a sps:In ;
-       sps:arg1 _:b315 .
+_:b314 sparql:projection _:b316 .
+_:b317 a sparql:Variable ;
+       sparql:varName "s" .
+_:b318 a sparql:TriplePattern ;
+       sparql:subject _:b317 ;
+       sparql:predicate <http://example.org/name> ;
+       sparql:object _:b315 .
+_:b319 a sparql:Filter .
+_:b320 a sparql:In ;
+       sparql:arg1 _:b315 .
 _:b321 rdf:first "Alice" ;
        rdf:rest _:b322 .
 _:b322 rdf:first "Bob" ;
        rdf:rest _:b323 .
 _:b323 rdf:first "Charlie" ;
        rdf:rest rdf:nil .
-_:b320 sps:args _:b321 .
-_:b319 sps:expression _:b320 .
+_:b320 sparql:args _:b321 .
+_:b319 sparql:expression _:b320 .
 _:b324 rdf:first _:b318 ;
        rdf:rest _:b325 .
 _:b325 rdf:first _:b319 ;
        rdf:rest rdf:nil .
-_:b314 sps:where _:b324 .
+_:b314 sparql:where _:b324 .

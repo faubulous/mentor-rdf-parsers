@@ -1,34 +1,34 @@
 # Expected RDF representation of filter_exists.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b337 a sps:SelectQuery .
-_:b338 a sps:Variable ;
-       sps:varName "x" .
+_:b337 a sparql:SelectQuery .
+_:b338 a sparql:Variable ;
+       sparql:varName "x" .
 _:b339 rdf:first _:b338 ;
        rdf:rest rdf:nil .
-_:b337 sps:projection _:b339 .
-_:b340 a sps:Variable ;
-       sps:varName "name" .
-_:b341 a sps:TriplePattern ;
-       sps:subject _:b338 ;
-       sps:predicate <http://example.org/name> ;
-       sps:object _:b340 .
-_:b342 a sps:Filter .
-_:b343 a sps:Exists .
-_:b344 a sps:Variable ;
-       sps:varName "email" .
-_:b345 a sps:TriplePattern ;
-       sps:subject _:b338 ;
-       sps:predicate <http://example.org/email> ;
-       sps:object _:b344 .
+_:b337 sparql:projection _:b339 .
+_:b340 a sparql:Variable ;
+       sparql:varName "name" .
+_:b341 a sparql:TriplePattern ;
+       sparql:subject _:b338 ;
+       sparql:predicate <http://example.org/name> ;
+       sparql:object _:b340 .
+_:b342 a sparql:Filter .
+_:b343 a sparql:Exists .
+_:b344 a sparql:Variable ;
+       sparql:varName "email" .
+_:b345 a sparql:TriplePattern ;
+       sparql:subject _:b338 ;
+       sparql:predicate <http://example.org/email> ;
+       sparql:object _:b344 .
 _:b346 rdf:first _:b345 ;
        rdf:rest rdf:nil .
-_:b343 sps:elements _:b346 .
-_:b342 sps:expression _:b343 .
+_:b343 sparql:elements _:b346 .
+_:b342 sparql:expression _:b343 .
 _:b347 rdf:first _:b341 ;
        rdf:rest _:b348 .
 _:b348 rdf:first _:b342 ;
        rdf:rest rdf:nil .
-_:b337 sps:where _:b347 .
+_:b337 sparql:where _:b347 .

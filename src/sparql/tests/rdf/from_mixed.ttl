@@ -1,43 +1,43 @@
 # Expected RDF representation of from_mixed.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b79 a sps:SelectQuery .
-_:b80 a sps:Variable ;
-      sps:varName "s" .
-_:b81 a sps:Variable ;
-      sps:varName "p" .
-_:b82 a sps:Variable ;
-      sps:varName "o" .
+_:b79 a sparql:SelectQuery .
+_:b80 a sparql:Variable ;
+      sparql:varName "s" .
+_:b81 a sparql:Variable ;
+      sparql:varName "p" .
+_:b82 a sparql:Variable ;
+      sparql:varName "o" .
 _:b83 rdf:first _:b80 ;
       rdf:rest _:b84 .
 _:b84 rdf:first _:b81 ;
       rdf:rest _:b85 .
 _:b85 rdf:first _:b82 ;
       rdf:rest rdf:nil .
-_:b79 sps:projection _:b83 ;
-      sps:from <http://example.org/default> ;
-      sps:fromNamed <http://example.org/named> .
-_:b86 a sps:Optional .
-_:b87 a sps:Graph ;
-      sps:graph <http://example.org/named> .
-_:b88 a sps:TriplePattern ;
-      sps:subject _:b80 ;
-      sps:predicate _:b81 ;
-      sps:object _:b82 .
+_:b79 sparql:projection _:b83 ;
+      sparql:from <http://example.org/default> ;
+      sparql:fromNamed <http://example.org/named> .
+_:b86 a sparql:Optional .
+_:b87 a sparql:Graph ;
+      sparql:graph <http://example.org/named> .
+_:b88 a sparql:TriplePattern ;
+      sparql:subject _:b80 ;
+      sparql:predicate _:b81 ;
+      sparql:object _:b82 .
 _:b89 rdf:first _:b88 ;
       rdf:rest rdf:nil .
-_:b87 sps:elements _:b89 .
+_:b87 sparql:elements _:b89 .
 _:b90 rdf:first _:b87 ;
       rdf:rest rdf:nil .
-_:b86 sps:elements _:b90 .
-_:b91 a sps:TriplePattern ;
-      sps:subject _:b80 ;
-      sps:predicate _:b81 ;
-      sps:object _:b82 .
+_:b86 sparql:elements _:b90 .
+_:b91 a sparql:TriplePattern ;
+      sparql:subject _:b80 ;
+      sparql:predicate _:b81 ;
+      sparql:object _:b82 .
 _:b92 rdf:first _:b86 ;
       rdf:rest _:b93 .
 _:b93 rdf:first _:b91 ;
       rdf:rest rdf:nil .
-_:b79 sps:where _:b92 .
+_:b79 sparql:where _:b92 .

@@ -1,26 +1,26 @@
 # Expected RDF representation of property_path_alternative.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b556 a sps:SelectQuery .
-_:b557 a sps:Variable ;
-       sps:varName "x" .
+_:b556 a sparql:SelectQuery .
+_:b557 a sparql:Variable ;
+       sparql:varName "x" .
 _:b558 rdf:first _:b557 ;
        rdf:rest rdf:nil .
-_:b556 sps:projection _:b558 .
-_:b559 a sps:AltPath .
+_:b556 sparql:projection _:b558 .
+_:b559 a sparql:AltPath .
 _:b560 rdf:first <http://xmlns.com/foaf/0.1/name> ;
        rdf:rest _:b561 .
 _:b561 rdf:first <http://purl.org/dc/elements/1.1/title> ;
        rdf:rest rdf:nil .
-_:b559 sps:pathElements _:b560 .
-_:b562 a sps:Variable ;
-       sps:varName "label" .
-_:b563 a sps:TriplePattern ;
-       sps:subject _:b557 ;
-       sps:predicate _:b559 ;
-       sps:object _:b562 .
+_:b559 sparql:pathElements _:b560 .
+_:b562 a sparql:Variable ;
+       sparql:varName "label" .
+_:b563 a sparql:TriplePattern ;
+       sparql:subject _:b557 ;
+       sparql:predicate _:b559 ;
+       sparql:object _:b562 .
 _:b564 rdf:first _:b563 ;
        rdf:rest rdf:nil .
-_:b556 sps:where _:b564 .
+_:b556 sparql:where _:b564 .

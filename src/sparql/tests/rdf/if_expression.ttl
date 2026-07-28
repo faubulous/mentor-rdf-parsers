@@ -1,37 +1,37 @@
 # Expected RDF representation of if_expression.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b375 a sps:SelectQuery .
-_:b376 a sps:Alias .
-_:b377 a sps:Variable ;
-       sps:varName "age" .
-_:b378 a sps:Gt ;
-       sps:arg1 _:b377 ;
-       sps:arg2 "18"^^xsd:integer .
-_:b379 a sps:BuiltInCall ;
-       sps:function sps:IF .
+_:b375 a sparql:SelectQuery .
+_:b376 a sparql:Alias .
+_:b377 a sparql:Variable ;
+       sparql:varName "age" .
+_:b378 a sparql:Gt ;
+       sparql:arg1 _:b377 ;
+       sparql:arg2 "18"^^xsd:integer .
+_:b379 a sparql:BuiltInCall ;
+       sparql:function sparql:IF .
 _:b380 rdf:first _:b378 ;
        rdf:rest _:b381 .
 _:b381 rdf:first "adult" ;
        rdf:rest _:b382 .
 _:b382 rdf:first "minor" ;
        rdf:rest rdf:nil .
-_:b379 sps:args _:b380 .
-_:b376 sps:expression _:b379 .
-_:b383 a sps:Variable ;
-       sps:varName "status" .
-_:b376 sps:variable _:b383 .
+_:b379 sparql:args _:b380 .
+_:b376 sparql:expression _:b379 .
+_:b383 a sparql:Variable ;
+       sparql:varName "status" .
+_:b376 sparql:variable _:b383 .
 _:b384 rdf:first _:b376 ;
        rdf:rest rdf:nil .
-_:b375 sps:projection _:b384 .
-_:b385 a sps:Variable ;
-       sps:varName "s" .
-_:b386 a sps:TriplePattern ;
-       sps:subject _:b385 ;
-       sps:predicate <http://example.org/age> ;
-       sps:object _:b377 .
+_:b375 sparql:projection _:b384 .
+_:b385 a sparql:Variable ;
+       sparql:varName "s" .
+_:b386 a sparql:TriplePattern ;
+       sparql:subject _:b385 ;
+       sparql:predicate <http://example.org/age> ;
+       sparql:object _:b377 .
 _:b387 rdf:first _:b386 ;
        rdf:rest rdf:nil .
-_:b375 sps:where _:b387 .
+_:b375 sparql:where _:b387 .

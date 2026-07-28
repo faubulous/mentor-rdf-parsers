@@ -1,27 +1,27 @@
 # Expected RDF representation of service_pattern.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b175 a sps:SelectQuery .
-_:b176 a sps:Variable ;
-       sps:varName "s" .
+_:b175 a sparql:SelectQuery .
+_:b176 a sparql:Variable ;
+       sparql:varName "s" .
 _:b177 rdf:first _:b176 ;
        rdf:rest rdf:nil .
-_:b175 sps:projection _:b177 .
-_:b178 a sps:Service ;
-       sps:endpoint <http://example.org/sparql> .
-_:b179 a sps:Variable ;
-       sps:varName "p" .
-_:b180 a sps:Variable ;
-       sps:varName "o" .
-_:b181 a sps:TriplePattern ;
-       sps:subject _:b176 ;
-       sps:predicate _:b179 ;
-       sps:object _:b180 .
+_:b175 sparql:projection _:b177 .
+_:b178 a sparql:Service ;
+       sparql:endpoint <http://example.org/sparql> .
+_:b179 a sparql:Variable ;
+       sparql:varName "p" .
+_:b180 a sparql:Variable ;
+       sparql:varName "o" .
+_:b181 a sparql:TriplePattern ;
+       sparql:subject _:b176 ;
+       sparql:predicate _:b179 ;
+       sparql:object _:b180 .
 _:b182 rdf:first _:b181 ;
        rdf:rest rdf:nil .
-_:b178 sps:elements _:b182 .
+_:b178 sparql:elements _:b182 .
 _:b183 rdf:first _:b178 ;
        rdf:rest rdf:nil .
-_:b175 sps:where _:b183 .
+_:b175 sparql:where _:b183 .

@@ -3,7 +3,7 @@ import dataFactory from '@rdfjs/data-model';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { SparqlParser } from './parser.js';
-import { sps, BUILT_IN_FUNCTIONS } from './vocabulary.js';
+import { sparql, BUILT_IN_FUNCTIONS } from './vocabulary.js';
 import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
 import { getCstChildren, getOrderedCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString } from '../reader-helpers.js';
 
@@ -39,8 +39,8 @@ type TriplesContext = { subject?: Term; predicate?: Term; object?: Term; element
  * (https://w3id.org/sparql-syntax#).
  *
  * The reader emits RDF/JS quads describing the query structure: the query or
- * update root node is typed (e.g. sps:SelectQuery), variables become shared
- * blank nodes typed sps:Variable, graph patterns become typed element nodes
+ * update root node is typed (e.g. sparql:SelectQuery), variables become shared
+ * blank nodes typed sparql:Variable, graph patterns become typed element nodes
  * collected in rdf:Lists, and syntactic sugar (collections, blank node
  * property lists, reified triples, annotations) is desugared the way the
  * SPARQL 1.2 specification does.
@@ -60,6 +60,14 @@ export class SparqlReader extends BaseVisitor {
      * The root node of the last read query or update.
      */
     rootNode: Term | null = null;
+
+    /**
+     * Optional IRI to use for the root query or update node. When set, the
+     * root node is emitted as this named node instead of a blank node, so
+     * that queries can be addressed by a stable IRI, such as the IRI of the
+     * document containing the query.
+     */
+    rootIri: NamedNode | null = null;
 
     /**
      * The quads accumulated during the current read.
@@ -136,24 +144,24 @@ export class SparqlReader extends BaseVisitor {
     }
 
     /**
-     * Create a sps:TriplePattern element node.
+     * Create a sparql:TriplePattern element node.
      */
     protected triplePatternNode(subject: Term, predicate: Term, object: Term): BlankNode {
-        const node = this.createNode(sps.TriplePattern);
-        this.emit(node, sps.subject, subject);
-        this.emit(node, sps.predicate, predicate);
-        this.emit(node, sps.object, object);
+        const node = this.createNode(sparql.TriplePattern);
+        this.emit(node, sparql.subject, subject);
+        this.emit(node, sparql.predicate, predicate);
+        this.emit(node, sparql.object, object);
         return node;
     }
 
     /**
-     * Create a sps:TripleTerm node.
+     * Create a sparql:TripleTerm node.
      */
     protected tripleTermNode(subject: Term, predicate: Term, object: Term): BlankNode {
-        const node = this.createNode(sps.TripleTerm);
-        this.emit(node, sps.subject, subject);
-        this.emit(node, sps.predicate, predicate);
-        this.emit(node, sps.object, object);
+        const node = this.createNode(sparql.TripleTerm);
+        this.emit(node, sparql.subject, subject);
+        this.emit(node, sparql.predicate, predicate);
+        this.emit(node, sparql.object, object);
         return node;
     }
 
@@ -162,8 +170,8 @@ export class SparqlReader extends BaseVisitor {
      */
     protected binaryNode(type: NamedNode, arg1: Term, arg2: Term): BlankNode {
         const node = this.createNode(type);
-        this.emit(node, sps.arg1, arg1);
-        this.emit(node, sps.arg2, arg2);
+        this.emit(node, sparql.arg1, arg1);
+        this.emit(node, sparql.arg2, arg2);
         return node;
     }
 
@@ -172,17 +180,17 @@ export class SparqlReader extends BaseVisitor {
      */
     protected unaryNode(type: NamedNode, arg: Term): BlankNode {
         const node = this.createNode(type);
-        this.emit(node, sps.arg, arg);
+        this.emit(node, sparql.arg, arg);
         return node;
     }
 
     /**
-     * Create a sps:BuiltInCall node.
+     * Create a sparql:BuiltInCall node.
      */
     protected builtInCallNode(fn: NamedNode, args: Term[]): BlankNode {
-        const node = this.createNode(sps.BuiltInCall);
-        this.emit(node, sps.function, fn);
-        this.emit(node, sps.args, this.makeList(args));
+        const node = this.createNode(sparql.BuiltInCall);
+        this.emit(node, sparql.function, fn);
+        this.emit(node, sparql.args, this.makeList(args));
         return node;
     }
 
@@ -193,7 +201,7 @@ export class SparqlReader extends BaseVisitor {
     protected syntacticBlankNode(token?: IToken): BlankNode {
         const id = token ? getBlankNodeIdFromToken(token) : undefined;
         const node = dataFactory.blankNode(id);
-        this.emit(node, RDF_TYPE, sps.BlankNode);
+        this.emit(node, RDF_TYPE, sparql.BlankNode);
         return node;
     }
 
@@ -207,8 +215,8 @@ export class SparqlReader extends BaseVisitor {
         if (!node) {
             node = dataFactory.blankNode();
             this.variables.set(name, node);
-            this.emit(node, RDF_TYPE, sps.Variable);
-            this.emit(node, sps.varName, dataFactory.literal(name));
+            this.emit(node, RDF_TYPE, sparql.Variable);
+            this.emit(node, sparql.varName, dataFactory.literal(name));
         }
 
         return node;
@@ -246,8 +254,8 @@ export class SparqlReader extends BaseVisitor {
             return result.subSelect;
         }
 
-        const node = this.createNode(sps.Group);
-        this.emit(node, sps.elements, this.makeList(result.elements));
+        const node = this.createNode(sparql.Group);
+        this.emit(node, sparql.elements, this.makeList(result.elements));
         return node;
     }
 
@@ -277,7 +285,23 @@ export class SparqlReader extends BaseVisitor {
         }
 
         if (root && this.versionString !== null) {
-            this.emit(root, sps.version, dataFactory.literal(this.versionString));
+            this.emit(root, sparql.version, dataFactory.literal(this.versionString));
+        }
+
+        // Give the root node a stable identity when a root IRI is configured.
+        // Blank nodes cannot appear in the predicate position, so rewriting
+        // subjects and objects covers all occurrences.
+        if (root && root.termType === 'BlankNode' && this.rootIri) {
+            const rootIri = this.rootIri;
+
+            this._quads = this._quads.map(q => (q.subject.equals(root) || q.object.equals(root))
+                ? dataFactory.quad(
+                    q.subject.equals(root) ? rootIri : q.subject,
+                    q.predicate,
+                    q.object.equals(root) ? rootIri : q.object)
+                : q);
+
+            root = rootIri;
         }
 
         this.rootNode = root;
@@ -312,7 +336,7 @@ export class SparqlReader extends BaseVisitor {
             const values = this.visit(ctx.valuesClause[0]);
 
             if (values) {
-                this.emit(root, sps.values, values);
+                this.emit(root, sparql.values, values);
             }
         }
 
@@ -350,7 +374,7 @@ export class SparqlReader extends BaseVisitor {
     // ==========================================
 
     selectQuery(ctx): Term {
-        const node = this.createNode(sps.SelectQuery);
+        const node = this.createNode(sparql.SelectQuery);
 
         this.visit(ctx.selectClause[0], node);
 
@@ -358,24 +382,24 @@ export class SparqlReader extends BaseVisitor {
             this.visit(clause, node);
         }
 
-        this.emit(node, sps.where, this.makeList(this.visit(ctx.whereClause[0])));
+        this.emit(node, sparql.where, this.makeList(this.visit(ctx.whereClause[0])));
         this.visit(ctx.solutionModifier[0], node);
 
         return node;
     }
 
     subSelect(ctx): Term {
-        const node = this.createNode(sps.SubSelect);
+        const node = this.createNode(sparql.SubSelect);
 
         this.visit(ctx.selectClause[0], node);
-        this.emit(node, sps.where, this.makeList(this.visit(ctx.whereClause[0])));
+        this.emit(node, sparql.where, this.makeList(this.visit(ctx.whereClause[0])));
         this.visit(ctx.solutionModifier[0], node);
 
         if (ctx.valuesClause) {
             const values = this.visit(ctx.valuesClause[0]);
 
             if (values) {
-                this.emit(node, sps.values, values);
+                this.emit(node, sparql.values, values);
             }
         }
 
@@ -384,13 +408,13 @@ export class SparqlReader extends BaseVisitor {
 
     selectClause(ctx, node: Term): void {
         if (ctx.DISTINCT) {
-            this.emit(node, sps.distinct, TRUE);
+            this.emit(node, sparql.distinct, TRUE);
         } else if (ctx.REDUCED) {
-            this.emit(node, sps.reduced, TRUE);
+            this.emit(node, sparql.reduced, TRUE);
         }
 
         if (ctx.STAR) {
-            this.emit(node, sps.star, TRUE);
+            this.emit(node, sparql.star, TRUE);
             return;
         }
 
@@ -401,11 +425,11 @@ export class SparqlReader extends BaseVisitor {
 
         for (let i = 0; i < items.length; i++) {
             if (items[i].key === 'expression') {
-                const alias = this.createNode(sps.Alias);
-                this.emit(alias, sps.expression, this.visit(items[i].node));
+                const alias = this.createNode(sparql.Alias);
+                this.emit(alias, sparql.expression, this.visit(items[i].node));
 
                 if (i + 1 < items.length && items[i + 1].key === 'var') {
-                    this.emit(alias, sps.variable, this.visit(items[i + 1].node));
+                    this.emit(alias, sparql.variable, this.visit(items[i + 1].node));
                     i++;
                 }
 
@@ -415,25 +439,25 @@ export class SparqlReader extends BaseVisitor {
             }
         }
 
-        this.emit(node, sps.projection, this.makeList(projection));
+        this.emit(node, sparql.projection, this.makeList(projection));
     }
 
     constructQuery(ctx): Term {
-        const node = this.createNode(sps.ConstructQuery);
+        const node = this.createNode(sparql.ConstructQuery);
 
         for (const clause of ctx.datasetClause ?? []) {
             this.visit(clause, node);
         }
 
         if (ctx.constructTemplate) {
-            this.emit(node, sps.template, this.makeList(this.visit(ctx.constructTemplate[0])));
-            this.emit(node, sps.where, this.makeList(this.visit(ctx.whereClause[0])));
+            this.emit(node, sparql.template, this.makeList(this.visit(ctx.constructTemplate[0])));
+            this.emit(node, sparql.where, this.makeList(this.visit(ctx.whereClause[0])));
         } else {
             // CONSTRUCT WHERE shorthand: the template doubles as the pattern.
             const elements = ctx.triplesTemplate ? this.visit(ctx.triplesTemplate[0]) : [];
 
-            this.emit(node, sps.template, this.makeList(elements));
-            this.emit(node, sps.where, this.makeList(elements));
+            this.emit(node, sparql.template, this.makeList(elements));
+            this.emit(node, sparql.where, this.makeList(elements));
         }
 
         this.visit(ctx.solutionModifier[0], node);
@@ -442,13 +466,13 @@ export class SparqlReader extends BaseVisitor {
     }
 
     describeQuery(ctx): Term {
-        const node = this.createNode(sps.DescribeQuery);
+        const node = this.createNode(sparql.DescribeQuery);
 
         if (ctx.STAR) {
-            this.emit(node, sps.star, TRUE);
+            this.emit(node, sparql.star, TRUE);
         } else if (ctx.varOrIri) {
             const targets = ctx.varOrIri.map(target => this.visit(target));
-            this.emit(node, sps.describeTargets, this.makeList(targets));
+            this.emit(node, sparql.describeTargets, this.makeList(targets));
         }
 
         for (const clause of ctx.datasetClause ?? []) {
@@ -456,7 +480,7 @@ export class SparqlReader extends BaseVisitor {
         }
 
         if (ctx.whereClause) {
-            this.emit(node, sps.where, this.makeList(this.visit(ctx.whereClause[0])));
+            this.emit(node, sparql.where, this.makeList(this.visit(ctx.whereClause[0])));
         }
 
         this.visit(ctx.solutionModifier[0], node);
@@ -465,13 +489,13 @@ export class SparqlReader extends BaseVisitor {
     }
 
     askQuery(ctx): Term {
-        const node = this.createNode(sps.AskQuery);
+        const node = this.createNode(sparql.AskQuery);
 
         for (const clause of ctx.datasetClause ?? []) {
             this.visit(clause, node);
         }
 
-        this.emit(node, sps.where, this.makeList(this.visit(ctx.whereClause[0])));
+        this.emit(node, sparql.where, this.makeList(this.visit(ctx.whereClause[0])));
         this.visit(ctx.solutionModifier[0], node);
 
         return node;
@@ -479,9 +503,9 @@ export class SparqlReader extends BaseVisitor {
 
     datasetClause(ctx, node: Term): void {
         if (ctx.defaultGraphClause) {
-            this.emit(node, sps.from, this.visit(ctx.defaultGraphClause[0]));
+            this.emit(node, sparql.from, this.visit(ctx.defaultGraphClause[0]));
         } else if (ctx.namedGraphClause) {
-            this.emit(node, sps.fromNamed, this.visit(ctx.namedGraphClause[0]));
+            this.emit(node, sparql.fromNamed, this.visit(ctx.namedGraphClause[0]));
         }
     }
 
@@ -522,7 +546,7 @@ export class SparqlReader extends BaseVisitor {
 
     groupClause(ctx, node: Term): void {
         const conditions = (ctx.groupCondition ?? []).map(condition => this.visit(condition));
-        this.emit(node, sps.groupBy, this.makeList(conditions));
+        this.emit(node, sparql.groupBy, this.makeList(conditions));
     }
 
     groupCondition(ctx): Term {
@@ -534,9 +558,9 @@ export class SparqlReader extends BaseVisitor {
             const expression = this.visit(ctx.expression[0]);
 
             if (ctx.var) {
-                const alias = this.createNode(sps.Alias);
-                this.emit(alias, sps.expression, expression);
-                this.emit(alias, sps.variable, this.visit(ctx.var[0]));
+                const alias = this.createNode(sparql.Alias);
+                this.emit(alias, sparql.expression, expression);
+                this.emit(alias, sparql.variable, this.visit(ctx.var[0]));
                 return alias;
             }
 
@@ -550,7 +574,7 @@ export class SparqlReader extends BaseVisitor {
 
     havingClause(ctx, node: Term): void {
         const conditions = (ctx.havingCondition ?? []).map(condition => this.visit(condition));
-        this.emit(node, sps.having, this.makeList(conditions));
+        this.emit(node, sparql.having, this.makeList(conditions));
     }
 
     havingCondition(ctx): Term {
@@ -559,13 +583,13 @@ export class SparqlReader extends BaseVisitor {
 
     orderClause(ctx, node: Term): void {
         const conditions = (ctx.orderCondition ?? []).map(condition => this.visit(condition));
-        this.emit(node, sps.orderBy, this.makeList(conditions));
+        this.emit(node, sparql.orderBy, this.makeList(conditions));
     }
 
     orderCondition(ctx): Term {
         if (ctx.ASC || ctx.DESC) {
-            const node = this.createNode(ctx.ASC ? sps.Asc : sps.Desc);
-            this.emit(node, sps.expression, this.visit(ctx.brackettedExpression[0]));
+            const node = this.createNode(ctx.ASC ? sparql.Asc : sparql.Desc);
+            this.emit(node, sparql.expression, this.visit(ctx.brackettedExpression[0]));
             return node;
         } else if (ctx.constraint) {
             return this.visit(ctx.constraint[0]);
@@ -586,11 +610,11 @@ export class SparqlReader extends BaseVisitor {
     }
 
     limitClause(ctx, node: Term): void {
-        this.emit(node, sps.limit, dataFactory.literal(ctx.INTEGER[0].image, XSD_INTEGER));
+        this.emit(node, sparql.limit, dataFactory.literal(ctx.INTEGER[0].image, XSD_INTEGER));
     }
 
     offsetClause(ctx, node: Term): void {
-        this.emit(node, sps.offset, dataFactory.literal(ctx.INTEGER[0].image, XSD_INTEGER));
+        this.emit(node, sparql.offset, dataFactory.literal(ctx.INTEGER[0].image, XSD_INTEGER));
     }
 
     // ==========================================
@@ -614,23 +638,23 @@ export class SparqlReader extends BaseVisitor {
     }
 
     inlineDataOneVar(ctx): Term {
-        const node = this.createNode(sps.Values);
+        const node = this.createNode(sparql.Values);
         const variable = this.visit(ctx.var[0]);
 
-        this.emit(node, sps.variables, this.makeList([variable]));
+        this.emit(node, sparql.variables, this.makeList([variable]));
 
         const rows = (ctx.dataBlockValue ?? []).map(value => this.makeList([this.visit(value)]));
-        this.emit(node, sps.bindings, this.makeList(rows));
+        this.emit(node, sparql.bindings, this.makeList(rows));
 
         return node;
     }
 
     inlineDataFull(ctx): Term {
-        const node = this.createNode(sps.Values);
+        const node = this.createNode(sparql.Values);
         const lcurlyOffset = ctx.LCURLY[0].startOffset;
 
         const variables = (ctx.var ?? []).map(variable => this.visit(variable));
-        this.emit(node, sps.variables, this.makeList(variables));
+        this.emit(node, sparql.variables, this.makeList(variables));
 
         // Reconstruct the binding rows: values are grouped between the paren
         // tokens that follow the opening curly brace; NIL is an empty row.
@@ -653,7 +677,7 @@ export class SparqlReader extends BaseVisitor {
             }
         }
 
-        this.emit(node, sps.bindings, this.makeList(rows));
+        this.emit(node, sparql.bindings, this.makeList(rows));
 
         return node;
     }
@@ -668,7 +692,7 @@ export class SparqlReader extends BaseVisitor {
         } else if (ctx.booleanLiteral) {
             return this.visit(ctx.booleanLiteral[0]);
         } else if (ctx.UNDEF) {
-            return sps.undef;
+            return sparql.undef;
         } else if (ctx.tripleTermData) {
             return this.visit(ctx.tripleTermData[0]);
         }
@@ -735,45 +759,45 @@ export class SparqlReader extends BaseVisitor {
     }
 
     optionalGraphPattern(ctx): Term {
-        const node = this.createNode(sps.Optional);
+        const node = this.createNode(sparql.Optional);
         const elements = this.groupElements(this.visit(ctx.groupGraphPattern[0]));
 
-        this.emit(node, sps.elements, this.makeList(elements));
+        this.emit(node, sparql.elements, this.makeList(elements));
 
         return node;
     }
 
     graphGraphPattern(ctx): Term {
-        const node = this.createNode(sps.Graph);
+        const node = this.createNode(sparql.Graph);
 
-        this.emit(node, sps.graph, this.visit(ctx.varOrIri[0]));
+        this.emit(node, sparql.graph, this.visit(ctx.varOrIri[0]));
 
         const elements = this.groupElements(this.visit(ctx.groupGraphPattern[0]));
-        this.emit(node, sps.elements, this.makeList(elements));
+        this.emit(node, sparql.elements, this.makeList(elements));
 
         return node;
     }
 
     serviceGraphPattern(ctx): Term {
-        const node = this.createNode(sps.Service);
+        const node = this.createNode(sparql.Service);
 
         if (ctx.SILENT) {
-            this.emit(node, sps.silent, TRUE);
+            this.emit(node, sparql.silent, TRUE);
         }
 
-        this.emit(node, sps.endpoint, this.visit(ctx.varOrIri[0]));
+        this.emit(node, sparql.endpoint, this.visit(ctx.varOrIri[0]));
 
         const elements = this.groupElements(this.visit(ctx.groupGraphPattern[0]));
-        this.emit(node, sps.elements, this.makeList(elements));
+        this.emit(node, sparql.elements, this.makeList(elements));
 
         return node;
     }
 
     minusGraphPattern(ctx): Term {
-        const node = this.createNode(sps.Minus);
+        const node = this.createNode(sparql.Minus);
         const elements = this.groupElements(this.visit(ctx.groupGraphPattern[0]));
 
-        this.emit(node, sps.elements, this.makeList(elements));
+        this.emit(node, sparql.elements, this.makeList(elements));
 
         return node;
     }
@@ -785,15 +809,15 @@ export class SparqlReader extends BaseVisitor {
             return this.groupNode(branches[0]);
         }
 
-        const node = this.createNode(sps.Union);
-        this.emit(node, sps.elements, this.makeList(branches.map(branch => this.groupNode(branch))));
+        const node = this.createNode(sparql.Union);
+        this.emit(node, sparql.elements, this.makeList(branches.map(branch => this.groupNode(branch))));
 
         return node;
     }
 
     filter(ctx): Term {
-        const node = this.createNode(sps.Filter);
-        this.emit(node, sps.expression, this.visit(ctx.constraint[0]));
+        const node = this.createNode(sparql.Filter);
+        this.emit(node, sparql.expression, this.visit(ctx.constraint[0]));
         return node;
     }
 
@@ -810,23 +834,23 @@ export class SparqlReader extends BaseVisitor {
     }
 
     bind(ctx): Term {
-        const node = this.createNode(sps.Bind);
-        this.emit(node, sps.expression, this.visit(ctx.expression[0]));
-        this.emit(node, sps.variable, this.visit(ctx.var[0]));
+        const node = this.createNode(sparql.Bind);
+        this.emit(node, sparql.expression, this.visit(ctx.expression[0]));
+        this.emit(node, sparql.variable, this.visit(ctx.var[0]));
         return node;
     }
 
     functionCall(ctx): Term {
-        const node = this.createNode(sps.FunctionCall);
-        this.emit(node, sps.function, this.visit(ctx.iri[0]));
+        const node = this.createNode(sparql.FunctionCall);
+        this.emit(node, sparql.function, this.visit(ctx.iri[0]));
 
         const { distinct, args } = this.visit(ctx.argList[0]);
 
         if (distinct) {
-            this.emit(node, sps.distinct, TRUE);
+            this.emit(node, sparql.distinct, TRUE);
         }
 
-        this.emit(node, sps.args, this.makeList(args));
+        this.emit(node, sparql.args, this.makeList(args));
 
         return node;
     }
@@ -958,7 +982,7 @@ export class SparqlReader extends BaseVisitor {
         for (let i = 0; i < members.length; i++) {
             const cellId = i === 0 ? headId : (headId ? `${headId}-rest-${i}` : undefined);
             const cell = dataFactory.blankNode(cellId);
-            this.emit(cell, RDF_TYPE, sps.BlankNode);
+            this.emit(cell, RDF_TYPE, sparql.BlankNode);
             cells.push(cell);
         }
 
@@ -1106,8 +1130,8 @@ export class SparqlReader extends BaseVisitor {
             return members[0];
         }
 
-        const node = this.createNode(sps.AltPath);
-        this.emit(node, sps.pathElements, this.makeList(members));
+        const node = this.createNode(sparql.AltPath);
+        this.emit(node, sparql.pathElements, this.makeList(members));
 
         return node;
     }
@@ -1119,8 +1143,8 @@ export class SparqlReader extends BaseVisitor {
             return members[0];
         }
 
-        const node = this.createNode(sps.SeqPath);
-        this.emit(node, sps.pathElements, this.makeList(members));
+        const node = this.createNode(sparql.SeqPath);
+        this.emit(node, sparql.pathElements, this.makeList(members));
 
         return node;
     }
@@ -1129,8 +1153,8 @@ export class SparqlReader extends BaseVisitor {
         const path = this.visit(ctx.pathElt[0]);
 
         if (ctx.CARET) {
-            const node = this.createNode(sps.InversePath);
-            this.emit(node, sps.path, path);
+            const node = this.createNode(sparql.InversePath);
+            this.emit(node, sparql.path, path);
             return node;
         }
 
@@ -1142,7 +1166,7 @@ export class SparqlReader extends BaseVisitor {
 
         if (ctx.pathMod) {
             const node = this.createNode(this.visit(ctx.pathMod[0]));
-            this.emit(node, sps.path, path);
+            this.emit(node, sparql.path, path);
             return node;
         }
 
@@ -1151,12 +1175,12 @@ export class SparqlReader extends BaseVisitor {
 
     pathMod(ctx): NamedNode {
         if (ctx.QUESTION_MARK) {
-            return sps.ZeroOrOnePath;
+            return sparql.ZeroOrOnePath;
         } else if (ctx.STAR) {
-            return sps.ZeroOrMorePath;
+            return sparql.ZeroOrMorePath;
         }
 
-        return sps.OneOrMorePath;
+        return sparql.OneOrMorePath;
     }
 
     pathPrimary(ctx): Term {
@@ -1165,8 +1189,8 @@ export class SparqlReader extends BaseVisitor {
         } else if (ctx.A) {
             return RDF_TYPE;
         } else if (ctx.pathNegatedPropertySet) {
-            const node = this.createNode(sps.NegatedPath);
-            this.emit(node, sps.pathElements, this.makeList(this.visit(ctx.pathNegatedPropertySet[0])));
+            const node = this.createNode(sparql.NegatedPath);
+            this.emit(node, sparql.pathElements, this.makeList(this.visit(ctx.pathNegatedPropertySet[0])));
             return node;
         } else if (ctx.path) {
             return this.visit(ctx.path[0]);
@@ -1183,8 +1207,8 @@ export class SparqlReader extends BaseVisitor {
         const iri = ctx.iri ? this.visit(ctx.iri[0]) : RDF_TYPE;
 
         if (ctx.CARET) {
-            const node = this.createNode(sps.InversePath);
-            this.emit(node, sps.path, iri);
+            const node = this.createNode(sparql.InversePath);
+            this.emit(node, sparql.path, iri);
             return node;
         }
 
@@ -1455,11 +1479,11 @@ export class SparqlReader extends BaseVisitor {
     }
 
     conditionalOrExpression(ctx): Term {
-        return this.foldBinary(ctx.conditionalAndExpression ?? [], sps.Or);
+        return this.foldBinary(ctx.conditionalAndExpression ?? [], sparql.Or);
     }
 
     conditionalAndExpression(ctx): Term {
-        return this.foldBinary(ctx.valueLogical ?? [], sps.And);
+        return this.foldBinary(ctx.valueLogical ?? [], sparql.And);
     }
 
     /**
@@ -1483,12 +1507,12 @@ export class SparqlReader extends BaseVisitor {
         const lhs = this.visit(ctx.numericExpression[0]);
 
         const operators: [string, NamedNode][] = [
-            ['EQ', sps.Eq],
-            ['NEQ', sps.Neq],
-            ['LTE', sps.Leq],
-            ['GTE', sps.Geq],
-            ['LT', sps.Lt],
-            ['GT', sps.Gt]
+            ['EQ', sparql.Eq],
+            ['NEQ', sparql.Neq],
+            ['LTE', sparql.Leq],
+            ['GTE', sparql.Geq],
+            ['LT', sparql.Lt],
+            ['GT', sparql.Gt]
         ];
 
         for (const [token, type] of operators) {
@@ -1498,9 +1522,9 @@ export class SparqlReader extends BaseVisitor {
         }
 
         if (ctx.IN) {
-            const node = this.createNode(ctx.NOT ? sps.NotIn : sps.In);
-            this.emit(node, sps.arg1, lhs);
-            this.emit(node, sps.args, this.makeList(this.visit(ctx.expressionList[0])));
+            const node = this.createNode(ctx.NOT ? sparql.NotIn : sparql.In);
+            this.emit(node, sparql.arg1, lhs);
+            this.emit(node, sparql.args, this.makeList(this.visit(ctx.expressionList[0])));
             return node;
         }
 
@@ -1524,10 +1548,10 @@ export class SparqlReader extends BaseVisitor {
             const item = items[i];
 
             if (item.key === 'PLUS_SIGN' && i + 1 < items.length) {
-                result = this.binaryNode(sps.Addition, result, this.visit(items[i + 1].node));
+                result = this.binaryNode(sparql.Addition, result, this.visit(items[i + 1].node));
                 i += 2;
             } else if (item.key === 'MINUS_SIGN' && i + 1 < items.length) {
-                result = this.binaryNode(sps.Subtraction, result, this.visit(items[i + 1].node));
+                result = this.binaryNode(sparql.Subtraction, result, this.visit(items[i + 1].node));
                 i += 2;
             } else if (item.key === 'numericLiteralPositive' || item.key === 'numericLiteralNegative') {
                 // Signed numeric literal shorthand: '?x +3' means ?x + (+3),
@@ -1536,12 +1560,12 @@ export class SparqlReader extends BaseVisitor {
                 i += 1;
 
                 if (i + 1 < items.length && (items[i].key === 'STAR' || items[i].key === 'SLASH')) {
-                    const type = items[i].key === 'STAR' ? sps.Multiplication : sps.Division;
+                    const type = items[i].key === 'STAR' ? sparql.Multiplication : sparql.Division;
                     rhs = this.binaryNode(type, rhs, this.visit(items[i + 1].node));
                     i += 2;
                 }
 
-                result = this.binaryNode(sps.Addition, result, rhs);
+                result = this.binaryNode(sparql.Addition, result, rhs);
             } else {
                 // Tolerate unexpected shapes from error-recovered syntax trees.
                 i += 1;
@@ -1558,7 +1582,7 @@ export class SparqlReader extends BaseVisitor {
         let i = 1;
 
         while (i + 1 < items.length) {
-            const type = items[i].key === 'STAR' ? sps.Multiplication : sps.Division;
+            const type = items[i].key === 'STAR' ? sparql.Multiplication : sparql.Division;
             result = this.binaryNode(type, result, this.visit(items[i + 1].node));
             i += 2;
         }
@@ -1568,11 +1592,11 @@ export class SparqlReader extends BaseVisitor {
 
     unaryExpression(ctx): Term {
         if (ctx.BANG) {
-            return this.unaryNode(sps.UnaryNot, this.visit(ctx.unaryExpression[0]));
+            return this.unaryNode(sparql.UnaryNot, this.visit(ctx.unaryExpression[0]));
         } else if (ctx.PLUS_SIGN) {
-            return this.unaryNode(sps.UnaryPlus, this.visit(ctx.primaryExpression[0]));
+            return this.unaryNode(sparql.UnaryPlus, this.visit(ctx.primaryExpression[0]));
         } else if (ctx.MINUS_SIGN) {
-            return this.unaryNode(sps.UnaryMinus, this.visit(ctx.primaryExpression[0]));
+            return this.unaryNode(sparql.UnaryMinus, this.visit(ctx.primaryExpression[0]));
         }
 
         return this.visit(ctx.primaryExpression[0]);
@@ -1608,16 +1632,16 @@ export class SparqlReader extends BaseVisitor {
         const iri = this.visit(ctx.iri[0]);
 
         if (ctx.argList) {
-            const node = this.createNode(sps.FunctionCall);
-            this.emit(node, sps.function, iri);
+            const node = this.createNode(sparql.FunctionCall);
+            this.emit(node, sparql.function, iri);
 
             const { distinct, args } = this.visit(ctx.argList[0]);
 
             if (distinct) {
-                this.emit(node, sps.distinct, TRUE);
+                this.emit(node, sparql.distinct, TRUE);
             }
 
-            this.emit(node, sps.args, this.makeList(args));
+            this.emit(node, sparql.args, this.makeList(args));
 
             return node;
         }
@@ -1646,7 +1670,7 @@ export class SparqlReader extends BaseVisitor {
     /**
      * Generic handler for the built-in call group rules: identifies the
      * keyword token, collects the arguments in source order and builds a
-     * sps:BuiltInCall node.
+     * sparql:BuiltInCall node.
      */
     protected readBuiltInCallGroup(ctx): Term {
         const context = getCstChildren(ctx);
@@ -1723,38 +1747,38 @@ export class SparqlReader extends BaseVisitor {
     }
 
     regexExpression(ctx): Term {
-        return this.builtInCallNode(sps.REGEX, (ctx.expression ?? []).map(e => this.visit(e)));
+        return this.builtInCallNode(sparql.REGEX, (ctx.expression ?? []).map(e => this.visit(e)));
     }
 
     substringExpression(ctx): Term {
-        return this.builtInCallNode(sps.SUBSTR, (ctx.expression ?? []).map(e => this.visit(e)));
+        return this.builtInCallNode(sparql.SUBSTR, (ctx.expression ?? []).map(e => this.visit(e)));
     }
 
     strReplaceExpression(ctx): Term {
-        return this.builtInCallNode(sps.REPLACE, (ctx.expression ?? []).map(e => this.visit(e)));
+        return this.builtInCallNode(sparql.REPLACE, (ctx.expression ?? []).map(e => this.visit(e)));
     }
 
     existsFunc(ctx): Term {
-        const node = this.createNode(sps.Exists);
-        this.emit(node, sps.elements, this.makeList(this.groupElements(this.visit(ctx.groupGraphPattern[0]))));
+        const node = this.createNode(sparql.Exists);
+        this.emit(node, sparql.elements, this.makeList(this.groupElements(this.visit(ctx.groupGraphPattern[0]))));
         return node;
     }
 
     notExistsFunc(ctx): Term {
-        const node = this.createNode(sps.NotExists);
-        this.emit(node, sps.elements, this.makeList(this.groupElements(this.visit(ctx.groupGraphPattern[0]))));
+        const node = this.createNode(sparql.NotExists);
+        this.emit(node, sparql.elements, this.makeList(this.groupElements(this.visit(ctx.groupGraphPattern[0]))));
         return node;
     }
 
     aggregate(ctx): Term {
         const types: [string, NamedNode][] = [
-            ['COUNT', sps.Count],
-            ['SUM', sps.Sum],
-            ['MIN', sps.Min],
-            ['MAX', sps.Max],
-            ['AVG', sps.Avg],
-            ['SAMPLE', sps.Sample],
-            ['GROUP_CONCAT', sps.GroupConcat]
+            ['COUNT', sparql.Count],
+            ['SUM', sparql.Sum],
+            ['MIN', sparql.Min],
+            ['MAX', sparql.Max],
+            ['AVG', sparql.Avg],
+            ['SAMPLE', sparql.Sample],
+            ['GROUP_CONCAT', sparql.GroupConcat]
         ];
 
         const type = types.find(([token]) => ctx[token]);
@@ -1766,17 +1790,17 @@ export class SparqlReader extends BaseVisitor {
         const node = this.createNode(type[1]);
 
         if (ctx.DISTINCT) {
-            this.emit(node, sps.distinct, TRUE);
+            this.emit(node, sparql.distinct, TRUE);
         }
 
         if (ctx.STAR) {
-            this.emit(node, sps.countStar, TRUE);
+            this.emit(node, sparql.countStar, TRUE);
         } else if (ctx.expression) {
-            this.emit(node, sps.expression, this.visit(ctx.expression[0]));
+            this.emit(node, sparql.expression, this.visit(ctx.expression[0]));
         }
 
         if (ctx.string) {
-            this.emit(node, sps.separator, dataFactory.literal(this.visit(ctx.string[0])));
+            this.emit(node, sparql.separator, dataFactory.literal(this.visit(ctx.string[0])));
         }
 
         return node;
@@ -1795,12 +1819,12 @@ export class SparqlReader extends BaseVisitor {
     }
 
     updateBody(ctx): Term {
-        const node = this.createNode(sps.Update);
+        const node = this.createNode(sparql.Update);
         const operations: Term[] = [];
 
         this.collectUpdateOperations(ctx, operations);
 
-        this.emit(node, sps.operations, this.makeList(operations));
+        this.emit(node, sparql.operations, this.makeList(operations));
 
         return node;
     }
@@ -1845,116 +1869,116 @@ export class SparqlReader extends BaseVisitor {
     }
 
     load(ctx): Term {
-        const node = this.createNode(sps.Load);
+        const node = this.createNode(sparql.Load);
 
         if (ctx.SILENT) {
-            this.emit(node, sps.silent, TRUE);
+            this.emit(node, sparql.silent, TRUE);
         }
 
-        this.emit(node, sps.source, this.visit(ctx.iri[0]));
+        this.emit(node, sparql.source, this.visit(ctx.iri[0]));
 
         if (ctx.graphRef) {
-            this.emit(node, sps.into, this.visit(ctx.graphRef[0]));
+            this.emit(node, sparql.into, this.visit(ctx.graphRef[0]));
         }
 
         return node;
     }
 
     clear(ctx): Term {
-        return this.readClearOrDrop(ctx, sps.Clear);
+        return this.readClearOrDrop(ctx, sparql.Clear);
     }
 
     drop(ctx): Term {
-        return this.readClearOrDrop(ctx, sps.Drop);
+        return this.readClearOrDrop(ctx, sparql.Drop);
     }
 
     protected readClearOrDrop(ctx, type: NamedNode): Term {
         const node = this.createNode(type);
 
         if (ctx.SILENT) {
-            this.emit(node, sps.silent, TRUE);
+            this.emit(node, sparql.silent, TRUE);
         }
 
-        this.emit(node, sps.graphTarget, this.visit(ctx.graphRefAll[0]));
+        this.emit(node, sparql.graphTarget, this.visit(ctx.graphRefAll[0]));
 
         return node;
     }
 
     create(ctx): Term {
-        const node = this.createNode(sps.Create);
+        const node = this.createNode(sparql.Create);
 
         if (ctx.SILENT) {
-            this.emit(node, sps.silent, TRUE);
+            this.emit(node, sparql.silent, TRUE);
         }
 
-        this.emit(node, sps.graph, this.visit(ctx.graphRef[0]));
+        this.emit(node, sparql.graph, this.visit(ctx.graphRef[0]));
 
         return node;
     }
 
     add(ctx): Term {
-        return this.readGraphToGraph(ctx, sps.Add);
+        return this.readGraphToGraph(ctx, sparql.Add);
     }
 
     move(ctx): Term {
-        return this.readGraphToGraph(ctx, sps.Move);
+        return this.readGraphToGraph(ctx, sparql.Move);
     }
 
     copy(ctx): Term {
-        return this.readGraphToGraph(ctx, sps.Copy);
+        return this.readGraphToGraph(ctx, sparql.Copy);
     }
 
     protected readGraphToGraph(ctx, type: NamedNode): Term {
         const node = this.createNode(type);
 
         if (ctx.SILENT) {
-            this.emit(node, sps.silent, TRUE);
+            this.emit(node, sparql.silent, TRUE);
         }
 
-        this.emit(node, sps.fromGraph, this.visit(ctx.graphOrDefault[0]));
-        this.emit(node, sps.toGraph, this.visit(ctx.graphOrDefault[1]));
+        this.emit(node, sparql.fromGraph, this.visit(ctx.graphOrDefault[0]));
+        this.emit(node, sparql.toGraph, this.visit(ctx.graphOrDefault[1]));
 
         return node;
     }
 
     insertData(ctx): Term {
-        const node = this.createNode(sps.InsertData);
-        this.emit(node, sps.data, this.makeList(this.visit(ctx.quadData[0])));
+        const node = this.createNode(sparql.InsertData);
+        this.emit(node, sparql.data, this.makeList(this.visit(ctx.quadData[0])));
         return node;
     }
 
     deleteData(ctx): Term {
-        const node = this.createNode(sps.DeleteData);
-        this.emit(node, sps.data, this.makeList(this.visit(ctx.quadData[0])));
+        const node = this.createNode(sparql.DeleteData);
+        this.emit(node, sparql.data, this.makeList(this.visit(ctx.quadData[0])));
         return node;
     }
 
     deleteWhere(ctx): Term {
-        const node = this.createNode(sps.DeleteWhere);
-        this.emit(node, sps.where, this.makeList(this.visit(ctx.quadPattern[0])));
+        const node = this.createNode(sparql.DeleteWhere);
+        this.emit(node, sparql.where, this.makeList(this.visit(ctx.quadPattern[0])));
         return node;
     }
 
     modify(ctx): Term {
-        const node = this.createNode(sps.Modify);
+        const node = this.createNode(sparql.Modify);
 
         if (ctx.WITH) {
-            this.emit(node, sps.withGraph, this.visit(ctx.iri[0]));
+            this.emit(node, sparql.withGraph, this.visit(ctx.iri[0]));
         }
 
         if (ctx.deleteClause) {
-            this.emit(node, sps.deleteTemplate, this.makeList(this.visit(ctx.deleteClause[0])));
+            this.emit(node, sparql.deleteTemplate, this.makeList(this.visit(ctx.deleteClause[0])));
         }
 
         if (ctx.insertClause) {
-            this.emit(node, sps.insertTemplate, this.makeList(this.visit(ctx.insertClause[0])));
+            this.emit(node, sparql.insertTemplate, this.makeList(this.visit(ctx.insertClause[0])));
         }
 
         for (const clause of ctx.usingClause ?? []) {
             this.visit(clause, node);
         }
 
-        this.emit(node, sps.where, this.makeList(this.groupElements(this.visit(ctx.groupGraphPattern[0]))));
+        this.emit(node, sparql.where, this.makeList(this.groupElements(this.visit(ctx.groupGraphPattern[0]))));
 
         return node;
     }
@@ -1969,15 +1993,15 @@ export class SparqlReader extends BaseVisitor {
 
     usingClause(ctx, node: Term): void {
         if (ctx.NAMED) {
-            this.emit(node, sps.usingNamed, this.visit(ctx.iri[0]));
+            this.emit(node, sparql.usingNamed, this.visit(ctx.iri[0]));
         } else {
-            this.emit(node, sps.using, this.visit(ctx.iri[0]));
+            this.emit(node, sparql.using, this.visit(ctx.iri[0]));
         }
     }
 
     graphOrDefault(ctx): Term {
         if (ctx.DEFAULT) {
-            return sps.DefaultGraph;
+            return sparql.DefaultGraph;
         }
 
         return this.visit(ctx.iri[0]);
@@ -1991,11 +2015,11 @@ export class SparqlReader extends BaseVisitor {
         if (ctx.graphRef) {
             return this.visit(ctx.graphRef[0]);
         } else if (ctx.DEFAULT) {
-            return sps.DefaultGraph;
+            return sparql.DefaultGraph;
         } else if (ctx.NAMED) {
-            return sps.NamedGraphs;
+            return sparql.NamedGraphs;
         } else if (ctx.ALL) {
-            return sps.AllGraphs;
+            return sparql.AllGraphs;
         }
 
         throw new Error('Invalid graph reference: ' + JSON.stringify(Object.keys(ctx)));
@@ -2020,12 +2044,12 @@ export class SparqlReader extends BaseVisitor {
     }
 
     quadsNotTriples(ctx): Term[] {
-        const node = this.createNode(sps.Graph);
+        const node = this.createNode(sparql.Graph);
 
-        this.emit(node, sps.graph, this.visit(ctx.varOrIri[0]));
+        this.emit(node, sparql.graph, this.visit(ctx.varOrIri[0]));
 
         const elements = ctx.triplesTemplate ? this.visit(ctx.triplesTemplate[0]) : [];
-        this.emit(node, sps.elements, this.makeList(elements));
+        this.emit(node, sparql.elements, this.makeList(elements));
 
         return [node];
     }
@@ -2123,8 +2147,8 @@ export class SparqlReader extends BaseVisitor {
             if (!node) {
                 node = dataFactory.blankNode(id);
                 this.blankNodes.set(id, node);
-                this.emit(node, RDF_TYPE, sps.BlankNode);
-                this.emit(node, sps.label, dataFactory.literal(label));
+                this.emit(node, RDF_TYPE, sparql.BlankNode);
+                this.emit(node, sparql.label, dataFactory.literal(label));
             }
 
             return node;

@@ -30,7 +30,7 @@ Standards-compliant, fault-tolerant parsers for RDF languages, built with [Chevr
 The SPARQL reader is special: SPARQL is a query language, not a data language,
 so `SparqlReader` produces an RDF *representation of the query itself* using the
 [SPARQL Syntax Vocabulary](vocab/sparql-syntax.ttl) (`https://w3id.org/sparql-syntax#`,
-prefix `sps:`) — queries become introspectable RDF in the spirit of SPIN, covering
+prefix `sparql:`) — queries become introspectable RDF in the spirit of SPIN, covering
 all SPARQL 1.2 query forms, updates and RDF 1.2 features.
 
 ## Installation

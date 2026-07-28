@@ -1,30 +1,30 @@
 # Expected RDF representation of minus_pattern.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b156 a sps:SelectQuery .
-_:b157 a sps:Variable ;
-       sps:varName "s" .
+_:b156 a sparql:SelectQuery .
+_:b157 a sparql:Variable ;
+       sparql:varName "s" .
 _:b158 rdf:first _:b157 ;
        rdf:rest rdf:nil .
-_:b156 sps:projection _:b158 .
-_:b159 a sps:Variable ;
-       sps:varName "v" .
-_:b160 a sps:TriplePattern ;
-       sps:subject _:b157 ;
-       sps:predicate <http://example.org/value> ;
-       sps:object _:b159 .
-_:b161 a sps:Minus .
-_:b162 a sps:TriplePattern ;
-       sps:subject _:b157 ;
-       sps:predicate <http://example.org/excluded> ;
-       sps:object "true"^^xsd:boolean .
+_:b156 sparql:projection _:b158 .
+_:b159 a sparql:Variable ;
+       sparql:varName "v" .
+_:b160 a sparql:TriplePattern ;
+       sparql:subject _:b157 ;
+       sparql:predicate <http://example.org/value> ;
+       sparql:object _:b159 .
+_:b161 a sparql:Minus .
+_:b162 a sparql:TriplePattern ;
+       sparql:subject _:b157 ;
+       sparql:predicate <http://example.org/excluded> ;
+       sparql:object "true"^^xsd:boolean .
 _:b163 rdf:first _:b162 ;
        rdf:rest rdf:nil .
-_:b161 sps:elements _:b163 .
+_:b161 sparql:elements _:b163 .
 _:b164 rdf:first _:b160 ;
        rdf:rest _:b165 .
 _:b165 rdf:first _:b161 ;
        rdf:rest rdf:nil .
-_:b156 sps:where _:b164 .
+_:b156 sparql:where _:b164 .

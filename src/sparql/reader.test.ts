@@ -5,7 +5,7 @@ import type { Quad, Term } from '@rdfjs/types';
 import { parseQuads, quadsMatch } from '../helpers.js';
 import { SparqlLexer, SparqlParser } from './parser.js';
 import { SparqlReader } from './reader.js';
-import { sps } from './vocabulary.js';
+import { sparql } from './vocabulary.js';
 
 /**
  * SPARQL 1.2 Reader Conformance Tests
@@ -432,52 +432,52 @@ describe('SparqlReader', () => {
 
             // The root is a typed SELECT query with LIMIT 100 and OFFSET 10.
             expect(reader.rootNode).not.toBeNull();
-            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(rdfType) && q.object.equals(sps.SelectQuery))).toBe(true);
-            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(sps.limit) && q.object.equals(dataFactory.literal('100', xsdInteger)))).toBe(true);
-            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(sps.offset) && q.object.equals(dataFactory.literal('10', xsdInteger)))).toBe(true);
+            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(rdfType) && q.object.equals(sparql.SelectQuery))).toBe(true);
+            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(sparql.limit) && q.object.equals(dataFactory.literal('100', xsdInteger)))).toBe(true);
+            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(sparql.offset) && q.object.equals(dataFactory.literal('10', xsdInteger)))).toBe(true);
 
             // The query uses exactly the variables x, y, age and email, each shared.
-            const variableNodes = subjectsOf(quads, rdfType, sps.Variable);
-            const variableNames = quads.filter(q => q.predicate.equals(sps.varName)).map(q => q.object.value).sort();
+            const variableNodes = subjectsOf(quads, rdfType, sparql.Variable);
+            const variableNames = quads.filter(q => q.predicate.equals(sparql.varName)).map(q => q.object.value).sort();
             expect(variableNodes.length).toBe(4);
             expect(variableNames).toEqual(['age', 'email', 'x', 'y']);
 
             // FILTER (?age >= 18 && ?age <= 65) produces And(Geq(age, 18), Leq(age, 65)).
-            const geq = subjectsOf(quads, rdfType, sps.Geq);
+            const geq = subjectsOf(quads, rdfType, sparql.Geq);
             expect(geq.length).toBe(1);
-            expect(quads.some(q => q.subject.equals(geq[0]) && q.predicate.equals(sps.arg2) && q.object.equals(dataFactory.literal('18', xsdInteger)))).toBe(true);
-            expect(subjectsOf(quads, rdfType, sps.And).length).toBe(1);
-            expect(subjectsOf(quads, rdfType, sps.Leq).length).toBe(1);
-            expect(subjectsOf(quads, rdfType, sps.Neq).length).toBe(1);
+            expect(quads.some(q => q.subject.equals(geq[0]) && q.predicate.equals(sparql.arg2) && q.object.equals(dataFactory.literal('18', xsdInteger)))).toBe(true);
+            expect(subjectsOf(quads, rdfType, sparql.And).length).toBe(1);
+            expect(subjectsOf(quads, rdfType, sparql.Leq).length).toBe(1);
+            expect(subjectsOf(quads, rdfType, sparql.Neq).length).toBe(1);
 
             // One OPTIONAL group containing a STRSTARTS filter.
-            expect(subjectsOf(quads, rdfType, sps.Optional).length).toBe(1);
-            expect(quads.some(q => q.predicate.equals(sps.function) && q.object.equals(sps.STRSTARTS))).toBe(true);
+            expect(subjectsOf(quads, rdfType, sparql.Optional).length).toBe(1);
+            expect(quads.some(q => q.predicate.equals(sparql.function) && q.object.equals(sparql.STRSTARTS))).toBe(true);
 
             // ORDER BY DESC(?age) ?x: one Desc node over the age variable.
-            const desc = subjectsOf(quads, rdfType, sps.Desc);
+            const desc = subjectsOf(quads, rdfType, sparql.Desc);
             expect(desc.length).toBe(1);
 
-            const age = quads.find(q => q.predicate.equals(sps.varName) && q.object.value === 'age')!.subject;
-            expect(quads.some(q => q.subject.equals(desc[0]) && q.predicate.equals(sps.expression) && q.object.equals(age))).toBe(true);
+            const age = quads.find(q => q.predicate.equals(sparql.varName) && q.object.value === 'age')!.subject;
+            expect(quads.some(q => q.subject.equals(desc[0]) && q.predicate.equals(sparql.expression) && q.object.equals(age))).toBe(true);
         });
 
         it('variables are shared across query parts', () => {
             const { quads } = read('SELECT ?s WHERE { ?s ?p ?o . ?s ?q ?o }');
 
-            const rdfTypeQuads = quads.filter(q => q.predicate.value.endsWith('#type') && q.object.equals(sps.Variable));
+            const rdfTypeQuads = quads.filter(q => q.predicate.value.endsWith('#type') && q.object.equals(sparql.Variable));
             expect(rdfTypeQuads.length).toBe(4);
 
-            const patternSubjects = quads.filter(q => q.predicate.equals(sps.subject)).map(q => q.object.value);
+            const patternSubjects = quads.filter(q => q.predicate.equals(sparql.subject)).map(q => q.object.value);
             expect(new Set(patternSubjects).size).toBe(1);
         });
 
         it('labeled blank nodes are shared and labeled', () => {
             const { quads } = read('SELECT ?p WHERE { _:a ?p _:a }');
 
-            const blankNodes = quads.filter(q => q.predicate.value.endsWith('#type') && q.object.equals(sps.BlankNode));
+            const blankNodes = quads.filter(q => q.predicate.value.endsWith('#type') && q.object.equals(sparql.BlankNode));
             expect(blankNodes.length).toBe(1);
-            expect(quads.some(q => q.predicate.equals(sps.label) && q.object.value === 'a')).toBe(true);
+            expect(quads.some(q => q.predicate.equals(sparql.label) && q.object.value === 'a')).toBe(true);
         });
     });
 
@@ -486,7 +486,7 @@ describe('SparqlReader', () => {
         const fixtures = fs.readdirSync(testsDir).filter(file => file.endsWith('.rq')).sort();
 
         const rootTypes = [
-            sps.SelectQuery, sps.ConstructQuery, sps.DescribeQuery, sps.AskQuery, sps.Update
+            sparql.SelectQuery, sparql.ConstructQuery, sparql.DescribeQuery, sparql.AskQuery, sparql.Update
         ];
 
         const readsWithTypedRoot = (text: string) => {
@@ -557,14 +557,57 @@ describe('SparqlReader', () => {
         }
     });
 
+    describe('Root IRI', () => {
+        const readWithRootIri = (text: string, rootIri: string) => {
+            const lexResult = lexer.tokenize(text);
+            const cst = parser.parse(lexResult.tokens);
+
+            const reader = new SparqlReader();
+            reader.rootIri = dataFactory.namedNode(rootIri);
+
+            const quads = reader.visit(cst) as Quad[];
+
+            return { quads, reader };
+        }
+
+        it('emits the root query node as the configured named node', () => {
+            const rootIri = 'workspace:///queries/select.rq';
+            const { quads, reader } = readWithRootIri('SELECT * WHERE { ?s ?p ?o }', rootIri);
+
+            expect(reader.rootNode?.termType).toEqual('NamedNode');
+            expect(reader.rootNode?.value).toEqual(rootIri);
+
+            const typeQuad = quads.find(q => q.predicate.equals(sparql.where));
+
+            expect(typeQuad?.subject.termType).toEqual('NamedNode');
+            expect(typeQuad?.subject.value).toEqual(rootIri);
+            expect(quads.some(q => q.subject.equals(reader.rootNode!) && q.object.equals(sparql.SelectQuery))).toBe(true);
+        });
+
+        it('emits the root update node as the configured named node', () => {
+            const rootIri = 'workspace:///queries/update.rq';
+            const { quads, reader } = readWithRootIri('INSERT DATA { <urn:s> <urn:p> "o" } ; CLEAR ALL', rootIri);
+
+            expect(reader.rootNode?.termType).toEqual('NamedNode');
+            expect(reader.rootNode?.value).toEqual(rootIri);
+            expect(quads.some(q => q.subject.equals(reader.rootNode!) && q.object.equals(sparql.Update))).toBe(true);
+        });
+
+        it('keeps a blank root node when no root IRI is configured', () => {
+            const { reader } = read('SELECT * WHERE { ?s ?p ?o }');
+
+            expect(reader.rootNode?.termType).toEqual('BlankNode');
+        });
+    });
+
     describe('Vocabulary', () => {
         it('every term of the vocabulary module is defined in the ontology', async () => {
             const ontology = fs.readFileSync(resolvePath('../../vocab/sparql-syntax.ttl'), 'utf-8');
             const quads = await parseQuads(ontology);
             const subjects = new Set(quads.map(q => q.subject.value));
 
-            for (const [name, term] of Object.entries(sps)) {
-                expect(subjects.has(term.value), `Missing ontology definition for sps:${name}`).toBe(true);
+            for (const [name, term] of Object.entries(sparql)) {
+                expect(subjects.has(term.value), `Missing ontology definition for sparql:${name}`).toBe(true);
             }
         });
     });

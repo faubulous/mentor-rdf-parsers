@@ -1,21 +1,21 @@
 # Expected RDF representation of rdf12_version.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b94 a sps:SelectQuery .
-_:b95 a sps:Variable ;
-      sps:varName "name" .
+_:b94 a sparql:SelectQuery .
+_:b95 a sparql:Variable ;
+      sparql:varName "name" .
 _:b96 rdf:first _:b95 ;
       rdf:rest rdf:nil .
-_:b94 sps:projection _:b96 .
-_:b97 a sps:Variable ;
-      sps:varName "s" .
-_:b98 a sps:TriplePattern ;
-      sps:subject _:b97 ;
-      sps:predicate <http://xmlns.com/foaf/0.1/name> ;
-      sps:object _:b95 .
+_:b94 sparql:projection _:b96 .
+_:b97 a sparql:Variable ;
+      sparql:varName "s" .
+_:b98 a sparql:TriplePattern ;
+      sparql:subject _:b97 ;
+      sparql:predicate <http://xmlns.com/foaf/0.1/name> ;
+      sparql:object _:b95 .
 _:b99 rdf:first _:b98 ;
       rdf:rest rdf:nil .
-_:b94 sps:where _:b99 ;
-      sps:version "1.2" .
+_:b94 sparql:where _:b99 ;
+      sparql:version "1.2" .

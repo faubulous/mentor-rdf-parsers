@@ -1,17 +1,17 @@
 # Expected RDF representation of update_delete_data.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b696 a sps:Update .
-_:b697 a sps:DeleteData .
-_:b698 a sps:TriplePattern ;
-       sps:subject <http://example.org/s> ;
-       sps:predicate <http://example.org/p> ;
-       sps:object <http://example.org/o> .
+_:b696 a sparql:Update .
+_:b697 a sparql:DeleteData .
+_:b698 a sparql:TriplePattern ;
+       sparql:subject <http://example.org/s> ;
+       sparql:predicate <http://example.org/p> ;
+       sparql:object <http://example.org/o> .
 _:b699 rdf:first _:b698 ;
        rdf:rest rdf:nil .
-_:b697 sps:data _:b699 .
+_:b697 sparql:data _:b699 .
 _:b700 rdf:first _:b697 ;
        rdf:rest rdf:nil .
-_:b696 sps:operations _:b700 .
+_:b696 sparql:operations _:b700 .

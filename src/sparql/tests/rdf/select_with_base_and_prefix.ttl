@@ -1,20 +1,20 @@
 # Expected RDF representation of select_with_base_and_prefix.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b35 a sps:SelectQuery .
-_:b36 a sps:Variable ;
-      sps:varName "name" .
+_:b35 a sparql:SelectQuery .
+_:b36 a sparql:Variable ;
+      sparql:varName "name" .
 _:b37 rdf:first _:b36 ;
       rdf:rest rdf:nil .
-_:b35 sps:projection _:b37 .
-_:b38 a sps:Variable ;
-      sps:varName "s" .
-_:b39 a sps:TriplePattern ;
-      sps:subject _:b38 ;
-      sps:predicate <http://xmlns.com/foaf/0.1/name> ;
-      sps:object _:b36 .
+_:b35 sparql:projection _:b37 .
+_:b38 a sparql:Variable ;
+      sparql:varName "s" .
+_:b39 a sparql:TriplePattern ;
+      sparql:subject _:b38 ;
+      sparql:predicate <http://xmlns.com/foaf/0.1/name> ;
+      sparql:object _:b36 .
 _:b40 rdf:first _:b39 ;
       rdf:rest rdf:nil .
-_:b35 sps:where _:b40 .
+_:b35 sparql:where _:b40 .

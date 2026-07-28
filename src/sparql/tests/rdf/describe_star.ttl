@@ -1,16 +1,16 @@
 # Expected RDF representation of describe_star.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b61 a sps:DescribeQuery ;
-      sps:star "true"^^xsd:boolean .
-_:b62 a sps:Variable ;
-      sps:varName "s" .
-_:b63 a sps:TriplePattern ;
-      sps:subject _:b62 ;
-      sps:predicate <http://example.org/type> ;
-      sps:object <http://example.org/Person> .
+_:b61 a sparql:DescribeQuery ;
+      sparql:star "true"^^xsd:boolean .
+_:b62 a sparql:Variable ;
+      sparql:varName "s" .
+_:b63 a sparql:TriplePattern ;
+      sparql:subject _:b62 ;
+      sparql:predicate <http://example.org/type> ;
+      sparql:object <http://example.org/Person> .
 _:b64 rdf:first _:b63 ;
       rdf:rest rdf:nil .
-_:b61 sps:where _:b64 .
+_:b61 sparql:where _:b64 .

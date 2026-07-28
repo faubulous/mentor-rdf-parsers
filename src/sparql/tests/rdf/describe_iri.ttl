@@ -1,9 +1,9 @@
 # Expected RDF representation of describe_iri.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b59 a sps:DescribeQuery .
+_:b59 a sparql:DescribeQuery .
 _:b60 rdf:first <http://example.org/resource> ;
       rdf:rest rdf:nil .
-_:b59 sps:describeTargets _:b60 .
+_:b59 sparql:describeTargets _:b60 .

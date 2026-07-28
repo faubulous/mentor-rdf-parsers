@@ -1,37 +1,37 @@
 # Expected RDF representation of rdf12_reified_triple.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b621 a sps:SelectQuery .
-_:b622 a sps:Variable ;
-       sps:varName "s" .
-_:b623 a sps:Variable ;
-       sps:varName "p" .
-_:b624 a sps:Variable ;
-       sps:varName "o" .
+_:b621 a sparql:SelectQuery .
+_:b622 a sparql:Variable ;
+       sparql:varName "s" .
+_:b623 a sparql:Variable ;
+       sparql:varName "p" .
+_:b624 a sparql:Variable ;
+       sparql:varName "o" .
 _:b625 rdf:first _:b622 ;
        rdf:rest _:b626 .
 _:b626 rdf:first _:b623 ;
        rdf:rest _:b627 .
 _:b627 rdf:first _:b624 ;
        rdf:rest rdf:nil .
-_:b621 sps:projection _:b625 .
-_:b628 a sps:TripleTerm ;
-       sps:subject _:b622 ;
-       sps:predicate _:b623 ;
-       sps:object _:b624 .
-_:b1 a sps:BlankNode .
-_:b629 a sps:TriplePattern ;
-       sps:subject _:b1 ;
-       sps:predicate rdf:reifies ;
-       sps:object _:b628 .
-_:b630 a sps:TriplePattern ;
-       sps:subject _:b1 ;
-       sps:predicate <http://example.org/source> ;
-       sps:object <http://example.org/web> .
+_:b621 sparql:projection _:b625 .
+_:b628 a sparql:TripleTerm ;
+       sparql:subject _:b622 ;
+       sparql:predicate _:b623 ;
+       sparql:object _:b624 .
+_:b1 a sparql:BlankNode .
+_:b629 a sparql:TriplePattern ;
+       sparql:subject _:b1 ;
+       sparql:predicate rdf:reifies ;
+       sparql:object _:b628 .
+_:b630 a sparql:TriplePattern ;
+       sparql:subject _:b1 ;
+       sparql:predicate <http://example.org/source> ;
+       sparql:object <http://example.org/web> .
 _:b631 rdf:first _:b629 ;
        rdf:rest _:b632 .
 _:b632 rdf:first _:b630 ;
        rdf:rest rdf:nil .
-_:b621 sps:where _:b631 .
+_:b621 sparql:where _:b631 .

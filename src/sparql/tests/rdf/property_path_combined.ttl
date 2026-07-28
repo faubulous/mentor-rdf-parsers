@@ -1,36 +1,36 @@
 # Expected RDF representation of property_path_combined.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b601 a sps:SelectQuery .
-_:b602 a sps:Variable ;
-       sps:varName "x" .
+_:b601 a sparql:SelectQuery .
+_:b602 a sparql:Variable ;
+       sparql:varName "x" .
 _:b603 rdf:first _:b602 ;
        rdf:rest rdf:nil .
-_:b601 sps:projection _:b603 .
-_:b604 a sps:InversePath ;
-       sps:path <http://example.org/b> .
-_:b605 a sps:AltPath .
+_:b601 sparql:projection _:b603 .
+_:b604 a sparql:InversePath ;
+       sparql:path <http://example.org/b> .
+_:b605 a sparql:AltPath .
 _:b606 rdf:first <http://example.org/a> ;
        rdf:rest _:b607 .
 _:b607 rdf:first _:b604 ;
        rdf:rest rdf:nil .
-_:b605 sps:pathElements _:b606 .
-_:b608 a sps:ZeroOrMorePath ;
-       sps:path <http://example.org/c> .
-_:b609 a sps:SeqPath .
+_:b605 sparql:pathElements _:b606 .
+_:b608 a sparql:ZeroOrMorePath ;
+       sparql:path <http://example.org/c> .
+_:b609 a sparql:SeqPath .
 _:b610 rdf:first _:b605 ;
        rdf:rest _:b611 .
 _:b611 rdf:first _:b608 ;
        rdf:rest rdf:nil .
-_:b609 sps:pathElements _:b610 .
-_:b612 a sps:Variable ;
-       sps:varName "y" .
-_:b613 a sps:TriplePattern ;
-       sps:subject _:b602 ;
-       sps:predicate _:b609 ;
-       sps:object _:b612 .
+_:b609 sparql:pathElements _:b610 .
+_:b612 a sparql:Variable ;
+       sparql:varName "y" .
+_:b613 a sparql:TriplePattern ;
+       sparql:subject _:b602 ;
+       sparql:predicate _:b609 ;
+       sparql:object _:b612 .
 _:b614 rdf:first _:b613 ;
        rdf:rest rdf:nil .
-_:b601 sps:where _:b614 .
+_:b601 sparql:where _:b614 .

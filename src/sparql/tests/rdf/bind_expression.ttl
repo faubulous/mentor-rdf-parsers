@@ -1,30 +1,30 @@
 # Expected RDF representation of bind_expression.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b193 a sps:SelectQuery .
-_:b194 a sps:Variable ;
-       sps:varName "s" .
+_:b193 a sparql:SelectQuery .
+_:b194 a sparql:Variable ;
+       sparql:varName "s" .
 _:b195 rdf:first _:b194 ;
        rdf:rest rdf:nil .
-_:b193 sps:projection _:b195 .
-_:b196 a sps:Variable ;
-       sps:varName "v" .
-_:b197 a sps:TriplePattern ;
-       sps:subject _:b194 ;
-       sps:predicate <http://example.org/value> ;
-       sps:object _:b196 .
-_:b198 a sps:Bind .
-_:b199 a sps:Multiplication ;
-       sps:arg1 _:b196 ;
-       sps:arg2 "2"^^xsd:integer .
-_:b198 sps:expression _:b199 .
-_:b200 a sps:Variable ;
-       sps:varName "doubled" .
-_:b198 sps:variable _:b200 .
+_:b193 sparql:projection _:b195 .
+_:b196 a sparql:Variable ;
+       sparql:varName "v" .
+_:b197 a sparql:TriplePattern ;
+       sparql:subject _:b194 ;
+       sparql:predicate <http://example.org/value> ;
+       sparql:object _:b196 .
+_:b198 a sparql:Bind .
+_:b199 a sparql:Multiplication ;
+       sparql:arg1 _:b196 ;
+       sparql:arg2 "2"^^xsd:integer .
+_:b198 sparql:expression _:b199 .
+_:b200 a sparql:Variable ;
+       sparql:varName "doubled" .
+_:b198 sparql:variable _:b200 .
 _:b201 rdf:first _:b197 ;
        rdf:rest _:b202 .
 _:b202 rdf:first _:b198 ;
        rdf:rest rdf:nil .
-_:b193 sps:where _:b201 .
+_:b193 sparql:where _:b201 .

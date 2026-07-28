@@ -1,22 +1,22 @@
 # Expected RDF representation of limit_offset.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b530 a sps:SelectQuery .
-_:b531 a sps:Variable ;
-       sps:varName "name" .
+_:b530 a sparql:SelectQuery .
+_:b531 a sparql:Variable ;
+       sparql:varName "name" .
 _:b532 rdf:first _:b531 ;
        rdf:rest rdf:nil .
-_:b530 sps:projection _:b532 .
-_:b533 a sps:Variable ;
-       sps:varName "s" .
-_:b534 a sps:TriplePattern ;
-       sps:subject _:b533 ;
-       sps:predicate <http://example.org/name> ;
-       sps:object _:b531 .
+_:b530 sparql:projection _:b532 .
+_:b533 a sparql:Variable ;
+       sparql:varName "s" .
+_:b534 a sparql:TriplePattern ;
+       sparql:subject _:b533 ;
+       sparql:predicate <http://example.org/name> ;
+       sparql:object _:b531 .
 _:b535 rdf:first _:b534 ;
        rdf:rest rdf:nil .
-_:b530 sps:where _:b535 ;
-       sps:limit "10"^^xsd:integer ;
-       sps:offset "20"^^xsd:integer .
+_:b530 sparql:where _:b535 ;
+       sparql:limit "10"^^xsd:integer ;
+       sparql:offset "20"^^xsd:integer .

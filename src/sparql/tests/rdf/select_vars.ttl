@@ -1,30 +1,30 @@
 # Expected RDF representation of select_vars.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b7 a sps:SelectQuery .
-_:b8 a sps:Variable ;
-     sps:varName "name" .
-_:b9 a sps:Variable ;
-     sps:varName "age" .
+_:b7 a sparql:SelectQuery .
+_:b8 a sparql:Variable ;
+     sparql:varName "name" .
+_:b9 a sparql:Variable ;
+     sparql:varName "age" .
 _:b10 rdf:first _:b8 ;
       rdf:rest _:b11 .
 _:b11 rdf:first _:b9 ;
       rdf:rest rdf:nil .
-_:b7 sps:projection _:b10 .
-_:b12 a sps:Variable ;
-      sps:varName "s" .
-_:b13 a sps:TriplePattern ;
-      sps:subject _:b12 ;
-      sps:predicate <http://example.org/name> ;
-      sps:object _:b8 .
-_:b14 a sps:TriplePattern ;
-      sps:subject _:b12 ;
-      sps:predicate <http://example.org/age> ;
-      sps:object _:b9 .
+_:b7 sparql:projection _:b10 .
+_:b12 a sparql:Variable ;
+      sparql:varName "s" .
+_:b13 a sparql:TriplePattern ;
+      sparql:subject _:b12 ;
+      sparql:predicate <http://example.org/name> ;
+      sparql:object _:b8 .
+_:b14 a sparql:TriplePattern ;
+      sparql:subject _:b12 ;
+      sparql:predicate <http://example.org/age> ;
+      sparql:object _:b9 .
 _:b15 rdf:first _:b13 ;
       rdf:rest _:b16 .
 _:b16 rdf:first _:b14 ;
       rdf:rest rdf:nil .
-_:b7 sps:where _:b15 .
+_:b7 sparql:where _:b15 .

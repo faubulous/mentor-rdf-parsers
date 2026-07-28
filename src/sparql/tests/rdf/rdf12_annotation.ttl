@@ -1,37 +1,37 @@
 # Expected RDF representation of rdf12_annotation.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b643 a sps:SelectQuery .
-_:b644 a sps:Variable ;
-       sps:varName "s" .
+_:b643 a sparql:SelectQuery .
+_:b644 a sparql:Variable ;
+       sparql:varName "s" .
 _:b645 rdf:first _:b644 ;
        rdf:rest rdf:nil .
-_:b643 sps:projection _:b645 .
-_:b646 a sps:Variable ;
-       sps:varName "o" .
-_:b647 a sps:TriplePattern ;
-       sps:subject _:b644 ;
-       sps:predicate <http://example.org/p> ;
-       sps:object _:b646 .
-_:b1 a sps:BlankNode .
-_:b648 a sps:TripleTerm ;
-       sps:subject _:b644 ;
-       sps:predicate <http://example.org/p> ;
-       sps:object _:b646 .
-_:b649 a sps:TriplePattern ;
-       sps:subject _:b1 ;
-       sps:predicate rdf:reifies ;
-       sps:object _:b648 .
-_:b650 a sps:TriplePattern ;
-       sps:subject _:b1 ;
-       sps:predicate <http://example.org/source> ;
-       sps:object <http://example.org/web> .
+_:b643 sparql:projection _:b645 .
+_:b646 a sparql:Variable ;
+       sparql:varName "o" .
+_:b647 a sparql:TriplePattern ;
+       sparql:subject _:b644 ;
+       sparql:predicate <http://example.org/p> ;
+       sparql:object _:b646 .
+_:b1 a sparql:BlankNode .
+_:b648 a sparql:TripleTerm ;
+       sparql:subject _:b644 ;
+       sparql:predicate <http://example.org/p> ;
+       sparql:object _:b646 .
+_:b649 a sparql:TriplePattern ;
+       sparql:subject _:b1 ;
+       sparql:predicate rdf:reifies ;
+       sparql:object _:b648 .
+_:b650 a sparql:TriplePattern ;
+       sparql:subject _:b1 ;
+       sparql:predicate <http://example.org/source> ;
+       sparql:object <http://example.org/web> .
 _:b651 rdf:first _:b647 ;
        rdf:rest _:b652 .
 _:b652 rdf:first _:b649 ;
        rdf:rest _:b653 .
 _:b653 rdf:first _:b650 ;
        rdf:rest rdf:nil .
-_:b643 sps:where _:b651 .
+_:b643 sparql:where _:b651 .

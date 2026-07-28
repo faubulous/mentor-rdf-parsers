@@ -1,24 +1,24 @@
 # Expected RDF representation of multiple_triples.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b100 a sps:SelectQuery .
-_:b101 a sps:Variable ;
-       sps:varName "s" .
+_:b100 a sparql:SelectQuery .
+_:b101 a sparql:Variable ;
+       sparql:varName "s" .
 _:b102 rdf:first _:b101 ;
        rdf:rest rdf:nil .
-_:b100 sps:projection _:b102 .
-_:b103 a sps:TriplePattern ;
-       sps:subject <http://example.org/a> ;
-       sps:predicate <http://example.org/b> ;
-       sps:object <http://example.org/c> .
-_:b104 a sps:TriplePattern ;
-       sps:subject <http://example.org/d> ;
-       sps:predicate <http://example.org/e> ;
-       sps:object <http://example.org/f> .
+_:b100 sparql:projection _:b102 .
+_:b103 a sparql:TriplePattern ;
+       sparql:subject <http://example.org/a> ;
+       sparql:predicate <http://example.org/b> ;
+       sparql:object <http://example.org/c> .
+_:b104 a sparql:TriplePattern ;
+       sparql:subject <http://example.org/d> ;
+       sparql:predicate <http://example.org/e> ;
+       sparql:object <http://example.org/f> .
 _:b105 rdf:first _:b103 ;
        rdf:rest _:b106 .
 _:b106 rdf:first _:b104 ;
        rdf:rest rdf:nil .
-_:b100 sps:where _:b105 .
+_:b100 sparql:where _:b105 .

@@ -1,67 +1,67 @@
 # Expected RDF representation of rdf12_builtin_functions.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b654 a sps:SelectQuery .
-_:b655 a sps:Variable ;
-       sps:varName "s" .
+_:b654 a sparql:SelectQuery .
+_:b655 a sparql:Variable ;
+       sparql:varName "s" .
 _:b656 rdf:first _:b655 ;
        rdf:rest rdf:nil .
-_:b654 sps:projection _:b656 .
-_:b657 a sps:Filter .
-_:b658 a sps:Variable ;
-       sps:varName "o" .
-_:b659 a sps:BuiltInCall ;
-       sps:function sps:isTRIPLE .
+_:b654 sparql:projection _:b656 .
+_:b657 a sparql:Filter .
+_:b658 a sparql:Variable ;
+       sparql:varName "o" .
+_:b659 a sparql:BuiltInCall ;
+       sparql:function sparql:isTRIPLE .
 _:b660 rdf:first _:b658 ;
        rdf:rest rdf:nil .
-_:b659 sps:args _:b660 .
-_:b657 sps:expression _:b659 .
-_:b661 a sps:Bind .
-_:b662 a sps:BuiltInCall ;
-       sps:function sps:SUBJECT .
+_:b659 sparql:args _:b660 .
+_:b657 sparql:expression _:b659 .
+_:b661 a sparql:Bind .
+_:b662 a sparql:BuiltInCall ;
+       sparql:function sparql:SUBJECT .
 _:b663 rdf:first _:b658 ;
        rdf:rest rdf:nil .
-_:b662 sps:args _:b663 .
-_:b661 sps:expression _:b662 .
-_:b664 a sps:Variable ;
-       sps:varName "subj" .
-_:b661 sps:variable _:b664 .
-_:b665 a sps:Bind .
-_:b666 a sps:BuiltInCall ;
-       sps:function sps:PREDICATE .
+_:b662 sparql:args _:b663 .
+_:b661 sparql:expression _:b662 .
+_:b664 a sparql:Variable ;
+       sparql:varName "subj" .
+_:b661 sparql:variable _:b664 .
+_:b665 a sparql:Bind .
+_:b666 a sparql:BuiltInCall ;
+       sparql:function sparql:PREDICATE .
 _:b667 rdf:first _:b658 ;
        rdf:rest rdf:nil .
-_:b666 sps:args _:b667 .
-_:b665 sps:expression _:b666 .
-_:b668 a sps:Variable ;
-       sps:varName "pred" .
-_:b665 sps:variable _:b668 .
-_:b669 a sps:Bind .
-_:b670 a sps:BuiltInCall ;
-       sps:function sps:OBJECT .
+_:b666 sparql:args _:b667 .
+_:b665 sparql:expression _:b666 .
+_:b668 a sparql:Variable ;
+       sparql:varName "pred" .
+_:b665 sparql:variable _:b668 .
+_:b669 a sparql:Bind .
+_:b670 a sparql:BuiltInCall ;
+       sparql:function sparql:OBJECT .
 _:b671 rdf:first _:b658 ;
        rdf:rest rdf:nil .
-_:b670 sps:args _:b671 .
-_:b669 sps:expression _:b670 .
-_:b672 a sps:Variable ;
-       sps:varName "obj" .
-_:b669 sps:variable _:b672 .
-_:b673 a sps:Bind .
-_:b674 a sps:BuiltInCall ;
-       sps:function sps:TRIPLE .
+_:b670 sparql:args _:b671 .
+_:b669 sparql:expression _:b670 .
+_:b672 a sparql:Variable ;
+       sparql:varName "obj" .
+_:b669 sparql:variable _:b672 .
+_:b673 a sparql:Bind .
+_:b674 a sparql:BuiltInCall ;
+       sparql:function sparql:TRIPLE .
 _:b675 rdf:first _:b664 ;
        rdf:rest _:b676 .
 _:b676 rdf:first _:b668 ;
        rdf:rest _:b677 .
 _:b677 rdf:first _:b672 ;
        rdf:rest rdf:nil .
-_:b674 sps:args _:b675 .
-_:b673 sps:expression _:b674 .
-_:b678 a sps:Variable ;
-       sps:varName "triple" .
-_:b673 sps:variable _:b678 .
+_:b674 sparql:args _:b675 .
+_:b673 sparql:expression _:b674 .
+_:b678 a sparql:Variable ;
+       sparql:varName "triple" .
+_:b673 sparql:variable _:b678 .
 _:b679 rdf:first _:b657 ;
        rdf:rest _:b680 .
 _:b680 rdf:first _:b661 ;
@@ -72,4 +72,4 @@ _:b682 rdf:first _:b669 ;
        rdf:rest _:b683 .
 _:b683 rdf:first _:b673 ;
        rdf:rest rdf:nil .
-_:b654 sps:where _:b679 .
+_:b654 sparql:where _:b679 .

@@ -1,22 +1,22 @@
 # Expected RDF representation of update_insert_graph.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b716 a sps:Update .
-_:b717 a sps:InsertData .
-_:b718 a sps:Graph ;
-       sps:graph <http://example.org/g1> .
-_:b719 a sps:TriplePattern ;
-       sps:subject <http://example.org/s> ;
-       sps:predicate <http://example.org/p> ;
-       sps:object <http://example.org/o> .
+_:b716 a sparql:Update .
+_:b717 a sparql:InsertData .
+_:b718 a sparql:Graph ;
+       sparql:graph <http://example.org/g1> .
+_:b719 a sparql:TriplePattern ;
+       sparql:subject <http://example.org/s> ;
+       sparql:predicate <http://example.org/p> ;
+       sparql:object <http://example.org/o> .
 _:b720 rdf:first _:b719 ;
        rdf:rest rdf:nil .
-_:b718 sps:elements _:b720 .
+_:b718 sparql:elements _:b720 .
 _:b721 rdf:first _:b718 ;
        rdf:rest rdf:nil .
-_:b717 sps:data _:b721 .
+_:b717 sparql:data _:b721 .
 _:b722 rdf:first _:b717 ;
        rdf:rest rdf:nil .
-_:b716 sps:operations _:b722 .
+_:b716 sparql:operations _:b722 .

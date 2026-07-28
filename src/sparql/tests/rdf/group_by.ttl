@@ -1,32 +1,32 @@
 # Expected RDF representation of group_by.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b482 a sps:SelectQuery .
-_:b483 a sps:Variable ;
-       sps:varName "type" .
-_:b484 a sps:Alias .
-_:b485 a sps:Count .
-_:b486 a sps:Variable ;
-       sps:varName "s" .
-_:b485 sps:expression _:b486 .
-_:b484 sps:expression _:b485 .
-_:b487 a sps:Variable ;
-       sps:varName "count" .
-_:b484 sps:variable _:b487 .
+_:b482 a sparql:SelectQuery .
+_:b483 a sparql:Variable ;
+       sparql:varName "type" .
+_:b484 a sparql:Alias .
+_:b485 a sparql:Count .
+_:b486 a sparql:Variable ;
+       sparql:varName "s" .
+_:b485 sparql:expression _:b486 .
+_:b484 sparql:expression _:b485 .
+_:b487 a sparql:Variable ;
+       sparql:varName "count" .
+_:b484 sparql:variable _:b487 .
 _:b488 rdf:first _:b483 ;
        rdf:rest _:b489 .
 _:b489 rdf:first _:b484 ;
        rdf:rest rdf:nil .
-_:b482 sps:projection _:b488 .
-_:b490 a sps:TriplePattern ;
-       sps:subject _:b486 ;
-       sps:predicate rdf:type ;
-       sps:object _:b483 .
+_:b482 sparql:projection _:b488 .
+_:b490 a sparql:TriplePattern ;
+       sparql:subject _:b486 ;
+       sparql:predicate rdf:type ;
+       sparql:object _:b483 .
 _:b491 rdf:first _:b490 ;
        rdf:rest rdf:nil .
-_:b482 sps:where _:b491 .
+_:b482 sparql:where _:b491 .
 _:b492 rdf:first _:b483 ;
        rdf:rest rdf:nil .
-_:b482 sps:groupBy _:b492 .
+_:b482 sparql:groupBy _:b492 .

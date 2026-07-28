@@ -12,7 +12,7 @@ export { NTriplesReader } from './ntriples/reader.js';
 export { SparqlLexer, SparqlParser, SparqlVariableParser, SparqlTokens } from './sparql/parser.js';
 export { SparqlReader } from './sparql/reader.js';
 export { sparqlVariableSymbols, type SparqlVariableSymbol } from './sparql/sparql-variable-scope.js';
-export { SPARQL_SYNTAX_NS, sps, BUILT_IN_FUNCTIONS } from './sparql/vocabulary.js';
+export { SPARQL_SYNTAX_NS, sparql, BUILT_IN_FUNCTIONS } from './sparql/vocabulary.js';
 export { TrigLexer, TrigParser, TrigTokens } from './trig/parser.js';
 export { TrigReader } from './trig/reader.js';
 export { TurtleLexer, TurtleParser, TurtleTokens } from './turtle/parser.js';

@@ -1,36 +1,36 @@
 # Expected RDF representation of update_modify_with.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b740 a sps:Update .
-_:b741 a sps:Modify ;
-       sps:withGraph <http://example.org/graph> .
-_:b742 a sps:Variable ;
-       sps:varName "s" .
-_:b743 a sps:Variable ;
-       sps:varName "o" .
-_:b744 a sps:TriplePattern ;
-       sps:subject _:b742 ;
-       sps:predicate <http://example.org/old> ;
-       sps:object _:b743 .
+_:b740 a sparql:Update .
+_:b741 a sparql:Modify ;
+       sparql:withGraph <http://example.org/graph> .
+_:b742 a sparql:Variable ;
+       sparql:varName "s" .
+_:b743 a sparql:Variable ;
+       sparql:varName "o" .
+_:b744 a sparql:TriplePattern ;
+       sparql:subject _:b742 ;
+       sparql:predicate <http://example.org/old> ;
+       sparql:object _:b743 .
 _:b745 rdf:first _:b744 ;
        rdf:rest rdf:nil .
-_:b741 sps:deleteTemplate _:b745 .
-_:b746 a sps:TriplePattern ;
-       sps:subject _:b742 ;
-       sps:predicate <http://example.org/new> ;
-       sps:object _:b743 .
+_:b741 sparql:deleteTemplate _:b745 .
+_:b746 a sparql:TriplePattern ;
+       sparql:subject _:b742 ;
+       sparql:predicate <http://example.org/new> ;
+       sparql:object _:b743 .
 _:b747 rdf:first _:b746 ;
        rdf:rest rdf:nil .
-_:b741 sps:insertTemplate _:b747 .
-_:b748 a sps:TriplePattern ;
-       sps:subject _:b742 ;
-       sps:predicate <http://example.org/old> ;
-       sps:object _:b743 .
+_:b741 sparql:insertTemplate _:b747 .
+_:b748 a sparql:TriplePattern ;
+       sparql:subject _:b742 ;
+       sparql:predicate <http://example.org/old> ;
+       sparql:object _:b743 .
 _:b749 rdf:first _:b748 ;
        rdf:rest rdf:nil .
-_:b741 sps:where _:b749 .
+_:b741 sparql:where _:b749 .
 _:b750 rdf:first _:b741 ;
        rdf:rest rdf:nil .
-_:b740 sps:operations _:b750 .
+_:b740 sparql:operations _:b750 .

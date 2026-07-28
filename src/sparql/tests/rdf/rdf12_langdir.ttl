@@ -1,47 +1,47 @@
 # Expected RDF representation of rdf12_langdir.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b1 a sps:SelectQuery .
-_:b2 a sps:Alias .
-_:b3 a sps:Variable ;
-     sps:varName "label" .
-_:b4 a sps:BuiltInCall ;
-     sps:function sps:LANGDIR .
+_:b1 a sparql:SelectQuery .
+_:b2 a sparql:Alias .
+_:b3 a sparql:Variable ;
+     sparql:varName "label" .
+_:b4 a sparql:BuiltInCall ;
+     sparql:function sparql:LANGDIR .
 _:b5 rdf:first _:b3 ;
      rdf:rest rdf:nil .
-_:b4 sps:args _:b5 .
-_:b2 sps:expression _:b4 .
-_:b6 a sps:Variable ;
-     sps:varName "dir" .
-_:b2 sps:variable _:b6 .
+_:b4 sparql:args _:b5 .
+_:b2 sparql:expression _:b4 .
+_:b6 a sparql:Variable ;
+     sparql:varName "dir" .
+_:b2 sparql:variable _:b6 .
 _:b7 rdf:first _:b2 ;
      rdf:rest rdf:nil .
-_:b1 sps:projection _:b7 .
-_:b8 a sps:Variable ;
-     sps:varName "s" .
-_:b9 a sps:TriplePattern ;
-     sps:subject _:b8 ;
-     sps:predicate <http://example.org/label> ;
-     sps:object _:b3 .
-_:b10 a sps:Filter .
-_:b11 a sps:BuiltInCall ;
-      sps:function sps:hasLANG .
+_:b1 sparql:projection _:b7 .
+_:b8 a sparql:Variable ;
+     sparql:varName "s" .
+_:b9 a sparql:TriplePattern ;
+     sparql:subject _:b8 ;
+     sparql:predicate <http://example.org/label> ;
+     sparql:object _:b3 .
+_:b10 a sparql:Filter .
+_:b11 a sparql:BuiltInCall ;
+      sparql:function sparql:hasLANG .
 _:b12 rdf:first _:b3 ;
       rdf:rest rdf:nil .
-_:b11 sps:args _:b12 .
-_:b13 a sps:BuiltInCall ;
-      sps:function sps:hasLANGDIR .
+_:b11 sparql:args _:b12 .
+_:b13 a sparql:BuiltInCall ;
+      sparql:function sparql:hasLANGDIR .
 _:b14 rdf:first _:b3 ;
       rdf:rest rdf:nil .
-_:b13 sps:args _:b14 .
-_:b15 a sps:And ;
-      sps:arg1 _:b11 ;
-      sps:arg2 _:b13 .
-_:b10 sps:expression _:b15 .
+_:b13 sparql:args _:b14 .
+_:b15 a sparql:And ;
+      sparql:arg1 _:b11 ;
+      sparql:arg2 _:b13 .
+_:b10 sparql:expression _:b15 .
 _:b16 rdf:first _:b9 ;
       rdf:rest _:b17 .
 _:b17 rdf:first _:b10 ;
       rdf:rest rdf:nil .
-_:b1 sps:where _:b16 .
+_:b1 sparql:where _:b16 .

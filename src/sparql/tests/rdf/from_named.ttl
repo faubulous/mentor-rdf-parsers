@@ -1,26 +1,26 @@
 # Expected RDF representation of from_named.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b71 a sps:SelectQuery .
-_:b72 a sps:Variable ;
-      sps:varName "name" .
+_:b71 a sparql:SelectQuery .
+_:b72 a sparql:Variable ;
+      sparql:varName "name" .
 _:b73 rdf:first _:b72 ;
       rdf:rest rdf:nil .
-_:b71 sps:projection _:b73 ;
-      sps:fromNamed <http://example.org/graph1> .
-_:b74 a sps:Graph ;
-      sps:graph <http://example.org/graph1> .
-_:b75 a sps:Variable ;
-      sps:varName "s" .
-_:b76 a sps:TriplePattern ;
-      sps:subject _:b75 ;
-      sps:predicate <http://example.org/name> ;
-      sps:object _:b72 .
+_:b71 sparql:projection _:b73 ;
+      sparql:fromNamed <http://example.org/graph1> .
+_:b74 a sparql:Graph ;
+      sparql:graph <http://example.org/graph1> .
+_:b75 a sparql:Variable ;
+      sparql:varName "s" .
+_:b76 a sparql:TriplePattern ;
+      sparql:subject _:b75 ;
+      sparql:predicate <http://example.org/name> ;
+      sparql:object _:b72 .
 _:b77 rdf:first _:b76 ;
       rdf:rest rdf:nil .
-_:b74 sps:elements _:b77 .
+_:b74 sparql:elements _:b77 .
 _:b78 rdf:first _:b74 ;
       rdf:rest rdf:nil .
-_:b71 sps:where _:b78 .
+_:b71 sparql:where _:b78 .

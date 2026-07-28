@@ -1,36 +1,36 @@
 # Expected RDF representation of semicolon_predicate_list.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b107 a sps:SelectQuery .
-_:b108 a sps:Variable ;
-       sps:varName "s" .
+_:b107 a sparql:SelectQuery .
+_:b108 a sparql:Variable ;
+       sparql:varName "s" .
 _:b109 rdf:first _:b108 ;
        rdf:rest rdf:nil .
-_:b107 sps:projection _:b109 .
-_:b110 a sps:Variable ;
-       sps:varName "o1" .
-_:b111 a sps:TriplePattern ;
-       sps:subject _:b108 ;
-       sps:predicate <http://example.org/p1> ;
-       sps:object _:b110 .
-_:b112 a sps:Variable ;
-       sps:varName "o2" .
-_:b113 a sps:TriplePattern ;
-       sps:subject _:b108 ;
-       sps:predicate <http://example.org/p2> ;
-       sps:object _:b112 .
-_:b114 a sps:Variable ;
-       sps:varName "o3" .
-_:b115 a sps:TriplePattern ;
-       sps:subject _:b108 ;
-       sps:predicate <http://example.org/p3> ;
-       sps:object _:b114 .
+_:b107 sparql:projection _:b109 .
+_:b110 a sparql:Variable ;
+       sparql:varName "o1" .
+_:b111 a sparql:TriplePattern ;
+       sparql:subject _:b108 ;
+       sparql:predicate <http://example.org/p1> ;
+       sparql:object _:b110 .
+_:b112 a sparql:Variable ;
+       sparql:varName "o2" .
+_:b113 a sparql:TriplePattern ;
+       sparql:subject _:b108 ;
+       sparql:predicate <http://example.org/p2> ;
+       sparql:object _:b112 .
+_:b114 a sparql:Variable ;
+       sparql:varName "o3" .
+_:b115 a sparql:TriplePattern ;
+       sparql:subject _:b108 ;
+       sparql:predicate <http://example.org/p3> ;
+       sparql:object _:b114 .
 _:b116 rdf:first _:b111 ;
        rdf:rest _:b117 .
 _:b117 rdf:first _:b113 ;
        rdf:rest _:b118 .
 _:b118 rdf:first _:b115 ;
        rdf:rest rdf:nil .
-_:b107 sps:where _:b116 .
+_:b107 sparql:where _:b116 .

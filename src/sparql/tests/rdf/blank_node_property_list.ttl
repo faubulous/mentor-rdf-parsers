@@ -1,31 +1,31 @@
 # Expected RDF representation of blank_node_property_list.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b241 a sps:SelectQuery .
-_:b242 a sps:Variable ;
-       sps:varName "s" .
+_:b241 a sparql:SelectQuery .
+_:b242 a sparql:Variable ;
+       sparql:varName "s" .
 _:b243 rdf:first _:b242 ;
        rdf:rest rdf:nil .
-_:b241 sps:projection _:b243 .
-_:b1 a sps:BlankNode .
-_:b244 a sps:TriplePattern ;
-       sps:subject _:b1 ;
-       sps:predicate <http://example.org/type> ;
-       sps:object "Person" .
-_:b245 a sps:TriplePattern ;
-       sps:subject _:b1 ;
-       sps:predicate <http://example.org/status> ;
-       sps:object "active" .
-_:b246 a sps:TriplePattern ;
-       sps:subject _:b242 ;
-       sps:predicate rdf:type ;
-       sps:object _:b1 .
+_:b241 sparql:projection _:b243 .
+_:b1 a sparql:BlankNode .
+_:b244 a sparql:TriplePattern ;
+       sparql:subject _:b1 ;
+       sparql:predicate <http://example.org/type> ;
+       sparql:object "Person" .
+_:b245 a sparql:TriplePattern ;
+       sparql:subject _:b1 ;
+       sparql:predicate <http://example.org/status> ;
+       sparql:object "active" .
+_:b246 a sparql:TriplePattern ;
+       sparql:subject _:b242 ;
+       sparql:predicate rdf:type ;
+       sparql:object _:b1 .
 _:b247 rdf:first _:b244 ;
        rdf:rest _:b248 .
 _:b248 rdf:first _:b245 ;
        rdf:rest _:b249 .
 _:b249 rdf:first _:b246 ;
        rdf:rest rdf:nil .
-_:b241 sps:where _:b247 .
+_:b241 sparql:where _:b247 .

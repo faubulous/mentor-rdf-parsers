@@ -1,32 +1,32 @@
 # Expected RDF representation of optional_pattern.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b131 a sps:SelectQuery .
-_:b132 a sps:Variable ;
-       sps:varName "name" .
+_:b131 a sparql:SelectQuery .
+_:b132 a sparql:Variable ;
+       sparql:varName "name" .
 _:b133 rdf:first _:b132 ;
        rdf:rest rdf:nil .
-_:b131 sps:projection _:b133 .
-_:b134 a sps:Variable ;
-       sps:varName "s" .
-_:b135 a sps:TriplePattern ;
-       sps:subject _:b134 ;
-       sps:predicate <http://example.org/name> ;
-       sps:object _:b132 .
-_:b136 a sps:Optional .
-_:b137 a sps:Variable ;
-       sps:varName "email" .
-_:b138 a sps:TriplePattern ;
-       sps:subject _:b134 ;
-       sps:predicate <http://example.org/email> ;
-       sps:object _:b137 .
+_:b131 sparql:projection _:b133 .
+_:b134 a sparql:Variable ;
+       sparql:varName "s" .
+_:b135 a sparql:TriplePattern ;
+       sparql:subject _:b134 ;
+       sparql:predicate <http://example.org/name> ;
+       sparql:object _:b132 .
+_:b136 a sparql:Optional .
+_:b137 a sparql:Variable ;
+       sparql:varName "email" .
+_:b138 a sparql:TriplePattern ;
+       sparql:subject _:b134 ;
+       sparql:predicate <http://example.org/email> ;
+       sparql:object _:b137 .
 _:b139 rdf:first _:b138 ;
        rdf:rest rdf:nil .
-_:b136 sps:elements _:b139 .
+_:b136 sparql:elements _:b139 .
 _:b140 rdf:first _:b135 ;
        rdf:rest _:b141 .
 _:b141 rdf:first _:b136 ;
        rdf:rest rdf:nil .
-_:b131 sps:where _:b140 .
+_:b131 sparql:where _:b140 .

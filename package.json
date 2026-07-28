@@ -9,7 +9,7 @@
     "typescript",
     "chevrotain"
   ],
-  "version": "1.11.0",
+  "version": "2.0.0",
   "private": false,
   "author": {
     "name": "Sebastian Faubel"
@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@rdfjs/data-model": "^2.1.2",
-    "chevrotain": "^12.0.0",
+    "chevrotain": "^13.0.0",
     "triplate": "^0.6.0"
   },
   "devDependencies": {

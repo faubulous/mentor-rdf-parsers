@@ -1,22 +1,22 @@
 # Expected RDF representation of inline_data_full.rq
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:b215 a sps:SelectQuery .
-_:b216 a sps:Variable ;
-       sps:varName "name" .
+_:b215 a sparql:SelectQuery .
+_:b216 a sparql:Variable ;
+       sparql:varName "name" .
 _:b217 rdf:first _:b216 ;
        rdf:rest rdf:nil .
-_:b215 sps:projection _:b217 .
-_:b218 a sps:Values .
-_:b219 a sps:Variable ;
-       sps:varName "age" .
+_:b215 sparql:projection _:b217 .
+_:b218 a sparql:Values .
+_:b219 a sparql:Variable ;
+       sparql:varName "age" .
 _:b220 rdf:first _:b216 ;
        rdf:rest _:b221 .
 _:b221 rdf:first _:b219 ;
        rdf:rest rdf:nil .
-_:b218 sps:variables _:b220 .
+_:b218 sparql:variables _:b220 .
 _:b222 rdf:first "Alice" ;
        rdf:rest _:b223 .
 _:b223 rdf:first "30"^^xsd:integer ;
@@ -29,15 +29,15 @@ _:b226 rdf:first _:b222 ;
        rdf:rest _:b227 .
 _:b227 rdf:first _:b224 ;
        rdf:rest rdf:nil .
-_:b218 sps:bindings _:b226 .
-_:b228 a sps:Variable ;
-       sps:varName "s" .
-_:b229 a sps:TriplePattern ;
-       sps:subject _:b228 ;
-       sps:predicate <http://example.org/name> ;
-       sps:object _:b216 .
+_:b218 sparql:bindings _:b226 .
+_:b228 a sparql:Variable ;
+       sparql:varName "s" .
+_:b229 a sparql:TriplePattern ;
+       sparql:subject _:b228 ;
+       sparql:predicate <http://example.org/name> ;
+       sparql:object _:b216 .
 _:b230 rdf:first _:b218 ;
        rdf:rest _:b231 .
 _:b231 rdf:first _:b229 ;
        rdf:rest rdf:nil .
-_:b215 sps:where _:b230 .
+_:b215 sparql:where _:b230 .

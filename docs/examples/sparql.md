@@ -223,11 +223,11 @@ const cst = new SparqlParser().parse(lexResult.tokens);
 
 `SparqlReader` converts the syntax tree of a query or update into an RDF
 representation of the query itself, using the SPARQL Syntax Vocabulary
-(`https://w3id.org/sparql-syntax#`, prefix `sps:`). The ontology is shipped
+(`https://w3id.org/sparql-syntax#`, prefix `sparql:`). The ontology is shipped
 with the package at `vocab/sparql-syntax.ttl`.
 
 ```typescript
-import { SparqlLexer, SparqlParser, SparqlReader, sps } from '@faubulous/mentor-rdf-parsers';
+import { SparqlLexer, SparqlParser, SparqlReader, sparql } from '@faubulous/mentor-rdf-parsers';
 
 const input = 'SELECT * WHERE { ?s ?p ?o }';
 
@@ -237,34 +237,34 @@ const cst = new SparqlParser().parse(lexResult.tokens);
 const reader = new SparqlReader();
 const quads = reader.visit(cst);
 
-// The typed root node of the query, e.g. an sps:SelectQuery.
+// The typed root node of the query, e.g. an sparql:SelectQuery.
 console.log(reader.rootNode);
 ```
 
 The example produces the following RDF (in Turtle):
 
 ```turtle
-@prefix sps: <https://w3id.org/sparql-syntax#> .
+@prefix sparql: <https://w3id.org/sparql-syntax#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-_:query a sps:SelectQuery ;
-    sps:star true ;
-    sps:where ( _:pattern ) .
+_:query a sparql:SelectQuery ;
+    sparql:star true ;
+    sparql:where ( _:pattern ) .
 
-_:pattern a sps:TriplePattern ;
-    sps:subject _:s ;
-    sps:predicate _:p ;
-    sps:object _:o .
+_:pattern a sparql:TriplePattern ;
+    sparql:subject _:s ;
+    sparql:predicate _:p ;
+    sparql:object _:o .
 
-_:s a sps:Variable ; sps:varName "s" .
-_:p a sps:Variable ; sps:varName "p" .
-_:o a sps:Variable ; sps:varName "o" .
+_:s a sparql:Variable ; sparql:varName "s" .
+_:p a sparql:Variable ; sparql:varName "p" .
+_:o a sparql:Variable ; sparql:varName "o" .
 ```
 
 Key modeling rules:
 
-- Variables become blank nodes typed `sps:Variable`; one node is shared per
+- Variables become blank nodes typed `sparql:Variable`; one node is shared per
   distinct variable name across the whole query.
 - IRIs and literals appear as themselves; prefixed names and relative IRIs are
   resolved against the prologue.
