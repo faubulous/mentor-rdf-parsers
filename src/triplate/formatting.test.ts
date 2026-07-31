@@ -34,6 +34,22 @@ describe('tokenizeTemplateForFormatting', () => {
         expect(comments.some(c => c.startsWith('# trailing'))).toBe(true);
     });
 
+    it('round-trips a bare LIMIT interpolation as its original text', () => {
+        const text = '---\nparams { limit: int }\n---\nSELECT * WHERE { ?s ?p ?o }\nLIMIT ${limit}\n';
+        const result = tokenizeTemplateForFormatting(new SparqlLexer(), text)!;
+
+        expect(result.hasDirectives).toBe(false);
+
+        const names = result.bodyTokens.map(t => t.tokenType.name);
+        expect(names).toContain('LIMIT');
+        expect(names).toContain('TRIPLATE_INTERPOLATION');
+        expect(names).not.toContain('INTEGER');
+
+        const interpolation = result.bodyTokens.find(t => t.tokenType.name === 'TRIPLATE_INTERPOLATION')!;
+        expect(interpolation.image).toBe('${limit}');
+        expect(text.slice(interpolation.startOffset, interpolation.endOffset + 1)).toBe('${limit}');
+    });
+
     it('flags control directives so the caller can skip', () => {
         const text = '---\nparams { limit: int }\n---\nSELECT * WHERE { ?s ?p ?o }\n{% if limit %}LIMIT ${limit}{% endif %}\n';
         const result = tokenizeTemplateForFormatting(new SparqlLexer(), text)!;

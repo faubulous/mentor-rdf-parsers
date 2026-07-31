@@ -22,6 +22,49 @@ params {
 SELECT * WHERE { ?s a \${type} }
 `;
 
+const SPARQL_PAGINATION_TEMPLATE = `---
+params {
+  limit: int
+  offset: int
+}
+---
+SELECT * WHERE { ?s ?p ?o }
+LIMIT \${limit}
+OFFSET \${offset}
+`;
+
+const SPARQL_LOWERCASE_PAGINATION_TEMPLATE = `---
+params {
+  count: int
+}
+---
+SELECT * WHERE { ?s ?p ?o }
+limit \${count}
+offset \${count}
+`;
+
+const SPARQL_OFFSET_FIRST_TEMPLATE = `---
+params {
+  limit: int
+  offset: int
+}
+---
+SELECT * WHERE { ?s ?p ?o }
+OFFSET \${offset}
+LIMIT \${limit}
+`;
+
+const SPARQL_DIRECTIVE_PAGINATION_TEMPLATE = `---
+params {
+  limit: int
+}
+---
+SELECT * WHERE { ?s ?p ?o }
+{% if limit %}
+LIMIT \${limit}
+{% endif %}
+`;
+
 describe('tokenizeWithTriplate', () => {
     const names = (tokens: { tokenType: { name: string } }[]) => tokens.map(t => t.tokenType.name);
 
@@ -111,6 +154,45 @@ describe('tokenizeWithTriplate', () => {
             for (const token of result.tokens) {
                 expect(SPARQL_TEMPLATE.slice(token.startOffset, token.endOffset + 1)).toBe(token.image);
             }
+        });
+    });
+
+    describe('SPARQL numeric slots', () => {
+        const parseErrors = (text: string) => {
+            const parser = new SparqlParser();
+            parser.parse(tokenizeWithTriplate(new SparqlLexer(), text).parseTokens, false);
+
+            return parser.errors;
+        };
+
+        const result = tokenizeWithTriplate(new SparqlLexer(), SPARQL_PAGINATION_TEMPLATE);
+
+        it('accepts bare LIMIT/OFFSET interpolations without parser errors', () => {
+            expect(parseErrors(SPARQL_PAGINATION_TEMPLATE)).toHaveLength(0);
+        });
+
+        it('emits real interpolation tokens for the LIMIT and OFFSET arguments', () => {
+            const images = result.tokens.filter(t => t.tokenType.name === 'TRIPLATE_INTERPOLATION').map(t => t.image);
+
+            expect(images).toEqual(['${limit}', '${offset}']);
+        });
+
+        it('preserves source offsets for every public token', () => {
+            for (const token of result.tokens) {
+                expect(SPARQL_PAGINATION_TEMPLATE.slice(token.startOffset, token.endOffset + 1)).toBe(token.image);
+            }
+        });
+
+        it('matches the keywords case-insensitively', () => {
+            expect(parseErrors(SPARQL_LOWERCASE_PAGINATION_TEMPLATE)).toHaveLength(0);
+        });
+
+        it('accepts OFFSET before LIMIT', () => {
+            expect(parseErrors(SPARQL_OFFSET_FIRST_TEMPLATE)).toHaveLength(0);
+        });
+
+        it('accepts a LIMIT wrapped in directive lines of its own', () => {
+            expect(parseErrors(SPARQL_DIRECTIVE_PAGINATION_TEMPLATE)).toHaveLength(0);
         });
     });
 

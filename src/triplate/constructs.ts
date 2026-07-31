@@ -14,6 +14,9 @@ const IRI_TEMPLATE_RE = /\$<[^>]*>/g;
 const STRING_TEMPLATE_RE = /\$"(?:[^"\\]|\\.)*"(?:@[A-Za-z][A-Za-z0-9-]*)?/g;
 const VALUE_INTERP_RE = /\$\{[^}]*\}/g;
 
+/** `LIMIT` / `OFFSET` take an INTEGER, not a term — SPARQL's only numeric-only slots. */
+const NUMERIC_VALUE_INTERP_RE = /\b(LIMIT|OFFSET)(\s+)(\$\{[^}]*\})/gi;
+
 function blank(s: string): string {
     return s.replace(/[^\r\n]/g, ' ');
 }
@@ -24,6 +27,11 @@ function iriPlaceholder(m: string): string {
 
 function stringPlaceholder(m: string): string {
     return '"' + '_'.repeat(Math.max(0, m.length - 2)) + '"';
+}
+
+/** A length-preserving INTEGER placeholder for slots where a term is not legal. */
+function integerPlaceholder(interpolation: string): string {
+    return '1' + '0'.repeat(Math.max(0, interpolation.length - 1));
 }
 
 /**
@@ -45,6 +53,16 @@ export function renderForHost(text: string): { rendering: string; replacements: 
     rendering = rendering.replace(DIRECTIVE_LINE_RE, (m, offset: number) => {
         replacements.push({ start: offset, end: offset + m.length, kind: 'directive' });
         return blank(m);
+    });
+
+    // Numeric slots before the generic term pass: LIMIT/OFFSET take an INTEGER,
+    // so the IRI placeholder used elsewhere would be a parse error here.
+    rendering = rendering.replace(NUMERIC_VALUE_INTERP_RE, (_match, keyword: string, gap: string, interpolation: string, offset: number) => {
+        const start = offset + keyword.length + gap.length;
+
+        replacements.push({ start, end: start + interpolation.length, kind: 'value' });
+
+        return keyword + gap + integerPlaceholder(interpolation);
     });
 
     // Inline interpolations, replaced with same-length term/literal placeholders.
