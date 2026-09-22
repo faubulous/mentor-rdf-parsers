@@ -6,6 +6,14 @@ import dataFactory from '@rdfjs/data-model';
  * An extended RDF/JS Quad that includes source tokens for each component.
  * Optional comment metadata is included for readers that support associating
  * comments with statements.
+ *
+ * Statements written inside an inline blank node `[ ... ]` carry the `[` token
+ * as their subject token and follow the statement that holds the node. The
+ * `rdf:first` / `rdf:rest` chain of a collection `( ... )` is reported with
+ * the `(` token as the subject token of the head, the token of the item a
+ * node holds as the subject token of every later node, and `)` as the object
+ * token of the final `rdf:nil`. Chain statements reuse the item token as their
+ * predicate token because their predicates are not written in the text.
  */
 export interface QuadContext extends Quad {
     /**

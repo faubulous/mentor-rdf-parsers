@@ -970,6 +970,62 @@ ex:Alice ex:knows ex:Bob .`;
         expect(infos[0].leadingComments[2].image).toBe('# Third comment');
     });
 
+    it('attaches a comment written inside a block to the statement it introduces', () => {
+        const input = `@prefix ex: <http://example.org/> .
+# About Alice
+ex:Alice ex:knows ex:Bob ;
+         # who she also likes
+         ex:likes ex:Carol .
+
+# About Dave
+ex:Dave ex:knows ex:Bob .`;
+
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const infos = new TurtleReader().readQuadContexts(cst, lexResult.tokens);
+
+        expect(infos).toHaveLength(3);
+
+        expect(infos[0].leadingComments!.map(c => c.image)).toEqual(['# About Alice']);
+        expect(infos[1].leadingComments!.map(c => c.image)).toEqual(['# who she also likes']);
+
+        // The comments of one block never reach the next one.
+        expect(infos[2].subject.value).toBe('http://example.org/Dave');
+        expect(infos[2].leadingComments!.map(c => c.image)).toEqual(['# About Dave']);
+    });
+
+    it('attaches a comment ending an inner line to the statement on that line', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:Alice ex:knows ex:Bob ; # a friend
+         ex:likes ex:Carol . # end of Alice`;
+
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const infos = new TurtleReader().readQuadContexts(cst, lexResult.tokens);
+
+        expect(infos).toHaveLength(2);
+        expect(infos[0].trailingComment!.image).toBe('# a friend');
+        expect(infos[1].trailingComment!.image).toBe('# end of Alice');
+    });
+
+    it('attaches a comment written inside a collection to the item it introduces', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:Alice ex:list (
+    ex:a
+    # the second one
+    ex:b
+) .`;
+
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const infos = new TurtleReader().readQuadContexts(cst, lexResult.tokens);
+        const introduced = infos.filter(info => (info.leadingComments ?? []).length > 0);
+
+        expect(introduced).toHaveLength(1);
+        expect(introduced[0].object.value).toBe('http://example.org/b');
+        expect(introduced[0].leadingComments!.map(c => c.image)).toEqual(['# the second one']);
+    });
+
     it('attaches document footer comments to last statement', () => {
         const input = `@prefix ex: <http://example.org/> .
 ex:Alice ex:knows ex:Bob .
@@ -1012,5 +1068,145 @@ ex:Alice ex:knows ex:Bob .`;
         expect(infos).toHaveLength(1);
         expect('endOffset' in infos[0]).toBe(false);
         expect('endLine' in infos[0]).toBe(false);
+    });
+});
+
+describe("TurtleReader.readQuadContexts - nested statements", () => {
+    const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+
+    /**
+     * Parse Turtle into quad contexts with comment tokens attached.
+     */
+    function read(input: string) {
+        const lexResult = new TurtleLexer().tokenize(input);
+        const cst = new TurtleParser().parse(lexResult.tokens);
+        const reader = new TurtleReader();
+
+        return { infos: reader.readQuadContexts(cst, lexResult.tokens), tokens: lexResult.tokens, cst };
+    }
+
+    /**
+     * Indicate whether a token points at a real source position.
+     */
+    function isReal(token: { startOffset: number }): boolean {
+        return Number.isFinite(token.startOffset);
+    }
+
+    it('emits the statements of an inline blank node with real tokens right after their parent', () => {
+        const { infos } = read(`@prefix ex: <http://example.org/> .
+ex:s ex:p [ ex:q "x" ; ex:r "y" ] .`);
+
+        expect(infos).toHaveLength(3);
+        expect(infos[0].subject.value).toBe('http://example.org/s');
+        expect(infos[0].objectToken.image).toBe('[');
+        expect(infos[1].subject.value).toBe(infos[0].object.value);
+        expect(infos[1].predicate.value).toBe('http://example.org/q');
+        expect(infos[1].subjectToken.image).toBe('[');
+        expect(infos[1].objectToken.image).toBe('"x"');
+        expect(infos[2].predicate.value).toBe('http://example.org/r');
+
+        for (const info of infos) {
+            expect(isReal(info.subjectToken)).toBe(true);
+            expect(isReal(info.predicateToken)).toBe(true);
+            expect(isReal(info.objectToken)).toBe(true);
+        }
+    });
+
+    it('emits nested blank nodes depth first with every parent before its children', () => {
+        const { infos } = read(`@prefix ex: <http://example.org/> .
+ex:s ex:p [ ex:q [ ex:r "z" ] ] .`);
+
+        expect(infos.map(i => i.predicate.value)).toEqual([
+            'http://example.org/p',
+            'http://example.org/q',
+            'http://example.org/r'
+        ]);
+        expect(infos[1].subject.value).toBe(infos[0].object.value);
+        expect(infos[2].subject.value).toBe(infos[1].object.value);
+        expect(infos[2].objectToken.image).toBe('"z"');
+    });
+
+    it('keeps duplicate statements inside an inline blank node', () => {
+        const { infos } = read(`@prefix ex: <http://example.org/> .
+ex:s ex:p [ ex:q 1 ; ex:q 1 ] .`);
+
+        expect(infos).toHaveLength(3);
+        expect(infos[1].objectToken.startOffset).not.toBe(infos[2].objectToken.startOffset);
+    });
+
+    it('emits the chain of a collection with the tokens of its items', () => {
+        const { infos } = read(`@prefix ex: <http://example.org/> .
+ex:s ex:p ( ex:a ex:b ) .`);
+
+        const first = infos.filter(i => i.predicate.value === `${RDF}first`);
+        const rest = infos.filter(i => i.predicate.value === `${RDF}rest`);
+
+        expect(infos).toHaveLength(5);
+        expect(infos[0].objectToken.image).toBe('(');
+
+        expect(first).toHaveLength(2);
+        expect(first[0].subject.value).toBe(infos[0].object.value);
+        expect(first[0].subjectToken.image).toBe('(');
+        expect(first[0].objectToken.image).toBe('ex:a');
+        expect(first[1].subjectToken.image).toBe('ex:b');
+        expect(first[1].objectToken.image).toBe('ex:b');
+
+        expect(rest).toHaveLength(2);
+        expect(rest[0].object.value).toBe(first[1].subject.value);
+        expect(rest[0].objectToken.image).toBe('ex:b');
+        expect(rest[1].object.value).toBe(`${RDF}nil`);
+        expect(rest[1].objectToken.image).toBe(')');
+    });
+
+    it('emits the statements of a blank node nested in a collection', () => {
+        const { infos } = read(`@prefix ex: <http://example.org/> .
+ex:s ex:p ( [ ex:q "x" ] ) .`);
+
+        const nested = infos.find(i => i.predicate.value === 'http://example.org/q');
+        const first = infos.find(i => i.predicate.value === `${RDF}first`);
+
+        expect(nested).toBeDefined();
+        expect(first).toBeDefined();
+        expect(nested!.subject.value).toBe(first!.object.value);
+        expect(nested!.objectToken.image).toBe('"x"');
+        expect(infos.indexOf(first!)).toBeLessThan(infos.indexOf(nested!));
+    });
+
+    it('emits the chain of a collection in subject position before its statements', () => {
+        const { infos } = read(`@prefix ex: <http://example.org/> .
+( ex:a ) ex:p ex:o .`);
+
+        expect(infos).toHaveLength(3);
+        expect(infos[0].predicate.value).toBe(`${RDF}first`);
+        expect(infos[2].predicate.value).toBe('http://example.org/p');
+        expect(infos[2].subject.value).toBe(infos[0].subject.value);
+    });
+
+    it('keeps the trailing comment on the outer statement when the block ends with a nested node', () => {
+        const { infos } = read(`@prefix ex: <http://example.org/> .
+# About s
+ex:s ex:p [ ex:q "x" ] . # end`);
+
+        expect(infos).toHaveLength(2);
+        expect(infos[0].leadingComments.map(c => c.image)).toEqual(['# About s']);
+        expect(infos[0].trailingComment?.image).toBe('# end');
+        expect(infos[1].leadingComments).toHaveLength(0);
+        expect(infos[1].trailingComment).toBeUndefined();
+    });
+
+    it('produces one context per quad of the visitor for nested nodes and collections', () => {
+        const input = `@prefix ex: <http://example.org/> .
+ex:s ex:p [ ex:q ( 1 [ ex:r "x" ] ) ; ex:t "y" ], ex:o .
+( ex:a ex:b ) ex:p ex:o .`;
+
+        const { infos, cst } = read(input);
+        const quads = new TurtleReader().visit(cst);
+
+        expect(infos).toHaveLength(quads.length);
+
+        for (const info of infos) {
+            expect(isReal(info.subjectToken)).toBe(true);
+            expect(isReal(info.objectToken)).toBe(true);
+        }
     });
 });

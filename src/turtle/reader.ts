@@ -20,8 +20,12 @@ const BaseVisitor = new TurtleParser().getBaseCstVisitorConstructor();
 
 type PredicateObjectResult = SharedPredicateObjectResult<NamedNode, Term, CstContext>;
 type ObjectListResult = SharedObjectListResult<Term, CstContext>;
-type PredicateObjectInfoResult = SharedPredicateObjectInfoResult<any, any, CstContext>;
-type ObjectListInfoResult = SharedObjectListInfoResult<any, CstContext>;
+type PredicateObjectInfoResult = SharedPredicateObjectInfoResult<any, any, CstContext, QuadContext>;
+type ObjectListInfoResult = SharedObjectListInfoResult<any, CstContext, QuadContext>;
+
+const RDF_FIRST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+const RDF_REST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+const RDF_NIL = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
 
 /**
  * A visitor class that constructs RDF/JS quads from Turtle syntax trees.
@@ -118,6 +122,131 @@ export class TurtleReader extends BaseVisitor {
     }
 
     /**
+     * Find the index of the context that ends a statement block: the last one whose subject
+     * token is the block's own subject token. Nested statements follow their parent in the
+     * list, so the plain last element may belong to an inline blank node instead.
+     */
+    protected getTrailingStatementIndex(triplesInfos: QuadContext[]): number {
+        const subjectToken = triplesInfos[0].subjectToken;
+
+        for (let i = triplesInfos.length - 1; i >= 0; i--) {
+            if (triplesInfos[i].subjectToken === subjectToken) {
+                return i;
+            }
+        }
+
+        return triplesInfos.length - 1;
+    }
+
+    /**
+     * The offset at which a statement's own text begins.
+     *
+     * A statement begins at its predicate rather than at its subject: a subject is written once
+     * for a whole block, so taking it would hand every comment inside the block to the statement
+     * that opens it. The chain of a collection reports the token of an item as the predicate of
+     * the statement holding it, so the items of a list are introduced one by one in the same way.
+     */
+    protected getStatementStart(context: QuadContext): number {
+        return context.predicateToken.startOffset;
+    }
+
+    /**
+     * The offset at which a statement's own text ends, which is the end of its object.
+     */
+    protected getStatementEnd(context: QuadContext): number {
+        const token = context.objectToken;
+
+        return token.endOffset ?? (token.startOffset + token.image.length - 1);
+    }
+
+    /**
+     * The line a statement ends on.
+     */
+    protected getStatementEndLine(context: QuadContext): number {
+        const token = context.objectToken;
+
+        return token.endLine ?? token.startLine ?? 1;
+    }
+
+    /**
+     * Attach the comments of a document to the statements they belong to.
+     *
+     * A comment sitting on the same line as the end of a statement trails it; every other comment
+     * introduces the statement whose own text begins next, which is how a comment written inside a
+     * block reaches the predicate it was written above rather than the resource that follows.
+     * Comments after the last statement stay with it as leading comments, which is where a reader
+     * looking for the footer of a document finds them.
+     * @param contexts The statements of the document, which are given their comments in place.
+     * @param comments The comment tokens of the document, in the order they were written.
+     * @param blockEnds The statements that end a block, which a comment after one belongs to.
+     */
+    protected attachComments(contexts: QuadContext[], comments: IToken[], blockEnds: Set<QuadContext> = new Set()): void {
+        if (contexts.length === 0 || comments.length === 0) {
+            return;
+        }
+
+        const byStart = [...contexts].sort((a, b) => this.getStatementStart(a) - this.getStatementStart(b));
+        const byEnd = [...contexts].sort((a, b) => this.getStatementEnd(a) - this.getStatementEnd(b));
+        const lastInText = byStart[byStart.length - 1];
+
+        // Both lists and the comments run forwards, so each is walked once.
+        let startIndex = 0;
+        let endIndex = 0;
+
+        for (const comment of comments) {
+            while (endIndex < byEnd.length && this.getStatementEnd(byEnd[endIndex]) < comment.startOffset) {
+                endIndex++;
+            }
+
+            while (startIndex < byStart.length && this.getStatementStart(byStart[startIndex]) < comment.startOffset) {
+                startIndex++;
+            }
+
+            const trailed = this.getTrailedStatement(byEnd, endIndex, comment, blockEnds);
+
+            if (trailed && !trailed.trailingComment) {
+                trailed.trailingComment = comment;
+            } else {
+                (byStart[startIndex] ?? lastInText).leadingComments!.push(comment);
+            }
+        }
+    }
+
+    /**
+     * The statement a comment trails, if it trails one: the last to end before it on its line.
+     *
+     * Several statements can end on one line, because the statements written inside an inline
+     * blank node or a collection end before the statement that holds it does. The comment belongs
+     * to the one that ends the block, so a comment after `[ ... ] .` stays with the statement
+     * holding the node rather than with the last statement written inside it.
+     * @param byEnd The statements of the document ordered by where they end.
+     * @param endIndex The position after the last statement to end before the comment.
+     * @param comment The comment token.
+     * @param blockEnds The statements that end a block.
+     * @returns The statement the comment trails, or `undefined` if it trails none.
+     */
+    protected getTrailedStatement(byEnd: QuadContext[], endIndex: number, comment: IToken, blockEnds: Set<QuadContext>): QuadContext | undefined {
+        let candidate: QuadContext | undefined;
+
+        // Offsets grow with the lines, so walking back stops at the first statement of an earlier one.
+        for (let i = endIndex - 1; i >= 0; i--) {
+            const context = byEnd[i];
+
+            if (this.getStatementEndLine(context) !== comment.startLine) {
+                break;
+            }
+
+            if (blockEnds.has(context)) {
+                return context;
+            }
+
+            candidate ??= context;
+        }
+
+        return candidate;
+    }
+
+    /**
      * Parse the document and return quad information with source tokens.
      * This is useful for IDE features that need to associate positions with triples.
      */
@@ -131,9 +260,7 @@ export class TurtleReader extends BaseVisitor {
 
         const result: QuadContext[] = [];
         const quads: Quad[] = []; // For internal quad generation (collections, etc.)
-        let commentIdx = 0;
-        let previousStatementEnd = -1;
-        let lastStatementEndLine = -1;
+        const blockEnds = new Set<QuadContext>();
 
         if (context.triples) {
             for (const triple of context.triples) {
@@ -141,65 +268,39 @@ export class TurtleReader extends BaseVisitor {
                 if (triplesInfos.length === 0) continue;
 
                 if (tokens) {
-                    const { startOffset: firstSubjectOffset, endOffset: statementEndOffset, endLine: statementEndLine } =
-                        this.getStatementSpan(triplesInfos);
-
-                    const leading: IToken[] = [];
-                    while (commentIdx < comments.length) {
-                        const c = comments[commentIdx];
-                        if (c.startOffset < firstSubjectOffset && c.startOffset > previousStatementEnd) {
-                            leading.push(c);
-                            commentIdx++;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    let trailing: IToken | undefined;
-                    if (
-                        commentIdx < comments.length &&
-                        comments[commentIdx].startOffset > statementEndOffset &&
-                        comments[commentIdx].startLine === statementEndLine
-                    ) {
-                        trailing = comments[commentIdx];
-                        commentIdx++;
-                    }
+                    // The nested statements of an inline blank node or a collection follow their
+                    // parent, so the last context is not necessarily a statement of the block's
+                    // own subject. The one that ends the block is the last sharing its subject
+                    // token, and it is the statement a comment after the block belongs to.
+                    const trailingIndex = this.getTrailingStatementIndex(triplesInfos);
 
                     for (let i = 0; i < triplesInfos.length; i++) {
-                        result.push({
-                            ...triplesInfos[i],
-                            leadingComments: i === 0 ? leading : [],
-                            trailingComment: i === triplesInfos.length - 1 ? trailing : undefined,
-                        });
-                    }
+                        const context: QuadContext = { ...triplesInfos[i], leadingComments: [], trailingComment: undefined };
 
-                    previousStatementEnd = statementEndOffset;
-                    lastStatementEndLine = statementEndLine;
+                        if (i === trailingIndex) {
+                            blockEnds.add(context);
+                        }
+
+                        result.push(context);
+                    }
                 } else {
                     result.push(...triplesInfos);
                 }
             }
         }
 
-        if (tokens && commentIdx < comments.length && result.length > 0) {
-            const last = result[result.length - 1];
-            while (commentIdx < comments.length) {
-                if (!last.trailingComment && comments[commentIdx].startLine === lastStatementEndLine) {
-                    last.trailingComment = comments[commentIdx];
-                } else {
-                    // Append as leading comments on last statement (document footer)
-                    last.leadingComments.push(comments[commentIdx]);
-                }
-                commentIdx++;
-            }
+        // Comments are attached once every statement is known, and before the synthetic contexts
+        // below join the result: those stand for statements that are not written in the text.
+        if (tokens) {
+            this.attachComments(result, comments, blockEnds);
         }
 
-        // Blank-node property lists and collections that appear in object position
-        // generate quads into the side-effect `quads` array but don't add them to
-        // `result`. The serializer needs all quads (including these inner ones) to
-        // correctly count blank-node references for inline-blank-node decisions.
-        // Append them now as synthetic QuadContexts (no real token positions), skipping
-        // any that are already present in `result` to avoid double-counting.
+        // The statements of inline blank nodes and collections are emitted with their real
+        // tokens right after their parent statement above. What remains in the side-effect
+        // `quads` array without a context of its own are the quads of reified triples and
+        // triple terms, which have no statement of their own in the text. The serializer
+        // needs them to count blank-node references, so append them as synthetic
+        // QuadContexts (no real token positions), skipping any that already have a context.
         if (quads.length > 0) {
             const syntheticToken: IToken = {
                 image: '',
@@ -238,30 +339,25 @@ export class TurtleReader extends BaseVisitor {
         const result: QuadContext[] = [];
 
         if (context.subject) {
-            const subjectToken = this.subjectInfo(context.subject[0], quads);
+            // A collection in subject position emits its chain before the statements about it.
+            const subjectToken = this.subjectInfo(context.subject[0], quads, result);
 
             if (!context.predicateObjectList) {
                 throw new Error('Invalid triples: ' + JSON.stringify(context));
             }
 
-            for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                result.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
-            }
+            this.pushStatements(result, subjectToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads));
         } else if (context.blankNodePropertyList) {
             const subjectToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, result);
 
             if (context.predicateObjectList) {
-                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    result.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
-                }
+                this.pushStatements(result, subjectToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads));
             }
         } else if (context.reifiedTriple) {
             const reifierToken = this.reifiedTripleInfo(context.reifiedTriple[0], quads, result);
 
             if (context.predicateObjectList) {
-                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    result.push(toQuadContext(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token));
-                }
+                this.pushStatements(result, reifierToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads));
             }
         } else {
             throw new Error('Invalid triples: ' + JSON.stringify(ctx));
@@ -271,16 +367,41 @@ export class TurtleReader extends BaseVisitor {
     }
 
     /**
+     * Emit the statements of a subject, each followed by the contexts nested in its object,
+     * so that a parent statement always precedes the statements of its inline blank node
+     * or collection.
+     */
+    protected pushStatements(
+        result: QuadContext[],
+        subjectToken: { term: Term; token: IToken },
+        pairs: PredicateObjectInfoResult[],
+        graphToken?: { term: Term; token: IToken }
+    ): void {
+        for (const { predicate, object, nested } of pairs) {
+            result.push(toQuadContext(
+                subjectToken.term, subjectToken.token,
+                predicate.term, predicate.token,
+                object.term, object.token,
+                graphToken?.term, graphToken?.token
+            ));
+
+            if (nested && nested.length > 0) {
+                result.push(...nested);
+            }
+        }
+    }
+
+    /**
      * Get subject term and token.
      */
-    protected subjectInfo(ctx: CstContext, quads: Quad[]) {
+    protected subjectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[] = []) {
         const context = this.getChildren(ctx);
         if (context.iri) {
             return this.iriInfo(context.iri[0]);
         } else if (context.blankNode) {
             return this.blankNodeInfo(context.blankNode[0]);
         } else if (context.collection) {
-            return this.collectionInfo(context.collection[0], quads);
+            return this.collectionInfo(context.collection[0], quads, infoResults);
         }
         throw new Error('Invalid subject: ' + JSON.stringify(context));
     }
@@ -303,9 +424,11 @@ export class TurtleReader extends BaseVisitor {
     }
 
     /**
-     * Get object term and token.
+     * Get object term and token. The statements nested in the object — those of an inline
+     * blank node property list or the chain of a collection — are appended to `nested` with
+     * their real source tokens, so callers can emit them right after the parent statement.
      */
-    protected objectInfo(ctx: CstContext, quads: Quad[]) {
+    protected objectInfo(ctx: CstContext, quads: Quad[], nested: QuadContext[] = []) {
         const context = this.getChildren(ctx);
         if (context.iri) {
             return this.iriInfo(context.iri[0]);
@@ -314,16 +437,13 @@ export class TurtleReader extends BaseVisitor {
         } else if (context.blankNode) {
             return this.blankNodeInfo(context.blankNode[0]);
         } else if (context.blankNodePropertyList) {
-            const infoResults: QuadContext[] = [];
-            const termToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults);
-            return termToken;
+            return this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, nested);
         } else if (context.collection) {
-            return this.collectionInfo(context.collection[0], quads);
+            return this.collectionInfo(context.collection[0], quads, nested);
         } else if (context.tripleTerm) {
             return this.tripleTermInfo(context.tripleTerm[0]);
         } else if (context.reifiedTriple) {
-            const infoResults: QuadContext[] = [];
-            return this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
+            return this.reifiedTripleInfo(context.reifiedTriple[0], quads, nested);
         }
         throw new Error('Invalid object: ' + JSON.stringify(context));
     }
@@ -408,10 +528,13 @@ export class TurtleReader extends BaseVisitor {
         const subjectToken = { term: subject, token };
 
         if (context.predicateObjectList) {
-            for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+            const pairs = this.predicateObjectListInfo(context.predicateObjectList[0], quads);
+
+            for (const { predicate, object } of pairs) {
                 quads.push(dataFactory.quad(subject, predicate.term as NamedNode, object.term));
-                infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
             }
+
+            this.pushStatements(infoResults, subjectToken, pairs);
         }
 
         return subjectToken;
@@ -508,39 +631,62 @@ export class TurtleReader extends BaseVisitor {
 
     /**
      * Get collection info. Returns the head node token (LPARENT).
+     *
+     * The `rdf:first` / `rdf:rest` chain is appended to `infoResults` with real tokens so that
+     * the items of a list can be located in the source: the head node is marked by `(`, every
+     * later chain node by the token of the item it holds, and the `rdf:rest` object of the last
+     * node by `)`. The chain statements reuse the item token as their predicate token because
+     * the predicates are not written in the text.
      */
-    protected collectionInfo(ctx: CstContext, quads: Quad[]) {
+    protected collectionInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[] = []) {
         const context = this.getChildren(ctx);
         const token = context.LPARENT ? context.LPARENT[0] : this.findFirstToken(context)!;
-        const nil = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
-        const rest = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-        const first = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+        const closingToken = context.RPARENT ? context.RPARENT[0] : token;
         const objectNodes = context.object ?? [];
 
         if (objectNodes.length === 0) {
-            return { term: nil, token };
+            return { term: RDF_NIL, token };
         }
+
+        // Read every item first: the `rdf:rest` statement of a node points at the token of the
+        // item that follows, which is only known once that item has been read.
+        const items = objectNodes.map(node => {
+            const nested: QuadContext[] = [];
+            const item = this.objectInfo(node, quads, nested);
+
+            return { term: item.term as Term, token: item.token as IToken, nested };
+        });
 
         // Use pre-assigned ID from LPARENT token for the head node
         const headBlankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
-        let head = dataFactory.blankNode(headBlankNodeId);
-        let current = head;
+        const head = dataFactory.blankNode(headBlankNodeId);
+        let current: BlankNode = head;
+        let currentToken: IToken = token;
 
-        for (let i = 0; i < objectNodes.length; i++) {
-            const elements = this.visit(objectNodes[i], quads as any) as Term[];
-            const element = Array.isArray(elements) ? elements[0] : elements;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const isLast = i === items.length - 1;
 
-            quads.push(dataFactory.quad(current, first, element));
+            // Derive rest-node IDs from the head ID so they never collide with
+            // pre-assigned token blank-node IDs or @rdfjs/data-model counters.
+            const restId = headBlankNodeId ? `${headBlankNodeId}-rest-${i + 1}` : undefined;
+            const next: Term = isLast ? RDF_NIL : dataFactory.blankNode(restId);
+            const nextToken = isLast ? closingToken : items[i + 1].token;
 
-            if (i < objectNodes.length - 1) {
-                // Derive rest-node IDs from the head ID so they never collide with
-                // pre-assigned token blank-node IDs or @rdfjs/data-model counters.
-                const restId = headBlankNodeId ? `${headBlankNodeId}-rest-${i + 1}` : undefined;
-                const next = dataFactory.blankNode(restId);
-                quads.push(dataFactory.quad(current, rest, next));
-                current = next;
-            } else {
-                quads.push(dataFactory.quad(current, rest, nil));
+            quads.push(dataFactory.quad(current, RDF_FIRST, item.term));
+            quads.push(dataFactory.quad(current, RDF_REST, next));
+
+            infoResults.push(toQuadContext(current, currentToken, RDF_FIRST, item.token, item.term, item.token));
+
+            if (item.nested.length > 0) {
+                infoResults.push(...item.nested);
+            }
+
+            infoResults.push(toQuadContext(current, currentToken, RDF_REST, item.token, next, nextToken));
+
+            if (!isLast) {
+                current = next as BlankNode;
+                currentToken = nextToken;
             }
         }
 
@@ -606,9 +752,9 @@ export class TurtleReader extends BaseVisitor {
         for (let i = 0; i < context.predicate.length; i++) {
             const predicate = this.predicateInfo(context.predicate[i]);
 
-            for (let { objectTokens, annotationCtx } of this.objectListInfo(context.objectList![i], quads)) {
+            for (let { objectTokens, annotationCtx, nested } of this.objectListInfo(context.objectList![i], quads)) {
                 for (let objectToken of objectTokens) {
-                    result.push({ predicate, object: objectToken, annotationCtx });
+                    result.push({ predicate, object: objectToken, annotationCtx, nested });
                 }
             }
         }
@@ -617,17 +763,19 @@ export class TurtleReader extends BaseVisitor {
     }
 
     /**
-     * Process object list and return info with tokens.
+     * Process object list and return info with tokens. Each entry carries the statement
+     * contexts nested in its object, such as those of an inline blank node.
      */
     protected objectListInfo(ctx: CstContext, quads: Quad[]): ObjectListInfoResult[] {
         const context = this.getChildren(ctx);
         const results: ObjectListInfoResult[] = [];
 
         for (let i = 0; i < context.object!.length; i++) {
-            const objectToken = this.objectInfo(context.object![i], quads);
+            const nested: QuadContext[] = [];
+            const objectToken = this.objectInfo(context.object![i], quads, nested);
             const annotationCtx = context.annotation?.[i];
 
-            results.push({ objectTokens: [objectToken], annotationCtx });
+            results.push({ objectTokens: [objectToken], annotationCtx, nested });
         }
 
         return results;

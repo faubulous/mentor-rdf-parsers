@@ -83,7 +83,9 @@ export interface TurtleTokenReaderCstFields extends BaseReaderCstContext {
     true?: IToken[];
     false?: IToken[];
     LBRACKET?: IToken[];
+    RBRACKET?: IToken[];
     LPARENT?: IToken[];
+    RPARENT?: IToken[];
 }
 
 /**

@@ -45,18 +45,25 @@ export interface VerbInfoResult<TPredicate = any> {
 
 /**
  * Shared predicate/object info result with token metadata.
+ *
+ * `nested` holds the statement contexts produced while reading the object, such as the
+ * statements inside a blank node property list `[ ... ]` or the chain of a collection
+ * `( ... )`. Callers emit the statement itself first and then its nested contexts, so the
+ * result stays in document order with every parent before its children.
  */
-export interface PredicateObjectInfoResult<TPredicate = any, TObject = any, TCtx = unknown> {
+export interface PredicateObjectInfoResult<TPredicate = any, TObject = any, TCtx = unknown, TNested = unknown> {
     predicate: TPredicate;
     object: TObject;
     inversePredicate?: boolean;
     annotationCtx?: TCtx;
+    nested?: TNested[];
 }
 
 /**
  * Shared object list info result with token metadata.
  */
-export interface ObjectListInfoResult<TObject = any, TCtx = unknown> {
+export interface ObjectListInfoResult<TObject = any, TCtx = unknown, TNested = unknown> {
     objectTokens: TObject[];
     annotationCtx?: TCtx;
+    nested?: TNested[];
 }
