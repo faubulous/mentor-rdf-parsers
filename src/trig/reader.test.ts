@@ -541,3 +541,51 @@ ex:s a ex:Class .`;
         expect(blankNodeInfo!.subjectToken.image).toBe('[');
     });
 });
+describe("TrigReader.readQuadContexts - nested statements", () => {
+    const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+
+    /**
+     * Parse TriG into quad contexts.
+     */
+    function read(input: string) {
+        const lexResult = new TrigLexer().tokenize(input);
+        const cst = new TrigParser().parse(lexResult.tokens);
+
+        return { infos: new TrigReader().readQuadContexts(cst), cst };
+    }
+
+    it('emits the statements of an inline blank node with the graph of their parent', () => {
+        const { infos } = read(`@prefix ex: <http://example.org/> .
+ex:g { ex:s ex:p [ ex:q "x" ] . }`);
+
+        expect(infos).toHaveLength(2);
+        expect(infos[1].subject.value).toBe(infos[0].object.value);
+        expect(infos[1].graph.value).toBe('http://example.org/g');
+        expect(infos[1].graphToken).toBeDefined();
+        expect(infos[1].objectToken.image).toBe('"x"');
+        expect(Number.isFinite(infos[1].subjectToken.startOffset)).toBe(true);
+    });
+
+    it('emits the chain of a collection with item tokens inside a named graph', () => {
+        const { infos } = read(`@prefix ex: <http://example.org/> .
+GRAPH ex:g { ex:s ex:p ( ex:a ) . }`);
+
+        const first = infos.find(i => i.predicate.value === `${RDF}first`);
+        const rest = infos.find(i => i.predicate.value === `${RDF}rest`);
+
+        expect(infos).toHaveLength(3);
+        expect(first!.objectToken.image).toBe('ex:a');
+        expect(first!.graph.value).toBe('http://example.org/g');
+        expect(rest!.objectToken.image).toBe(')');
+    });
+
+    it('produces one context per quad of the visitor for nested nodes in the default graph', () => {
+        const { infos, cst } = read(`@prefix ex: <http://example.org/> .
+ex:s ex:p [ ex:q ( 1 2 ) ] .`);
+
+        const quads = new TrigReader().visit(cst);
+
+        expect(infos).toHaveLength(quads.length);
+        expect(infos.every(i => i.graphToken === undefined)).toBe(true);
+    });
+});

@@ -20,8 +20,17 @@ const BaseVisitor = new TrigParser().getBaseCstVisitorConstructor();
 
 type PredicateObjectResult = SharedPredicateObjectResult<NamedNode, Term, CstContext>;
 type ObjectListResult = SharedObjectListResult<Term, CstContext>;
-type PredicateObjectInfoResult = SharedPredicateObjectInfoResult<any, any, CstContext>;
-type ObjectListInfoResult = SharedObjectListInfoResult<any, CstContext>;
+type PredicateObjectInfoResult = SharedPredicateObjectInfoResult<any, any, CstContext, QuadContext>;
+type ObjectListInfoResult = SharedObjectListInfoResult<any, CstContext, QuadContext>;
+
+/**
+ * A term together with the token it was read from, as returned by the `*Info` methods.
+ */
+type TermToken = { term: Term; token: IToken };
+
+const RDF_FIRST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+const RDF_REST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+const RDF_NIL = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
 
 /**
  * A visitor class that constructs RDF/JS quads from TriG syntax trees.
@@ -185,20 +194,40 @@ export class TrigReader extends BaseVisitor {
                 this.wrappedGraphInfo(context.wrappedGraph[0], quads, infoResults, labelOrSubjectToken);
             } else if (context.predicateObjectList) {
                 this.currentGraph = null;
-                const subjectToken = labelOrSubjectToken;
 
-                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
-                }
+                this.pushStatements(infoResults, labelOrSubjectToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads));
             }
         } else if (context.reifiedTriple) {
             this.currentGraph = null;
             const reifierToken = this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
 
             if (context.predicateObjectList) {
-                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadContext(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token));
-                }
+                this.pushStatements(infoResults, reifierToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads));
+            }
+        }
+    }
+
+    /**
+     * Emit the statements of a subject, each followed by the contexts nested in its object,
+     * so that a parent statement always precedes the statements of its inline blank node
+     * or collection. Nested contexts already carry the graph they were read in.
+     */
+    protected pushStatements(
+        infoResults: QuadContext[],
+        subjectToken: TermToken,
+        pairs: PredicateObjectInfoResult[],
+        graphToken?: TermToken
+    ): void {
+        for (const { predicate, object, nested } of pairs) {
+            infoResults.push(toQuadContext(
+                subjectToken.term, subjectToken.token,
+                predicate.term, predicate.token,
+                object.term, object.token,
+                graphToken?.term, graphToken?.token
+            ));
+
+            if (nested && nested.length > 0) {
+                infoResults.push(...nested);
             }
         }
     }
@@ -233,28 +262,23 @@ export class TrigReader extends BaseVisitor {
     protected triplesInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[], graphToken?: any): void {
         const context = this.getChildren(ctx);
         if (context.subject) {
-            const subjectToken = this.subjectInfo(context.subject[0], quads);
+            // A collection in subject position emits its chain before the statements about it.
+            const subjectToken = this.subjectInfo(context.subject[0], quads, infoResults, graphToken);
 
             if (context.predicateObjectList) {
-                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
-                }
+                this.pushStatements(infoResults, subjectToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads, graphToken), graphToken);
             }
         } else if (context.blankNodePropertyList) {
             const subjectToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, graphToken);
 
             if (context.predicateObjectList) {
-                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
-                }
+                this.pushStatements(infoResults, subjectToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads, graphToken), graphToken);
             }
         } else if (context.reifiedTriple) {
             const reifierToken = this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
 
             if (context.predicateObjectList) {
-                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadContext(reifierToken.term, reifierToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
-                }
+                this.pushStatements(infoResults, reifierToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads, graphToken), graphToken);
             }
         }
     }
@@ -268,17 +292,13 @@ export class TrigReader extends BaseVisitor {
             const subjectToken = this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, graphToken);
 
             if (context.predicateObjectList) {
-                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
-                }
+                this.pushStatements(infoResults, subjectToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads, graphToken), graphToken);
             }
         } else if (context.collection) {
-            const subjectToken = this.collectionInfo(context.collection[0], quads);
+            const subjectToken = this.collectionInfo(context.collection[0], quads, infoResults, graphToken);
 
             if (context.predicateObjectList) {
-                for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
-                    infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
-                }
+                this.pushStatements(infoResults, subjectToken, this.predicateObjectListInfo(context.predicateObjectList[0], quads, graphToken), graphToken);
             }
         }
     }
@@ -299,16 +319,16 @@ export class TrigReader extends BaseVisitor {
     /**
      * Get subject term and token.
      */
-    protected subjectInfo(ctx: CstContext, quads: Quad[]) {
+    protected subjectInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[] = [], graphToken?: TermToken) {
         const context = this.getChildren(ctx);
         if (context.iri) {
             return this.iriInfo(context.iri[0]);
         } else if (context.blankNode) {
             return this.blankNodeInfo(context.blankNode[0]);
         } else if (context.blank) {
-            return this.blankInfo(context.blank[0], quads);
+            return this.blankInfo(context.blank[0], quads, infoResults, graphToken);
         } else if (context.collection) {
-            return this.collectionInfo(context.collection[0], quads);
+            return this.collectionInfo(context.collection[0], quads, infoResults, graphToken);
         }
         throw new Error('Invalid subject: ' + JSON.stringify(context));
     }
@@ -316,12 +336,12 @@ export class TrigReader extends BaseVisitor {
     /**
      * Get blank term and token.
      */
-    protected blankInfo(ctx: CstContext, quads: Quad[]) {
+    protected blankInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[] = [], graphToken?: TermToken) {
         const context = this.getChildren(ctx);
         if (context.blankNode) {
             return this.blankNodeInfo(context.blankNode[0]);
         } else if (context.collection) {
-            return this.collectionInfo(context.collection[0], quads);
+            return this.collectionInfo(context.collection[0], quads, infoResults, graphToken);
         }
         throw new Error('Invalid blank: ' + JSON.stringify(context));
     }
@@ -343,9 +363,12 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Get object term and token.
+     * Get object term and token. The statements nested in the object — those of an inline
+     * blank node property list or the chain of a collection — are appended to `nested` with
+     * their real source tokens and the graph they were read in, so callers can emit them right
+     * after the parent statement.
      */
-    protected objectInfo(ctx: CstContext, quads: Quad[]) {
+    protected objectInfo(ctx: CstContext, quads: Quad[], nested: QuadContext[] = [], graphToken?: TermToken) {
         const context = this.getChildren(ctx);
         if (context.iri) {
             return this.iriInfo(context.iri[0]);
@@ -354,17 +377,15 @@ export class TrigReader extends BaseVisitor {
         } else if (context.blankNode) {
             return this.blankNodeInfo(context.blankNode[0]);
         } else if (context.blank) {
-            return this.blankInfo(context.blank[0], quads);
+            return this.blankInfo(context.blank[0], quads, nested, graphToken);
         } else if (context.blankNodePropertyList) {
-            const infoResults: QuadContext[] = [];
-            return this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, infoResults, undefined);
+            return this.blankNodePropertyListInfo(context.blankNodePropertyList[0], quads, nested, graphToken);
         } else if (context.collection) {
-            return this.collectionInfo(context.collection[0], quads);
+            return this.collectionInfo(context.collection[0], quads, nested, graphToken);
         } else if (context.tripleTerm) {
             return this.tripleTermInfo(context.tripleTerm[0]);
         } else if (context.reifiedTriple) {
-            const infoResults: QuadContext[] = [];
-            return this.reifiedTripleInfo(context.reifiedTriple[0], quads, infoResults);
+            return this.reifiedTripleInfo(context.reifiedTriple[0], quads, nested);
         }
         throw new Error('Invalid object: ' + JSON.stringify(context));
     }
@@ -442,10 +463,13 @@ export class TrigReader extends BaseVisitor {
         const subjectToken = { term: subject, token };
 
         if (context.predicateObjectList) {
-            for (const { predicate, object } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
+            const pairs = this.predicateObjectListInfo(context.predicateObjectList[0], quads, graphToken);
+
+            for (const { predicate, object } of pairs) {
                 this._emitQuad(quads, subject, predicate.term as NamedNode, object.term);
-                infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token, graphToken?.term, graphToken?.token));
             }
+
+            this.pushStatements(infoResults, subjectToken, pairs, graphToken);
         }
 
         return subjectToken;
@@ -533,40 +557,62 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Get collection info.
+     * Get collection info. Returns the head node token (LPARENT).
+     *
+     * The `rdf:first` / `rdf:rest` chain is appended to `infoResults` with real tokens so that
+     * the items of a list can be located in the source: the head node is marked by `(`, every
+     * later chain node by the token of the item it holds, and the `rdf:rest` object of the last
+     * node by `)`. The chain statements reuse the item token as their predicate token because
+     * the predicates are not written in the text.
      */
-    protected collectionInfo(ctx: CstContext, quads: Quad[]) {
+    protected collectionInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[] = [], graphToken?: TermToken) {
         const context = this.getChildren(ctx);
         const token = context.LPARENT ? context.LPARENT[0] : this.findFirstToken(context)!;
-        const nil = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
-        const rest = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-        const first = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
-
+        const closingToken = context.RPARENT ? context.RPARENT[0] : token;
         const objectNodes = context.object ?? [];
 
         if (objectNodes.length === 0) {
-            return { term: nil, token };
+            return { term: RDF_NIL, token };
         }
+
+        // Read every item first: the `rdf:rest` statement of a node points at the token of the
+        // item that follows, which is only known once that item has been read.
+        const items = objectNodes.map(node => {
+            const nested: QuadContext[] = [];
+            const item = this.objectInfo(node, quads, nested, graphToken);
+
+            return { term: item.term as Term, token: item.token as IToken, nested };
+        });
 
         // Use pre-assigned ID from LPARENT token for the head blank node
         const baseId = token ? getBlankNodeIdFromToken(token) : undefined;
-        let head = dataFactory.blankNode(baseId);
-        let current = head;
+        const head = dataFactory.blankNode(baseId);
+        let current: BlankNode = head;
+        let currentToken: IToken = token;
 
-        for (let i = 0; i < objectNodes.length; i++) {
-            const elements = this.visit(objectNodes[i], quads as any) as Term[];
-            const element = Array.isArray(elements) ? elements[0] : elements;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const isLast = i === items.length - 1;
 
-            this._emitQuad(quads, current, first, element);
+            // Derive rest node IDs from base ID
+            const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
+            const next: Term = isLast ? RDF_NIL : dataFactory.blankNode(restId);
+            const nextToken = isLast ? closingToken : items[i + 1].token;
 
-            if (i < objectNodes.length - 1) {
-                // Derive rest node IDs from base ID
-                const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
-                const next = dataFactory.blankNode(restId);
-                this._emitQuad(quads, current, rest, next);
-                current = next;
-            } else {
-                this._emitQuad(quads, current, rest, nil);
+            this._emitQuad(quads, current, RDF_FIRST, item.term);
+            this._emitQuad(quads, current, RDF_REST, next);
+
+            infoResults.push(toQuadContext(current, currentToken, RDF_FIRST, item.token, item.term, item.token, graphToken?.term, graphToken?.token));
+
+            if (item.nested.length > 0) {
+                infoResults.push(...item.nested);
+            }
+
+            infoResults.push(toQuadContext(current, currentToken, RDF_REST, item.token, next, nextToken, graphToken?.term, graphToken?.token));
+
+            if (!isLast) {
+                current = next as BlankNode;
+                currentToken = nextToken;
             }
         }
 
@@ -620,7 +666,7 @@ export class TrigReader extends BaseVisitor {
     /**
      * Process predicate-object list and return info with tokens.
      */
-    protected predicateObjectListInfo(ctx: CstContext, quads: Quad[]): PredicateObjectInfoResult[] {
+    protected predicateObjectListInfo(ctx: CstContext, quads: Quad[], graphToken?: TermToken): PredicateObjectInfoResult[] {
         const context = this.getChildren(ctx);
         const result: PredicateObjectInfoResult[] = [];
 
@@ -631,9 +677,9 @@ export class TrigReader extends BaseVisitor {
         for (let i = 0; i < context.predicate.length; i++) {
             const predicate = this.predicateInfo(context.predicate[i]);
 
-            for (let { objectTokens, annotationCtx } of this.objectListInfo(context.objectList![i], quads)) {
+            for (let { objectTokens, annotationCtx, nested } of this.objectListInfo(context.objectList![i], quads, graphToken)) {
                 for (let objectToken of objectTokens) {
-                    result.push({ predicate, object: objectToken, annotationCtx });
+                    result.push({ predicate, object: objectToken, annotationCtx, nested });
                 }
             }
         }
@@ -642,17 +688,19 @@ export class TrigReader extends BaseVisitor {
     }
 
     /**
-     * Process object list and return info with tokens.
+     * Process object list and return info with tokens. Each entry carries the statement
+     * contexts nested in its object, such as those of an inline blank node.
      */
-    protected objectListInfo(ctx: CstContext, quads: Quad[]): ObjectListInfoResult[] {
+    protected objectListInfo(ctx: CstContext, quads: Quad[], graphToken?: TermToken): ObjectListInfoResult[] {
         const context = this.getChildren(ctx);
         const results: ObjectListInfoResult[] = [];
 
         for (let i = 0; i < context.object!.length; i++) {
-            const objectToken = this.objectInfo(context.object![i], quads);
+            const nested: QuadContext[] = [];
+            const objectToken = this.objectInfo(context.object![i], quads, nested, graphToken);
             const annotationCtx = context.annotation?.[i];
 
-            results.push({ objectTokens: [objectToken], annotationCtx });
+            results.push({ objectTokens: [objectToken], annotationCtx, nested });
         }
 
         return results;
