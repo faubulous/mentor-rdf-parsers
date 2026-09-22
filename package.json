@@ -56,12 +56,12 @@
   },
   "devDependencies": {
     "@rdfjs/types": "^2.0.1",
-    "@types/n3": "^1.26.1",
+    "@types/n3": "^1.26.4",
     "@types/rdfjs__data-model": "^2.0.9",
     "@vitest/coverage-v8": "^4.1.11",
     "command-line-args": "^6.0.2",
-    "n3": "^2.3.0",
-    "tsx": "^4.23.12",
+    "n3": "^2.7.12",
+    "tsx": "^4.23.15",
     "typedoc": "^0.28.20",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
