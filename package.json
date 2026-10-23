@@ -44,6 +44,7 @@
     "bench:stable": "vitest bench --run",
     "bench:baseline": "node scripts/run-bench-baseline.mjs",
     "bench:watch": "vitest bench",
+    "perf": "npm run build && node --expose-gc perf/turtle-quad-reader-benchmark.mjs",
     "build": "tsc",
     "check:pack": "npm pack --dry-run",
     "ci:quality": "npm run typecheck && npm test && npm run build && npm run check:pack",
