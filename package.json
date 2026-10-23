@@ -9,7 +9,7 @@
     "typescript",
     "chevrotain"
   ],
-  "version": "2.1.0",
+  "version": "2.1.1",
   "private": false,
   "author": {
     "name": "Sebastian Faubel"
@@ -56,14 +56,14 @@
   },
   "devDependencies": {
     "@rdfjs/types": "^2.0.1",
-    "@types/n3": "^1.26.4",
+    "@types/n3": "^1.26.5",
     "@types/rdfjs__data-model": "^2.0.9",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.0.5",
     "command-line-args": "^6.0.2",
-    "n3": "^2.7.12",
+    "n3": "^2.13.12",
     "tsx": "^4.23.15",
     "typedoc": "^0.28.20",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.5"
   }
 }
