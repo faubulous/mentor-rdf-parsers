@@ -78,7 +78,7 @@ flowchart LR
 
 ### Reading quads without a syntax tree
 
-When only the quads are needed, such as when loading a document into a store, `TurtleQuadReader` reads them straight from the token stream. It skips the parser and the CST, which makes it about 15 times faster than parsing and reading on large documents, and it emits the same quads with the same blank node ids. It stops at the first error and throws a `QuadReaderError` that carries the offending token; hand such a document to `TurtleParser`, whose error recovery reports every error.
+When only the quads are needed, such as when loading a document into a store, `TurtleQuadReader` reads them straight from the token stream. It skips the parser and the CST, which makes it about 15 times faster than parsing and reading on large documents (`npm run perf` measures both), and it emits the same quads with the same blank node ids. It stops at the first error and throws a `QuadReaderError` that carries the offending token; hand such a document to `TurtleParser`, whose error recovery reports every error.
 
 ```typescript
 import { TurtleLexer, TurtleQuadReader } from '@faubulous/mentor-rdf-parsers';
