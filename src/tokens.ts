@@ -21,11 +21,13 @@ function createTokenWithMetadata(config: ITokenConfig, metadata?: TokenMetadata)
 }
 
 // Inspired by the Tree Sitter DSL: https://tree-sitter.github.io/tree-sitter/creating-parsers#defining-tokens
+// The helpers emit non-capturing groups: nothing reads the captures, and recording them costs about
+// 30% of the lexing time on prefixed-name heavy input (see issue #8).
 export const seq = (...patterns: PatternInput[]): RegExp => new RegExp(patterns.map(p => (p as RegExp).source || p).join(''));
-export const choice = (...patterns: PatternInput[]): RegExp => new RegExp(`(${patterns.map(p => (p as RegExp).source || p).join('|')})`);
-export const repeat = (...patterns: PatternInput[]): RegExp => new RegExp(`(${patterns.map(p => (p as RegExp).source || p).join('')})*`);
-export const repeat1 = (...patterns: PatternInput[]): RegExp => new RegExp(`(${patterns.map(p => (p as RegExp).source || p).join('')})+`);
-export const optional = (...patterns: PatternInput[]): RegExp => new RegExp(`(${patterns.map(p => (p as RegExp).source || p).join('')})?`);
+export const choice = (...patterns: PatternInput[]): RegExp => new RegExp(`(?:${patterns.map(p => (p as RegExp).source || p).join('|')})`);
+export const repeat = (...patterns: PatternInput[]): RegExp => new RegExp(`(?:${patterns.map(p => (p as RegExp).source || p).join('')})*`);
+export const repeat1 = (...patterns: PatternInput[]): RegExp => new RegExp(`(?:${patterns.map(p => (p as RegExp).source || p).join('')})+`);
+export const optional = (...patterns: PatternInput[]): RegExp => new RegExp(`(?:${patterns.map(p => (p as RegExp).source || p).join('')})?`);
 
 const _COMMENT = /#[^\n\r]*/;
 
