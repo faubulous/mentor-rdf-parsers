@@ -85,7 +85,8 @@ const _GRAPH = /GRAPH\b/i;
 
 // The 'a' keyword (rdf:type shorthand) must not be followed by a colon
 // or any character that could continue a prefix name (letters, digits, underscore),
-// otherwise it would be a prefix like 'a:localname' or 'abc:'
+// otherwise it would be a prefix like 'a:localname' or 'abc:'. Prefixes with
+// a period such as 'a.b:' are excluded by keyword() when the token is created.
 const _A = /a(?![A-Za-z0-9_:])/;
 
 const _EXPONENT = /[eE][+-]?\d+/;
@@ -144,12 +145,22 @@ const _PN_LOCAL = seq(
     )
 );
 
-const _PN_PREFIX = seq(
-    _PN_CHARS_BASE,
-    optional(seq(repeat(choice(_PN_CHARS, /\./)), _PN_CHARS))
-);
+// The characters of a prefix name after the first one, i.e. PN_PREFIX without PN_CHARS_BASE
+const _PN_PREFIX_TAIL = optional(seq(repeat(choice(_PN_CHARS, /\./)), _PN_CHARS));
+
+const _PN_PREFIX = seq(_PN_CHARS_BASE, _PN_PREFIX_TAIL);
 
 const _PNAME_NS = seq(optional(_PN_PREFIX), /\:/);
+
+/**
+ * Restricts a keyword pattern so that it does not match the start of a prefixed name,
+ * such as 'prefix:', 'true:a' or 'graph.x:g', which are lexed as PNAME_NS or PNAME_LN.
+ * @param pattern The keyword pattern; its flags are preserved.
+ * @returns A pattern that only matches the keyword if it is not followed by the rest of a prefix name and ':'.
+ */
+function keyword(pattern: RegExp): RegExp {
+    return new RegExp(`${pattern.source}(?!${seq(_PN_PREFIX_TAIL, /\:/).source})`, pattern.flags);
+}
 
 const _PNAME_LN = seq(_PNAME_NS, _PN_LOCAL);
 
@@ -418,7 +429,7 @@ const _GTE = />=/;
  * Common tokens for W3C RDF syntaxes such as N-Triples, N-Quads, Turtle, TriG and SPARQL.
  */
 export const RdfToken = {
-    A: createTokenWithMetadata({ name: 'A', label: 'a', pattern: _A }, TOKEN_METADATA.A),
+    A: createTokenWithMetadata({ name: 'A', label: 'a', pattern: keyword(_A) }, TOKEN_METADATA.A),
     ANON: createTokenWithMetadata({ name: 'ANON', pattern: _ANON }, TOKEN_METADATA.ANON),
     TTL_BASE: createTokenWithMetadata({ name: 'BASE', label: '@base', pattern: _BASE }, TOKEN_METADATA.TTL_BASE),
     BLANK_NODE_LABEL: createTokenWithMetadata({ name: 'BLANK_NODE_LABEL', pattern: _BLANK_NODE_LABEL }, TOKEN_METADATA.BLANK_NODE_LABEL),
@@ -431,8 +442,8 @@ export const RdfToken = {
     DECIMAL: createTokenWithMetadata({ name: 'DECIMAL', pattern: _DECIMAL }, TOKEN_METADATA.DECIMAL),
     PERIOD: createTokenWithMetadata({ name: 'PERIOD', label: '.', pattern: _PERIOD }, TOKEN_METADATA.PERIOD),
     DOUBLE: createTokenWithMetadata({ name: 'DOUBLE', pattern: _DOUBLE }, TOKEN_METADATA.DOUBLE),
-    FALSE: createTokenWithMetadata({ name: 'false', pattern: _FALSE }, TOKEN_METADATA.FALSE),
-    GRAPH: createTokenWithMetadata({ name: 'GRAPH', pattern: _GRAPH }, TOKEN_METADATA.GRAPH),
+    FALSE: createTokenWithMetadata({ name: 'false', pattern: keyword(_FALSE) }, TOKEN_METADATA.FALSE),
+    GRAPH: createTokenWithMetadata({ name: 'GRAPH', pattern: keyword(_GRAPH) }, TOKEN_METADATA.GRAPH),
     INTEGER: createTokenWithMetadata({ name: 'INTEGER', pattern: _INTEGER }, TOKEN_METADATA.INTEGER),
     IRIREF_ABS: createTokenWithMetadata({ name: 'IRIREF_ABS', pattern: _IRIREF_ABS }, TOKEN_METADATA.IRIREF_ABS),
     IRIREF: createTokenWithMetadata({ name: 'IRIREF', pattern: _IRIREF }, TOKEN_METADATA.IRIREF),
@@ -450,15 +461,15 @@ export const RdfToken = {
     RCURLY: createTokenWithMetadata({ name: 'RCURLY', label: '}', pattern: _RCURLY }, TOKEN_METADATA.RCURLY),
     RPARENT: createTokenWithMetadata({ name: 'RPARENT', label: ')', pattern: _RPARENT }, TOKEN_METADATA.RPARENT),
     SEMICOLON: createTokenWithMetadata({ name: 'SEMICOLON', label: ';', pattern: _SEMICOLON }, TOKEN_METADATA.SEMICOLON),
-    BASE: createTokenWithMetadata({ name: 'BASE', pattern: _SPARQL_BASE }, TOKEN_METADATA.BASE),
-    PREFIX: createTokenWithMetadata({ name: 'PREFIX', pattern: _SPARQL_PREFIX }, TOKEN_METADATA.PREFIX),
-    SPARQL_VERSION: createTokenWithMetadata({ name: 'SPARQL_VERSION', pattern: _SPARQL_VERSION }, TOKEN_METADATA.SPARQL_VERSION),
+    BASE: createTokenWithMetadata({ name: 'BASE', pattern: keyword(_SPARQL_BASE) }, TOKEN_METADATA.BASE),
+    PREFIX: createTokenWithMetadata({ name: 'PREFIX', pattern: keyword(_SPARQL_PREFIX) }, TOKEN_METADATA.PREFIX),
+    SPARQL_VERSION: createTokenWithMetadata({ name: 'SPARQL_VERSION', pattern: keyword(_SPARQL_VERSION) }, TOKEN_METADATA.SPARQL_VERSION),
     STRING_LITERAL_LONG_QUOTE: createTokenWithMetadata({ name: 'STRING_LITERAL_LONG_QUOTE', pattern: _STRING_LITERAL_LONG_QUOTE }, TOKEN_METADATA.STRING_LITERAL_LONG_QUOTE),
     STRING_LITERAL_LONG_SINGLE_QUOTE: createTokenWithMetadata({ name: 'STRING_LITERAL_LONG_SINGLE_QUOTE', pattern: _STRING_LITERAL_LONG_SINGLE_QUOTE }, TOKEN_METADATA.STRING_LITERAL_LONG_SINGLE_QUOTE),
     STRING_LITERAL_QUOTE: createTokenWithMetadata({ name: 'STRING_LITERAL_QUOTE', pattern: _STRING_LITERAL_QUOTE }, TOKEN_METADATA.STRING_LITERAL_QUOTE),
     STRING_LITERAL_SINGLE_QUOTE: createTokenWithMetadata({ name: 'STRING_LITERAL_SINGLE_QUOTE', pattern: _STRING_LITERAL_SINGLE_QUOTE }, TOKEN_METADATA.STRING_LITERAL_SINGLE_QUOTE),
     TILDE: createTokenWithMetadata({ name: 'TILDE', label: '~', pattern: _TILDE }, TOKEN_METADATA.TILDE),
-    TRUE: createTokenWithMetadata({ name: 'true', pattern: _TRUE }, TOKEN_METADATA.TRUE),
+    TRUE: createTokenWithMetadata({ name: 'true', pattern: keyword(_TRUE) }, TOKEN_METADATA.TRUE),
     VAR1: createTokenWithMetadata({ name: 'VAR1', pattern: _VAR1 }, TOKEN_METADATA.VAR1),
     VAR2: createTokenWithMetadata({ name: 'VAR2', pattern: _VAR2 }, TOKEN_METADATA.VAR2),
     VERSION: createTokenWithMetadata({ name: 'VERSION', label: '@version', pattern: _VERSION }, TOKEN_METADATA.VERSION),
@@ -474,9 +485,9 @@ export const RdfToken = {
     CARET: createTokenWithMetadata({ name: 'CARET', label: '^', pattern: _CARET }, TOKEN_METADATA.CARET),
     FORALL: createTokenWithMetadata({ name: 'FORALL', label: '@forAll', pattern: _FORALL }, TOKEN_METADATA.FORALL),
     FORSOME: createTokenWithMetadata({ name: 'FORSOME', label: '@forSome', pattern: _FORSOME }, TOKEN_METADATA.FORSOME),
-    HAS: createTokenWithMetadata({ name: 'HAS', label: 'has', pattern: _HAS }, TOKEN_METADATA.HAS),
-    IS: createTokenWithMetadata({ name: 'IS', label: 'is', pattern: _IS }, TOKEN_METADATA.IS),
-    OF: createTokenWithMetadata({ name: 'OF', label: 'of', pattern: _OF }, TOKEN_METADATA.OF),
+    HAS: createTokenWithMetadata({ name: 'HAS', label: 'has', pattern: keyword(_HAS) }, TOKEN_METADATA.HAS),
+    IS: createTokenWithMetadata({ name: 'IS', label: 'is', pattern: keyword(_IS) }, TOKEN_METADATA.IS),
+    OF: createTokenWithMetadata({ name: 'OF', label: 'of', pattern: keyword(_OF) }, TOKEN_METADATA.OF),
 
     // SPARQL operator/punctuation tokens
     STAR: createTokenWithMetadata({ name: 'STAR', label: '*', pattern: _STAR }, TOKEN_METADATA.STAR),
