@@ -6,7 +6,7 @@ import { N3Parser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
 import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
-import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString } from '../reader-helpers.js';
+import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
 import type { N3ReaderCstContext as CstContext } from '../reader-cst-types.js';
 import type {
     DirectiveResult,
@@ -16,7 +16,7 @@ import type {
     PredicateObjectInfoResult,
 } from '../reader-types.js';
 
-const BaseVisitor = new N3Parser().getBaseCstVisitorConstructor();
+const BaseVisitor = createLazyBaseVisitor(() => new N3Parser());
 
 // Well-known IRIs
 const RDF_TYPE = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');

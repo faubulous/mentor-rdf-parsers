@@ -5,10 +5,10 @@ import type { CstNode, IToken } from 'chevrotain';
 import { NTriplesParser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
-import { getCstChildren, findFirstTokenInCst, unescapeRdfString } from '../reader-helpers.js';
+import { getCstChildren, findFirstTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
 import type { NTriplesReaderCstContext as CstContext } from '../reader-cst-types.js';
 
-const BaseVisitor = new NTriplesParser().getBaseCstVisitorConstructor();
+const BaseVisitor = createLazyBaseVisitor(() => new NTriplesParser());
 
 /**
  * A visitor class that constructs RDF/JS quads from N-Triples syntax trees.
