@@ -6,7 +6,7 @@ import { TurtleParser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
 import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
-import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString } from '../reader-helpers.js';
+import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
 import type { TurtleReaderCstContext as CstContext } from '../reader-cst-types.js';
 import type {
     DirectiveResult,
@@ -16,7 +16,7 @@ import type {
     ObjectListInfoResult as SharedObjectListInfoResult,
 } from '../reader-types.js';
 
-const BaseVisitor = new TurtleParser().getBaseCstVisitorConstructor();
+const BaseVisitor = createLazyBaseVisitor(() => new TurtleParser());
 
 type PredicateObjectResult = SharedPredicateObjectResult<NamedNode, Term, CstContext>;
 type ObjectListResult = SharedObjectListResult<Term, CstContext>;

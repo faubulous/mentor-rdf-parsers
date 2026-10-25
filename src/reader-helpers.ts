@@ -1,4 +1,4 @@
-import type { IToken } from 'chevrotain';
+import type { CstNode, CstParser, IToken } from 'chevrotain';
 
 type CstLikeContext = {
     [key: string]: unknown;
@@ -124,4 +124,58 @@ export function unescapeRdfString(raw: string): string {
             default: return match;
         }
     });
+}
+
+/**
+ * The constructor of a syntax tree visitor's base class, as returned by
+ * `CstParser.getBaseCstVisitorConstructor()`.
+ */
+export type BaseVisitorConstructor = new () => {
+    visit(cstNode: CstNode | CstNode[], param?: unknown): any;
+    validateVisitor(): void;
+};
+
+/**
+ * Creates the base class of a syntax tree reader without building the parser
+ * when the module is loaded. chevrotain's base visitor needs the parser only to
+ * validate a visitor against the grammar's rules, and building a parser runs
+ * the grammar's self-analysis, which is costly: every application importing the
+ * package paid for all readers on load. The parser is now built when the first
+ * reader validates itself, i.e. when the first reader is constructed.
+ * @param createParser Builds the parser whose rules the readers visit.
+ * @returns The base class; `visit` behaves exactly like chevrotain's.
+ */
+export function createLazyBaseVisitor(createParser: () => CstParser): BaseVisitorConstructor {
+    let base: BaseVisitorConstructor | undefined;
+
+    const getBase = (): BaseVisitorConstructor => {
+        base ??= createParser().getBaseCstVisitorConstructor() as BaseVisitorConstructor;
+
+        return base;
+    };
+
+    return class LazyBaseVisitor {
+        /**
+         * Visits a syntax tree node by calling the method named after its rule;
+         * the same dispatch as chevrotain's base visitor.
+         */
+        visit(cstNode: CstNode | CstNode[], param?: unknown): any {
+            // A node's children never contain empty arrays, so a single child is passed as an array of one.
+            const node = Array.isArray(cstNode) ? cstNode[0] : cstNode;
+
+            if (node === undefined) {
+                return undefined;
+            }
+
+            return (this as any)[node.name](node.children, param);
+        }
+
+        /**
+         * Checks that the visitor has a method for every rule of the grammar.
+         * @throws An error listing the missing methods, as chevrotain's base visitor does.
+         */
+        validateVisitor(): void {
+            getBase().prototype.validateVisitor.call(this);
+        }
+    };
 }

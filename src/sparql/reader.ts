@@ -5,9 +5,9 @@ import type { CstNode, IToken } from 'chevrotain';
 import { SparqlParser } from './parser.js';
 import { sparql, BUILT_IN_FUNCTIONS } from './vocabulary.js';
 import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
-import { getCstChildren, getOrderedCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString } from '../reader-helpers.js';
+import { getCstChildren, getOrderedCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
 
-const BaseVisitor = new SparqlParser().getBaseCstVisitorConstructor();
+const BaseVisitor = createLazyBaseVisitor(() => new SparqlParser());
 
 const RDF_TYPE = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 const RDF_FIRST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
