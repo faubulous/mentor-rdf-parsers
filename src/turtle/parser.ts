@@ -73,7 +73,7 @@ export class TurtleLexer extends Lexer implements ILexer {
 
         // Unless explicitly disabled (null), assign blank node IDs
         if (this.blankNodeIdGenerator !== null) {
-            assignBlankNodeIds(result.tokens, this.blankNodeIdGenerator ?? defaultBlankNodeIdGenerator);
+            assignBlankNodeIds(result.tokens, this.blankNodeIdGenerator ?? defaultBlankNodeIdGenerator, 'turtle');
         }
 
         return result;

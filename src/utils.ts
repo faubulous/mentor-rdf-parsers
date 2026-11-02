@@ -1,5 +1,6 @@
 import { IToken } from "chevrotain";
 import { RdfToken } from "./tokens.js";
+import { BlankNodeLabeller, StatementLayout } from "./blank-node-labeller.js";
 import { SparqlLexer } from './sparql/parser.js';
 
 /**
@@ -20,9 +21,11 @@ export const BLANK_NODE_TOKEN_NAMES = new Set([
  * A function that generates a blank node ID.
  * @param counter The current counter value (incremented for each call).
  * @param token The token for which the ID is being generated.
+ * @param key Where an anonymous blank node is written, as a key that stays the same when the
+ * document changes elsewhere; given when the lexer knows how its statements are laid out.
  * @returns The blank node ID string (without the _: prefix).
  */
-export type BlankNodeIdGenerator = (counter: number, token: IToken) => string;
+export type BlankNodeIdGenerator = (counter: number, token: IToken, key?: string) => string;
 
 /**
  * The default blank node ID generator.
@@ -39,41 +42,64 @@ export const defaultBlankNodeIdGenerator: BlankNodeIdGenerator = (counter: numbe
 /**
  * Assigns pre-generated blank node IDs to tokens that can generate blank nodes.
  * The IDs are stored in the token's payload field as { blankNodeId: string }.
- * 
+ *
  * @param tokens The array of tokens to process.
  * @param generator Optional custom ID generator function. Defaults to generating 'b0', 'b1', etc.
+ * @param layout How the statements of the syntax are laid out. When given, the generator is told
+ * where each anonymous blank node is written, see {@link BlankNodeLabeller}.
  * @returns The same array of tokens with blank node IDs assigned.
  */
-export function assignBlankNodeIds(tokens: IToken[], generator: BlankNodeIdGenerator = defaultBlankNodeIdGenerator): IToken[] {
-    let counter = 0;
+export function assignBlankNodeIds(tokens: IToken[], generator: BlankNodeIdGenerator = defaultBlankNodeIdGenerator, layout?: StatementLayout): IToken[] {
+    const keys = layout ? new BlankNodeLabeller(layout).label(tokens) : undefined;
     const labelMap = new Map<string, string>();
+    const assigned = new Set<string>();
+    let counter = 0;
 
     for (const token of tokens) {
-        if (BLANK_NODE_TOKEN_NAMES.has(token.tokenType.name)) {
-            let id: string;
-            if (token.tokenType.name === 'BLANK_NODE_LABEL') {
-                // Reuse the same ID for repeated occurrences of the same label within one file.
-                const label = token.image;
-                if (labelMap.has(label)) {
-                    id = labelMap.get(label)!;
-                } else {
-                    id = generator(counter++, token);
-                    labelMap.set(label, id);
-                }
-            } else {
-                id = generator(counter++, token);
-            }
-            token.payload = { ...token.payload, blankNodeId: id };
+        if (!BLANK_NODE_TOKEN_NAMES.has(token.tokenType.name)) {
+            continue;
         }
+
+        let id: string;
+
+        if (token.tokenType.name === 'BLANK_NODE_LABEL') {
+            // Reuse the same ID for repeated occurrences of the same label within one file.
+            id = labelMap.get(token.image) ?? generator(counter++, token);
+            labelMap.set(token.image, id);
+        } else {
+            id = _distinctId(generator(counter++, token, keys?.get(token)), assigned);
+        }
+
+        assigned.add(id);
+        token.payload = { ...token.payload, blankNodeId: id };
     }
 
     return tokens;
 }
 
 /**
+ * Make a generated ID distinct from the IDs assigned before, which two keys whose hashes collide
+ * would otherwise share.
+ * @param id The generated ID.
+ * @param assigned The IDs assigned before.
+ * @returns The ID, with a suffix when it was assigned before.
+ */
+function _distinctId(id: string, assigned: ReadonlySet<string>): string {
+    let distinct = id;
+
+    for (let suffix = 1; assigned.has(distinct); suffix++) {
+        distinct = `${id}_${suffix}`;
+    }
+
+    return distinct;
+}
+
+/**
  * Creates a blank node ID generator scoped to a specific file URI.
  * All blank node IDs produced by this generator are prefixed with a short
- * deterministic hash of the URI, preventing collisions across files.
+ * deterministic hash of the URI, preventing collisions across files. An
+ * anonymous blank node whose key is given is named by a hash of the key, so
+ * that it keeps its ID when the file changes elsewhere.
  *
  * @param fileUri The URI of the file (used to derive the prefix).
  * @returns A BlankNodeIdGenerator that produces file-scoped blank node IDs.
@@ -84,12 +110,35 @@ export function createFileBlankNodeIdGenerator(fileUri: string): BlankNodeIdGene
         h = (h * 33 ^ fileUri.charCodeAt(i)) | 0;
     }
     const prefix = (h >>> 0).toString(36);
-    return (counter: number, token: IToken) => {
+    return (counter: number, token: IToken, key?: string) => {
         if (token.tokenType.name === 'BLANK_NODE_LABEL') {
             return `${prefix}_${token.image.substring(2)}`;
         }
-        return `${prefix}_b${counter}`;
+        return key !== undefined ? `${prefix}_${_hashKey(key)}` : `${prefix}_b${counter}`;
     };
+}
+
+/**
+ * Hash the key of a blank node into a short identifier (cyrb53, 53 bits in base 36), which keeps
+ * hash collisions unlikely even for files with hundreds of thousands of blank nodes.
+ * @param key The key.
+ * @returns The hash.
+ */
+function _hashKey(key: string): string {
+    let h1 = 0xdeadbeef;
+    let h2 = 0x41c6ce57;
+
+    for (let i = 0; i < key.length; i++) {
+        const code = key.charCodeAt(i);
+
+        h1 = Math.imul(h1 ^ code, 2654435761);
+        h2 = Math.imul(h2 ^ code, 1597334677);
+    }
+
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
 
 /**
