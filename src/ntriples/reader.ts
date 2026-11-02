@@ -1,11 +1,11 @@
 // @ts-nocheck
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NTriplesParser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
-import { getCstChildren, findFirstTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
+import { getCstChildren, findFirstTokenInCst, unescapeRdfString, createLazyBaseVisitor, getLanguageTag } from '../reader-helpers.js';
 import type { NTriplesReaderCstContext as CstContext } from '../reader-cst-types.js';
 
 const BaseVisitor = createLazyBaseVisitor(() => new NTriplesParser());
@@ -143,12 +143,12 @@ export class NTriplesReader extends BaseVisitor {
         let literal: Literal;
         if (context.datatype) {
             const datatypeNode = this.visit(context.datatype[0]) as NamedNode;
-            literal = dataFactory.literal(value, datatypeNode);
+            literal = RdfDataFactory.literal(value, datatypeNode);
         } else if (context.LANGTAG) {
-            const langtag = context.LANGTAG[0].image.slice(1).toLowerCase();
-            literal = dataFactory.literal(value, langtag);
+            const langtag = getLanguageTag(context.LANGTAG[0].image);
+            literal = RdfDataFactory.literal(value, langtag);
         } else {
-            literal = dataFactory.literal(value);
+            literal = RdfDataFactory.literal(value);
         }
 
         return { term: literal, token };
@@ -167,7 +167,7 @@ export class NTriplesReader extends BaseVisitor {
         const token = this.findFirstToken(context);
 
         return {
-            term: dataFactory.quad(subject, predicate, object),
+            term: RdfDataFactory.quad(subject, predicate, object),
             token: token!
         };
     }
@@ -189,7 +189,7 @@ export class NTriplesReader extends BaseVisitor {
         const predicate = this.visit(ctx.predicate![0]) as NamedNode;
         const object = this.visit(ctx.object![0]) as Term;
 
-        return dataFactory.quad(subject, predicate, object);
+        return RdfDataFactory.quad(subject, predicate, object);
     }
 
     subject(ctx: CstContext): NamedNode | BlankNode {
@@ -230,7 +230,7 @@ export class NTriplesReader extends BaseVisitor {
         const predicate = this.visit(ctx.predicate![0]) as NamedNode;
         const object = this.visit(ctx.object![0]) as Term;
 
-        return dataFactory.quad(subject, predicate, object);
+        return RdfDataFactory.quad(subject, predicate, object);
     }
 
     literal(ctx: CstContext): Literal {
@@ -239,15 +239,15 @@ export class NTriplesReader extends BaseVisitor {
         if (ctx.datatype) {
             const datatypeNode = this.visit(ctx.datatype[0]) as NamedNode;
 
-            return dataFactory.literal(value, datatypeNode);
+            return RdfDataFactory.literal(value, datatypeNode);
         } else if (ctx.LANGTAG) {
             // LANGTAG image includes the leading '@', e.g. "@en" — strip it.
             // Language tags are normalized to lowercase per BCP 47.
-            const langtag = ctx.LANGTAG[0].image.slice(1).toLowerCase();
+            const langtag = getLanguageTag(ctx.LANGTAG[0].image);
 
-            return dataFactory.literal(value, langtag);
+            return RdfDataFactory.literal(value, langtag);
         } else {
-            return dataFactory.literal(value);
+            return RdfDataFactory.literal(value);
         }
     }
 
@@ -269,11 +269,11 @@ export class NTriplesReader extends BaseVisitor {
             String.fromCodePoint(parseInt(hex, 16))
         );
 
-        return dataFactory.namedNode(value);
+        return RdfDataFactory.namedNode(value);
     }
 
     getBlankNode(ctx: CstContext): BlankNode {
-        return dataFactory.blankNode(ctx.BLANK_NODE_LABEL![0].image);
+        return RdfDataFactory.blankNode(ctx.BLANK_NODE_LABEL![0].image);
     }
 
     getLiteralValue(ctx: CstContext): string {

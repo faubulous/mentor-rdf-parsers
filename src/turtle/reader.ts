@@ -1,12 +1,12 @@
 // @ts-nocheck
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TurtleParser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
 import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
-import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
+import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor, getLanguageTag } from '../reader-helpers.js';
 import type { TurtleReaderCstContext as CstContext } from '../reader-cst-types.js';
 import type {
     DirectiveResult,
@@ -23,9 +23,9 @@ type ObjectListResult = SharedObjectListResult<Term, CstContext>;
 type PredicateObjectInfoResult = SharedPredicateObjectInfoResult<any, any, CstContext, QuadContext>;
 type ObjectListInfoResult = SharedObjectListInfoResult<any, CstContext, QuadContext>;
 
-const RDF_FIRST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
-const RDF_REST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-const RDF_NIL = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+const RDF_FIRST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+const RDF_REST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+const RDF_NIL = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
 
 /**
  * A visitor class that constructs RDF/JS quads from Turtle syntax trees.
@@ -416,7 +416,7 @@ export class TurtleReader extends BaseVisitor {
             return iriInfo;
         } else if (context.A) {
             return {
-                term: dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                term: RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
                 token: context.A[0]
             };
         }
@@ -481,7 +481,7 @@ export class TurtleReader extends BaseVisitor {
         const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
 
         return {
-            term: dataFactory.namedNode(namespaceIri.value + unescapedLocalName),
+            term: RdfDataFactory.namedNode(namespaceIri.value + unescapedLocalName),
             token
         };
     }
@@ -496,7 +496,7 @@ export class TurtleReader extends BaseVisitor {
             const token = context.BLANK_NODE_LABEL[0];
 
             return {
-                term: dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2)),
+                term: RdfDataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2)),
                 token
             };
         } else if (context.anon) {
@@ -506,7 +506,7 @@ export class TurtleReader extends BaseVisitor {
             const token = this.findFirstToken(anonCtx);
 
             return {
-                term: dataFactory.blankNode(),
+                term: RdfDataFactory.blankNode(),
                 token: token!
             };
         }
@@ -524,14 +524,14 @@ export class TurtleReader extends BaseVisitor {
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
         // Use pre-assigned ID from LBRACKET token payload if available
         const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
-        const subject = dataFactory.blankNode(blankNodeId);
+        const subject = RdfDataFactory.blankNode(blankNodeId);
         const subjectToken = { term: subject, token };
 
         if (context.predicateObjectList) {
             const pairs = this.predicateObjectListInfo(context.predicateObjectList[0], quads);
 
             for (const { predicate, object } of pairs) {
-                quads.push(dataFactory.quad(subject, predicate.term as NamedNode, object.term));
+                quads.push(RdfDataFactory.quad(subject, predicate.term as NamedNode, object.term));
             }
 
             this.pushStatements(infoResults, subjectToken, pairs);
@@ -571,12 +571,12 @@ export class TurtleReader extends BaseVisitor {
         if (context.datatype) {
             const datatype = this.visit(context.datatype[0] as any) as NamedNode;
 
-            literal = dataFactory.literal(value, datatype);
+            literal = RdfDataFactory.literal(value, datatype);
         } else if (context.LANGTAG) {
-            const langtag = context.LANGTAG[0].image.slice(1);
-            literal = dataFactory.literal(value, langtag);
+            const langtag = getLanguageTag(context.LANGTAG[0].image);
+            literal = RdfDataFactory.literal(value, langtag);
         } else {
-            literal = dataFactory.literal(value);
+            literal = RdfDataFactory.literal(value);
         }
 
         return { term: literal, token };
@@ -590,17 +590,17 @@ export class TurtleReader extends BaseVisitor {
 
         if (context.INTEGER) {
             return {
-                term: dataFactory.literal(context.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
+                term: RdfDataFactory.literal(context.INTEGER[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
                 token: context.INTEGER[0]
             };
         } else if (context.DECIMAL) {
             return {
-                term: dataFactory.literal(context.DECIMAL[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal')),
+                term: RdfDataFactory.literal(context.DECIMAL[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal')),
                 token: context.DECIMAL[0]
             };
         } else if (context.DOUBLE) {
             return {
-                term: dataFactory.literal(context.DOUBLE[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double')),
+                term: RdfDataFactory.literal(context.DOUBLE[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double')),
                 token: context.DOUBLE[0]
             };
         }
@@ -616,12 +616,12 @@ export class TurtleReader extends BaseVisitor {
 
         if (context.true) {
             return {
-                term: dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                term: RdfDataFactory.literal('true', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
                 token: context.true[0]
             };
         } else if (context.false) {
             return {
-                term: dataFactory.literal('false', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                term: RdfDataFactory.literal('false', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
                 token: context.false[0]
             };
         }
@@ -659,7 +659,7 @@ export class TurtleReader extends BaseVisitor {
 
         // Use pre-assigned ID from LPARENT token for the head node
         const headBlankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
-        const head = dataFactory.blankNode(headBlankNodeId);
+        const head = RdfDataFactory.blankNode(headBlankNodeId);
         let current: BlankNode = head;
         let currentToken: IToken = token;
 
@@ -668,13 +668,13 @@ export class TurtleReader extends BaseVisitor {
             const isLast = i === items.length - 1;
 
             // Derive rest-node IDs from the head ID so they never collide with
-            // pre-assigned token blank-node IDs or @rdfjs/data-model counters.
+            // pre-assigned token blank-node IDs or the counter of the data factory.
             const restId = headBlankNodeId ? `${headBlankNodeId}-rest-${i + 1}` : undefined;
-            const next: Term = isLast ? RDF_NIL : dataFactory.blankNode(restId);
+            const next: Term = isLast ? RDF_NIL : RdfDataFactory.blankNode(restId);
             const nextToken = isLast ? closingToken : items[i + 1].token;
 
-            quads.push(dataFactory.quad(current, RDF_FIRST, item.term));
-            quads.push(dataFactory.quad(current, RDF_REST, next));
+            quads.push(RdfDataFactory.quad(current, RDF_FIRST, item.term));
+            quads.push(RdfDataFactory.quad(current, RDF_REST, next));
 
             infoResults.push(toQuadContext(current, currentToken, RDF_FIRST, item.token, item.term, item.token));
 
@@ -704,7 +704,7 @@ export class TurtleReader extends BaseVisitor {
         const object = this.visit(context.ttObject![0] as any) as Term;
 
         return {
-            term: dataFactory.quad(subject, predicate, object),
+            term: RdfDataFactory.quad(subject, predicate, object),
             token
         };
     }
@@ -715,7 +715,7 @@ export class TurtleReader extends BaseVisitor {
     protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         const token = this.findFirstToken(context)!;
-        const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+        const rdfReifies = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
 
         const subject = this.visit(context.rtSubject![0], quads as any) as NamedNode | BlankNode;
         const predicate = this.visit(context.predicate![0] as any) as NamedNode;
@@ -729,11 +729,11 @@ export class TurtleReader extends BaseVisitor {
             // Use pre-assigned ID from OPEN_REIFIED_TRIPLE token for anonymous reifier
             const openReifiedTripleToken = context.OPEN_REIFIED_TRIPLE?.[0];
             const blankNodeId = openReifiedTripleToken ? getBlankNodeIdFromToken(openReifiedTripleToken) : undefined;
-            reifierNode = dataFactory.blankNode(blankNodeId);
+            reifierNode = RdfDataFactory.blankNode(blankNodeId);
         }
 
-        const tripleTerm = dataFactory.quad(subject, predicate, object);
-        quads.push(dataFactory.quad(reifierNode, rdfReifies, tripleTerm));
+        const tripleTerm = RdfDataFactory.quad(subject, predicate, object);
+        quads.push(RdfDataFactory.quad(reifierNode, rdfReifies, tripleTerm));
 
         return { term: reifierNode, token };
     }
@@ -858,7 +858,7 @@ export class TurtleReader extends BaseVisitor {
             }
 
             for (const { predicate, object, annotationCtx } of this.visit(ctx.predicateObjectList[0], quads as any) as PredicateObjectResult[]) {
-                quads.push(dataFactory.quad(subject, predicate, object));
+                quads.push(RdfDataFactory.quad(subject, predicate, object));
                 this.processAnnotation(annotationCtx, subject, predicate, object, quads);
             }
         } else if (ctx.blankNodePropertyList) {
@@ -868,7 +868,7 @@ export class TurtleReader extends BaseVisitor {
                 const subject = subjects[0];
 
                 for (const { predicate, object, annotationCtx } of this.visit(ctx.predicateObjectList[0], quads as any) as PredicateObjectResult[]) {
-                    quads.push(dataFactory.quad(subject, predicate, object));
+                    quads.push(RdfDataFactory.quad(subject, predicate, object));
                     this.processAnnotation(annotationCtx, subject, predicate, object, quads);
                 }
             }
@@ -879,7 +879,7 @@ export class TurtleReader extends BaseVisitor {
 
             if (ctx.predicateObjectList) {
                 for (const { predicate, object, annotationCtx } of this.visit(ctx.predicateObjectList[0], quads as any) as PredicateObjectResult[]) {
-                    quads.push(dataFactory.quad(reifierNode, predicate, object));
+                    quads.push(RdfDataFactory.quad(reifierNode, predicate, object));
                     this.processAnnotation(annotationCtx, reifierNode, predicate, object, quads);
                 }
             }
@@ -893,9 +893,9 @@ export class TurtleReader extends BaseVisitor {
     collection(ctx: CstContext, quads: Quad[]): NamedNode | BlankNode {
         // Generate a linked list of blank nodes, push internal quads to `quads`,
         // and return the head blank node (or rdf:nil for an empty list).
-        const nil = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
-        const rest = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-        const first = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+        const nil = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+        const rest = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+        const first = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
 
         const objectNodes = ctx.object ?? [];
 
@@ -906,7 +906,7 @@ export class TurtleReader extends BaseVisitor {
         // Use pre-assigned ID from LPARENT token for the head blank node
         const lparentToken = ctx.LPARENT?.[0];
         const baseId = lparentToken ? getBlankNodeIdFromToken(lparentToken) : undefined;
-        let head = dataFactory.blankNode(baseId);
+        let head = RdfDataFactory.blankNode(baseId);
         let current = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
@@ -914,18 +914,18 @@ export class TurtleReader extends BaseVisitor {
             const elements = this.visit(objectNodes[i], quads as any) as Term[];
             const element = Array.isArray(elements) ? elements[0] : elements;
 
-            quads.push(dataFactory.quad(current, first, element));
+            quads.push(RdfDataFactory.quad(current, first, element));
 
             if (i < objectNodes.length - 1) {
                 // Derive rest node IDs from base ID
                 const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
-                const next = dataFactory.blankNode(restId);
+                const next = RdfDataFactory.blankNode(restId);
 
-                quads.push(dataFactory.quad(current, rest, next));
+                quads.push(RdfDataFactory.quad(current, rest, next));
 
                 current = next;
             } else {
-                quads.push(dataFactory.quad(current, rest, nil));
+                quads.push(RdfDataFactory.quad(current, rest, nil));
             }
         }
 
@@ -946,7 +946,7 @@ export class TurtleReader extends BaseVisitor {
         if (ctx.iri) {
             return this.visit(ctx.iri as any) as NamedNode;
         } else if (ctx.A) {
-            return dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+            return RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
         } else {
             throw new Error('Invalid predicate: ' + JSON.stringify(ctx));
         }
@@ -1017,7 +1017,7 @@ export class TurtleReader extends BaseVisitor {
             const subject = this.getBlankNode(ctx);
 
             for (const { predicate, object, annotationCtx } of this.visit(ctx.predicateObjectList[0], quads as any) as PredicateObjectResult[]) {
-                quads.push(dataFactory.quad(subject, predicate, object));
+                quads.push(RdfDataFactory.quad(subject, predicate, object));
                 this.processAnnotation(annotationCtx, subject, predicate, object, quads);
             }
 
@@ -1042,16 +1042,16 @@ export class TurtleReader extends BaseVisitor {
         // Use pre-assigned ID from LBRACKET token
         const lbracketToken = ctx.LBRACKET?.[0];
         const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
-        return dataFactory.blankNode(blankNodeId);
+        return RdfDataFactory.blankNode(blankNodeId);
     }
 
     numericLiteral(ctx: CstContext): Literal {
         if (ctx.INTEGER) {
-            return dataFactory.literal(ctx.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer'));
+            return RdfDataFactory.literal(ctx.INTEGER[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer'));
         } else if (ctx.DECIMAL) {
-            return dataFactory.literal(ctx.DECIMAL[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal'));
+            return RdfDataFactory.literal(ctx.DECIMAL[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal'));
         } else if (ctx.DOUBLE) {
-            return dataFactory.literal(ctx.DOUBLE[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double'));
+            return RdfDataFactory.literal(ctx.DOUBLE[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double'));
         } else {
             throw new Error('Invalid numeric literal: ' + JSON.stringify(ctx));
         }
@@ -1059,9 +1059,9 @@ export class TurtleReader extends BaseVisitor {
 
     booleanLiteral(ctx: CstContext): Literal {
         if (ctx.true) {
-            return dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
+            return RdfDataFactory.literal('true', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
         } else if (ctx.false) {
-            return dataFactory.literal('false', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
+            return RdfDataFactory.literal('false', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
         } else {
             throw new Error('Invalid boolean literal: ' + JSON.stringify(ctx));
         }
@@ -1073,14 +1073,14 @@ export class TurtleReader extends BaseVisitor {
         if (ctx.datatype) {
             const datatype = this.visit(ctx.datatype[0] as any) as NamedNode;
 
-            return dataFactory.literal(value, datatype);
+            return RdfDataFactory.literal(value, datatype);
         } else if (ctx.LANGTAG) {
             // LANGTAG image includes the leading '@', e.g. "@en" — strip it.
-            const langtag = ctx.LANGTAG[0].image.slice(1);
+            const langtag = getLanguageTag(ctx.LANGTAG[0].image);
 
-            return dataFactory.literal(value, langtag);
+            return RdfDataFactory.literal(value, langtag);
         } else {
-            return dataFactory.literal(value);
+            return RdfDataFactory.literal(value);
         }
     }
 
@@ -1132,7 +1132,7 @@ export class TurtleReader extends BaseVisitor {
         // Unescape backslash-escaped characters in local names (e.g. \~ \. \- \! etc.)
         const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
 
-        return dataFactory.namedNode(namespaceIri.value + unescapedLocalName);
+        return RdfDataFactory.namedNode(namespaceIri.value + unescapedLocalName);
     }
 
     literal(ctx: CstContext): Literal {
@@ -1160,7 +1160,7 @@ export class TurtleReader extends BaseVisitor {
      * Emits: reifierNode rdf:reifies <<( s p o )>> .
      */
     reifiedTriple(ctx: CstContext, quads: Quad[]): NamedNode | BlankNode {
-        const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+        const rdfReifies = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
 
         const subject = this.visit(ctx.rtSubject![0], quads as any) as NamedNode | BlankNode;
         const predicate = this.visit(ctx.predicate![0] as any) as NamedNode;
@@ -1171,14 +1171,14 @@ export class TurtleReader extends BaseVisitor {
         if (ctx.reifier) {
             reifierNode = this.visit(ctx.reifier[0] as any) as NamedNode | BlankNode;
         } else {
-            reifierNode = dataFactory.blankNode();
+            reifierNode = RdfDataFactory.blankNode();
         }
 
         // Create the triple term
-        const tripleTerm = dataFactory.quad(subject, predicate, object);
+        const tripleTerm = RdfDataFactory.quad(subject, predicate, object);
 
         // Emit: reifierNode rdf:reifies <<( s p o )>>
-        quads.push(dataFactory.quad(reifierNode, rdfReifies, tripleTerm));
+        quads.push(RdfDataFactory.quad(reifierNode, rdfReifies, tripleTerm));
 
         return reifierNode;
     }
@@ -1216,7 +1216,7 @@ export class TurtleReader extends BaseVisitor {
         const predicate = this.visit(ctx.predicate![0] as any) as NamedNode;
         const object = this.visit(ctx.ttObject![0] as any) as Term;
 
-        return dataFactory.quad(subject, predicate, object);
+        return RdfDataFactory.quad(subject, predicate, object);
     }
 
     ttSubject(ctx: CstContext): NamedNode | BlankNode | undefined {
@@ -1252,7 +1252,7 @@ export class TurtleReader extends BaseVisitor {
             // Use pre-assigned ID from TILDE token for anonymous reifier
             const tildeToken = ctx.TILDE?.[0];
             const blankNodeId = tildeToken ? getBlankNodeIdFromToken(tildeToken) : undefined;
-            return dataFactory.blankNode(blankNodeId);
+            return RdfDataFactory.blankNode(blankNodeId);
         }
     }
 
@@ -1280,8 +1280,8 @@ export class TurtleReader extends BaseVisitor {
     processAnnotation(annotationCtx: CstContext | undefined, subject: NamedNode | BlankNode, predicate: NamedNode, object: Term, quads: Quad[]): void {
         if (!annotationCtx) return;
 
-        const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
-        const tripleTerm = dataFactory.quad(subject, predicate, object);
+        const rdfReifies = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+        const tripleTerm = RdfDataFactory.quad(subject, predicate, object);
 
         // The annotation CST has reifier and/or annotationBlock children.
         const children = annotationCtx.children;
@@ -1341,7 +1341,7 @@ export class TurtleReader extends BaseVisitor {
             if (item.type === 'reifier') {
                 // A reifier without a following annotation block just emits rdf:reifies
                 const reifierTerm = item.term!;
-                quads.push(dataFactory.quad(reifierTerm, rdfReifies, tripleTerm));
+                quads.push(RdfDataFactory.quad(reifierTerm, rdfReifies, tripleTerm));
                 lastReifier = reifierTerm;
             } else if (item.type === 'annotationBlock') {
                 // An annotation block uses the preceding reifier, or creates a fresh blank node
@@ -1350,15 +1350,15 @@ export class TurtleReader extends BaseVisitor {
                     reifierTerm = lastReifier;
                     lastReifier = null;
                 } else {
-                    reifierTerm = dataFactory.blankNode();
-                    quads.push(dataFactory.quad(reifierTerm, rdfReifies, tripleTerm));
+                    reifierTerm = RdfDataFactory.blankNode();
+                    quads.push(RdfDataFactory.quad(reifierTerm, rdfReifies, tripleTerm));
                 }
 
                 // Process the predicateObjectList inside the annotation block
                 const polChildren = item.ctx!.children;
                 if (polChildren?.predicateObjectList) {
                     for (const { predicate: p, object: o, annotationCtx: innerAnnotation } of this.visit(polChildren.predicateObjectList[0], quads as any) as PredicateObjectResult[]) {
-                        quads.push(dataFactory.quad(reifierTerm, p, o));
+                        quads.push(RdfDataFactory.quad(reifierTerm, p, o));
                         // Handle nested annotations recursively
                         this.processAnnotation(innerAnnotation, reifierTerm, p, o, quads);
                     }
@@ -1386,14 +1386,14 @@ export class TurtleReader extends BaseVisitor {
         );
 
         if (value.includes(':')) {
-            return dataFactory.namedNode(value);
+            return RdfDataFactory.namedNode(value);
         } else if (value === '' && this.baseIri) {
-            return dataFactory.namedNode(this.baseIri.value);
+            return RdfDataFactory.namedNode(this.baseIri.value);
         } else if (value !== '' && this.baseIri) {
-            return dataFactory.namedNode(new URL(value, this.baseIri.value).href);
+            return RdfDataFactory.namedNode(new URL(value, this.baseIri.value).href);
         } else {
             // No base IRI available — keep the relative IRI as-is.
-            return dataFactory.namedNode(value);
+            return RdfDataFactory.namedNode(value);
         }
     }
 
@@ -1401,12 +1401,12 @@ export class TurtleReader extends BaseVisitor {
         if (ctx.BLANK_NODE_LABEL !== undefined) {
             const token = ctx.BLANK_NODE_LABEL[0];
 
-            return dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
+            return RdfDataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
         } else {
             // Use pre-assigned ID from LBRACKET token
             const lbracketToken = ctx.LBRACKET?.[0];
             const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
-            return dataFactory.blankNode(blankNodeId);
+            return RdfDataFactory.blankNode(blankNodeId);
         }
     }
 }

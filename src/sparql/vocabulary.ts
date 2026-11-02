@@ -1,4 +1,4 @@
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 import type { NamedNode } from '@rdfjs/types';
 
 /**
@@ -12,7 +12,7 @@ import type { NamedNode } from '@rdfjs/types';
  */
 export const SPARQL_SYNTAX_NS = 'https://w3id.org/sparql-syntax#';
 
-const ns = (localName: string): NamedNode => dataFactory.namedNode(SPARQL_SYNTAX_NS + localName);
+const ns = (localName: string): NamedNode => RdfDataFactory.namedNode(SPARQL_SYNTAX_NS + localName);
 
 /**
  * Named nodes for all terms of the SPARQL syntax vocabulary, keyed by local name.

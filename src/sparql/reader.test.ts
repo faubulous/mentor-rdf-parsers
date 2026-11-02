@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 import type { Quad, Term } from '@rdfjs/types';
 import { parseQuads, quadsMatch } from '../helpers.js';
 import { SparqlLexer, SparqlParser } from './parser.js';
@@ -421,8 +421,8 @@ describe('SparqlReader', () => {
     });
 
     describe('Structural assertions (independent of expected-RDF fixtures)', () => {
-        const xsdInteger = dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer');
-        const rdfType = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+        const xsdInteger = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer');
+        const rdfType = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 
         const subjectsOf = (quads: Quad[], predicate: Term, object: Term) =>
             quads.filter(q => q.predicate.equals(predicate) && q.object.equals(object)).map(q => q.subject);
@@ -433,8 +433,8 @@ describe('SparqlReader', () => {
             // The root is a typed SELECT query with LIMIT 100 and OFFSET 10.
             expect(reader.rootNode).not.toBeNull();
             expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(rdfType) && q.object.equals(sparql.SelectQuery))).toBe(true);
-            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(sparql.limit) && q.object.equals(dataFactory.literal('100', xsdInteger)))).toBe(true);
-            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(sparql.offset) && q.object.equals(dataFactory.literal('10', xsdInteger)))).toBe(true);
+            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(sparql.limit) && q.object.equals(RdfDataFactory.literal('100', xsdInteger)))).toBe(true);
+            expect(quads.some(q => q.subject.equals(reader.rootNode) && q.predicate.equals(sparql.offset) && q.object.equals(RdfDataFactory.literal('10', xsdInteger)))).toBe(true);
 
             // The query uses exactly the variables x, y, age and email, each shared.
             const variableNodes = subjectsOf(quads, rdfType, sparql.Variable);
@@ -445,7 +445,7 @@ describe('SparqlReader', () => {
             // FILTER (?age >= 18 && ?age <= 65) produces And(Geq(age, 18), Leq(age, 65)).
             const geq = subjectsOf(quads, rdfType, sparql.Geq);
             expect(geq.length).toBe(1);
-            expect(quads.some(q => q.subject.equals(geq[0]) && q.predicate.equals(sparql.arg2) && q.object.equals(dataFactory.literal('18', xsdInteger)))).toBe(true);
+            expect(quads.some(q => q.subject.equals(geq[0]) && q.predicate.equals(sparql.arg2) && q.object.equals(RdfDataFactory.literal('18', xsdInteger)))).toBe(true);
             expect(subjectsOf(quads, rdfType, sparql.And).length).toBe(1);
             expect(subjectsOf(quads, rdfType, sparql.Leq).length).toBe(1);
             expect(subjectsOf(quads, rdfType, sparql.Neq).length).toBe(1);
@@ -563,7 +563,7 @@ describe('SparqlReader', () => {
             const cst = parser.parse(lexResult.tokens);
 
             const reader = new SparqlReader();
-            reader.rootIri = dataFactory.namedNode(rootIri);
+            reader.rootIri = RdfDataFactory.namedNode(rootIri);
 
             const quads = reader.visit(cst) as Quad[];
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createLazyBaseVisitor } from './reader-helpers.js';
+import { createLazyBaseVisitor, getLanguageTag } from './reader-helpers.js';
 import { TurtleLexer, TurtleParser } from './turtle/parser.js';
 import { TurtleReader } from './turtle/reader.js';
 
@@ -67,5 +67,26 @@ describe('createLazyBaseVisitor', () => {
         const quads = new TurtleReader().visit(cst);
 
         expect(quads.map((quad: any) => quad.object.value)).toEqual(['http://example.org/o', 'x']);
+    });
+});
+
+describe('getLanguageTag', () => {
+    it('reads a language tag without its leading @', () => {
+        expect(getLanguageTag('@en-GB')).toBe('en-GB');
+    });
+
+    it('splits the base direction of RDF 1.2 off the language tag', () => {
+        expect(getLanguageTag('@ar--rtl')).toEqual({ language: 'ar', direction: 'rtl' });
+    });
+});
+
+describe('literals read from Turtle', () => {
+    it('carry the base direction and a lower case language tag, as the store holds them', () => {
+        const tokens = new TurtleLexer().tokenize('<http://example.org/s> <http://example.org/p> "a"@en-GB, "b"@ar--rtl .').tokens;
+        const quads = new TurtleReader().visit(new TurtleParser().parse(tokens));
+        const [first, second] = quads.map(quad => quad.object as any);
+
+        expect([first.language, first.direction]).toEqual(['en-gb', '']);
+        expect([second.language, second.direction]).toEqual(['ar', 'rtl']);
     });
 });

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import { N3Lexer, N3Parser } from './parser.js';
 import { N3Reader } from './reader.js';
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 
 /**
  * Notation3 (N3) Reader Tests

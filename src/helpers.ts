@@ -1,5 +1,6 @@
 import * as n3 from 'n3';
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from './data-factory.js';
+import { getLanguageTag } from './reader-helpers.js';
 import type { Quad, Term, NamedNode, BlankNode, Literal, Quad_Object } from '@rdfjs/types';
 
 export function parseQuads(input: string): Promise<Quad[]> {
@@ -26,6 +27,7 @@ interface CanonicalTerm {
     termType: string;
     value: string;
     language?: string;
+    direction?: string;
     datatype?: string;
     subject?: CanonicalTerm | null;
     predicate?: CanonicalTerm | null;
@@ -75,7 +77,7 @@ function nodesMatch(nodeA: CanonicalTerm | null, nodeB: CanonicalTerm | null): b
         return false;
     }
 
-    if (nodeA.termType === 'Literal' && (nodeA.datatype !== nodeB.datatype || nodeA.language !== nodeB.language)) {
+    if (nodeA.termType === 'Literal' && (nodeA.datatype !== nodeB.datatype || nodeA.language !== nodeB.language || nodeA.direction !== nodeB.direction)) {
         return false;
     }
 
@@ -157,6 +159,7 @@ function canonicalizeTerm(term: Term | null | undefined, bnodeMap: Map<string, s
             termType: term.termType,
             value: term.value,
             language: literal.language,
+            direction: literal.direction || undefined,
             datatype: literal.datatype?.value
         };
     }
@@ -196,7 +199,7 @@ export function parseNTriples12(input: string): Quad[] {
             parser.advance();
         }
 
-        quads.push(dataFactory.quad(subject, predicate, object, graph));
+        quads.push(RdfDataFactory.quad(subject, predicate, object, graph));
     }
 
     return quads;
@@ -253,7 +256,7 @@ class NT12LineParser {
         }
         this.advance(); // consume >
 
-        return dataFactory.namedNode(iri);
+        return RdfDataFactory.namedNode(iri);
     }
 
     parseBlankNode(): BlankNode {
@@ -266,7 +269,7 @@ class NT12LineParser {
             label += this.advance();
         }
 
-        return dataFactory.blankNode(label);
+        return RdfDataFactory.blankNode(label);
     }
 
     parseLiteral(): Literal {
@@ -310,14 +313,14 @@ class NT12LineParser {
             while (this.pos < this.input.length && /[a-zA-Z0-9-]/.test(this.peek()!)) {
                 lang += this.advance();
             }
-            return dataFactory.literal(value, lang);
+            return RdfDataFactory.literal(value, getLanguageTag(lang));
         } else if (this.input.substring(this.pos, this.pos + 2) === '^^') {
             this.pos += 2; // ^^
             const dt = this.parseIRI();
-            return dataFactory.literal(value, dt);
+            return RdfDataFactory.literal(value, dt);
         }
 
-        return dataFactory.literal(value);
+        return RdfDataFactory.literal(value);
     }
 
     parseTripleTerm(): Quad {
@@ -338,6 +341,6 @@ class NT12LineParser {
         }
         this.pos += 3;
 
-        return dataFactory.quad(subject, predicate, object);
+        return RdfDataFactory.quad(subject, predicate, object);
     }
 }

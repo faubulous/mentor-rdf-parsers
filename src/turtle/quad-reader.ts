@@ -1,20 +1,20 @@
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 import type { BlankNode, Literal, NamedNode, Quad, Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
 import type { IToken, TokenType } from 'chevrotain';
 import { RdfToken } from '../tokens.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
-import { unescapeRdfString } from '../reader-helpers.js';
+import { unescapeRdfString, getLanguageTag } from '../reader-helpers.js';
 import { QuadReaderError } from '../quad-reader-error.js';
 
-const RDF_TYPE = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
-const RDF_FIRST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
-const RDF_REST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-const RDF_NIL = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
-const RDF_REIFIES = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
-const XSD_INTEGER = dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer');
-const XSD_DECIMAL = dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal');
-const XSD_DOUBLE = dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double');
-const XSD_BOOLEAN = dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean');
+const RDF_TYPE = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+const RDF_FIRST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+const RDF_REST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+const RDF_NIL = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+const RDF_REIFIES = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+const XSD_INTEGER = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer');
+const XSD_DECIMAL = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal');
+const XSD_DOUBLE = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double');
+const XSD_BOOLEAN = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean');
 
 const LOCAL_NAME_ESCAPE = /\\([_~.\-!$&'()*+,;=/?#@%])/g;
 const IRI_UNICODE_ESCAPE = /\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})/g;
@@ -350,7 +350,7 @@ export class TurtleQuadReader {
         }
 
         const headId = getBlankNodeIdFromToken(open);
-        const head = dataFactory.blankNode(headId);
+        const head = RdfDataFactory.blankNode(headId);
 
         let current = head;
         let position = 0;
@@ -360,14 +360,14 @@ export class TurtleQuadReader {
 
             position++;
 
-            this._quads.push(dataFactory.quad(current, RDF_FIRST, item as Quad_Object));
+            this._quads.push(RdfDataFactory.quad(current, RDF_FIRST, item as Quad_Object));
 
             if (this._peekType() === RdfToken.RPARENT) {
-                this._quads.push(dataFactory.quad(current, RDF_REST, RDF_NIL));
+                this._quads.push(RdfDataFactory.quad(current, RDF_REST, RDF_NIL));
             } else {
-                const next = dataFactory.blankNode(headId ? `${headId}-rest-${position}` : undefined);
+                const next = RdfDataFactory.blankNode(headId ? `${headId}-rest-${position}` : undefined);
 
-                this._quads.push(dataFactory.quad(current, RDF_REST, next));
+                this._quads.push(RdfDataFactory.quad(current, RDF_REST, next));
 
                 current = next;
             }
@@ -390,7 +390,7 @@ export class TurtleQuadReader {
         const reifier = this._peekType() === RdfToken.TILDE ? this._readReifier() : this._blankNodeFor(open);
 
         this._consume(RdfToken.CLOSE_REIFIED_TRIPLE);
-        this._quads.push(dataFactory.quad(reifier, RDF_REIFIES, dataFactory.quad(subject, predicate, object as Quad_Object)));
+        this._quads.push(RdfDataFactory.quad(reifier, RDF_REIFIES, RdfDataFactory.quad(subject, predicate, object as Quad_Object)));
 
         return reifier;
     }
@@ -445,7 +445,7 @@ export class TurtleQuadReader {
 
         this._consume(RdfToken.CLOSE_TRIPLE_TERM);
 
-        return dataFactory.quad(subject, predicate, object as Quad_Object);
+        return RdfDataFactory.quad(subject, predicate, object as Quad_Object);
     }
 
     /**
@@ -506,7 +506,7 @@ export class TurtleQuadReader {
      */
     private _emitPairs(subject: Quad_Subject, pairs: PredicateObjectPair[]): void {
         for (const pair of pairs) {
-            this._quads.push(dataFactory.quad(subject, pair.predicate, pair.object as Quad_Object));
+            this._quads.push(RdfDataFactory.quad(subject, pair.predicate, pair.object as Quad_Object));
 
             if (pair.annotation) {
                 this._emitAnnotation(subject, pair, pair.annotation);
@@ -520,13 +520,13 @@ export class TurtleQuadReader {
      * the blank node id of its `{|` token.
      */
     private _emitAnnotation(subject: Quad_Subject, pair: PredicateObjectPair, items: AnnotationItem[]): void {
-        const tripleTerm = dataFactory.quad(subject, pair.predicate, pair.object as Quad_Object);
+        const tripleTerm = RdfDataFactory.quad(subject, pair.predicate, pair.object as Quad_Object);
 
         let lastReifier: NamedNode | BlankNode | undefined;
 
         for (const item of items) {
             if (item.reifier) {
-                this._quads.push(dataFactory.quad(item.reifier, RDF_REIFIES, tripleTerm));
+                this._quads.push(RdfDataFactory.quad(item.reifier, RDF_REIFIES, tripleTerm));
 
                 lastReifier = item.reifier;
             } else if (item.block) {
@@ -537,7 +537,7 @@ export class TurtleQuadReader {
                 } else {
                     reifier = this._blankNodeFor(item.block.token);
 
-                    this._quads.push(dataFactory.quad(reifier, RDF_REIFIES, tripleTerm));
+                    this._quads.push(RdfDataFactory.quad(reifier, RDF_REIFIES, tripleTerm));
                 }
 
                 for (const quad of item.block.nested) {
@@ -556,7 +556,7 @@ export class TurtleQuadReader {
         const token = this._advance();
 
         if (token.tokenType === RdfToken.BLANK_NODE_LABEL) {
-            return dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
+            return RdfDataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
         } else if (token.tokenType === RdfToken.LBRACKET) {
             this._consume(RdfToken.RBRACKET);
 
@@ -570,7 +570,7 @@ export class TurtleQuadReader {
      * Creates the blank node that a token stands for, using the id the lexer assigned to it.
      */
     private _blankNodeFor(token: IToken): BlankNode {
-        return dataFactory.blankNode(getBlankNodeIdFromToken(token));
+        return RdfDataFactory.blankNode(getBlankNodeIdFromToken(token));
     }
 
     /**
@@ -585,15 +585,15 @@ export class TurtleQuadReader {
         } else if (type === RdfToken.STRING_LITERAL_LONG_QUOTE || type === RdfToken.STRING_LITERAL_LONG_SINGLE_QUOTE) {
             return this._readStringLiteral(token.image.slice(3, -3));
         } else if (type === RdfToken.INTEGER) {
-            return dataFactory.literal(token.image, XSD_INTEGER);
+            return RdfDataFactory.literal(token.image, XSD_INTEGER);
         } else if (type === RdfToken.DECIMAL) {
-            return dataFactory.literal(token.image, XSD_DECIMAL);
+            return RdfDataFactory.literal(token.image, XSD_DECIMAL);
         } else if (type === RdfToken.DOUBLE) {
-            return dataFactory.literal(token.image, XSD_DOUBLE);
+            return RdfDataFactory.literal(token.image, XSD_DOUBLE);
         } else if (type === RdfToken.TRUE) {
-            return dataFactory.literal('true', XSD_BOOLEAN);
+            return RdfDataFactory.literal('true', XSD_BOOLEAN);
         } else if (type === RdfToken.FALSE) {
-            return dataFactory.literal('false', XSD_BOOLEAN);
+            return RdfDataFactory.literal('false', XSD_BOOLEAN);
         }
 
         throw this._unexpected('a literal', token);
@@ -608,14 +608,14 @@ export class TurtleQuadReader {
         const type = this._peekType();
 
         if (type === RdfToken.LANGTAG) {
-            return dataFactory.literal(value, this._advance().image.slice(1));
+            return RdfDataFactory.literal(value, getLanguageTag(this._advance().image));
         } else if (type === RdfToken.DCARET) {
             this._advance();
 
-            return dataFactory.literal(value, this._readIri());
+            return RdfDataFactory.literal(value, this._readIri());
         }
 
-        return dataFactory.literal(value);
+        return RdfDataFactory.literal(value);
     }
 
     /**
@@ -661,7 +661,7 @@ export class TurtleQuadReader {
             localName = localName.replace(LOCAL_NAME_ESCAPE, '$1');
         }
 
-        const node = dataFactory.namedNode(namespaceIri + localName);
+        const node = RdfDataFactory.namedNode(namespaceIri + localName);
 
         this._prefixedNames.set(image, node);
 
@@ -680,11 +680,11 @@ export class TurtleQuadReader {
         }
 
         if (value.includes(':') || this.baseIri === undefined) {
-            return dataFactory.namedNode(value);
+            return RdfDataFactory.namedNode(value);
         } else if (value === '') {
-            return dataFactory.namedNode(this.baseIri);
+            return RdfDataFactory.namedNode(this.baseIri);
         } else {
-            return dataFactory.namedNode(new URL(value, this.baseIri).href);
+            return RdfDataFactory.namedNode(new URL(value, this.baseIri).href);
         }
     }
 

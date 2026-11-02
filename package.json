@@ -51,14 +51,13 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@rdfjs/data-model": "^2.1.2",
     "chevrotain": "^13.2.0",
+    "rdf-data-factory": "^2.1.0",
     "triplate": "^0.7.1"
   },
   "devDependencies": {
     "@rdfjs/types": "^2.0.1",
     "@types/n3": "^1.26.5",
-    "@types/rdfjs__data-model": "^2.0.9",
     "@vitest/coverage-v8": "^5.0.5",
     "command-line-args": "^6.0.2",
     "n3": "^2.13.12",
