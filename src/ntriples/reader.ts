@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { RdfDataFactory } from '../data-factory.js';
+import { getBlankNodeIdFromToken } from '../utils.js';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NTriplesParser } from './parser.js';
@@ -273,7 +274,9 @@ export class NTriplesReader extends BaseVisitor {
     }
 
     getBlankNode(ctx: CstContext): BlankNode {
-        return RdfDataFactory.blankNode(ctx.BLANK_NODE_LABEL![0].image);
+        const token = ctx.BLANK_NODE_LABEL![0];
+
+        return RdfDataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
     }
 
     getLiteralValue(ctx: CstContext): string {

@@ -506,7 +506,7 @@ export class TurtleReader extends BaseVisitor {
             const token = this.findFirstToken(anonCtx);
 
             return {
-                term: RdfDataFactory.blankNode(),
+                term: RdfDataFactory.blankNode(token ? getBlankNodeIdFromToken(token) : undefined),
                 token: token!
             };
         }
@@ -1171,7 +1171,9 @@ export class TurtleReader extends BaseVisitor {
         if (ctx.reifier) {
             reifierNode = this.visit(ctx.reifier[0] as any) as NamedNode | BlankNode;
         } else {
-            reifierNode = RdfDataFactory.blankNode();
+            // Use pre-assigned ID from the OPEN_REIFIED_TRIPLE token, as TurtleQuadReader does
+            const open = (ctx.OPEN_REIFIED_TRIPLE as IToken[] | undefined)?.[0];
+            reifierNode = RdfDataFactory.blankNode(open ? getBlankNodeIdFromToken(open) : undefined);
         }
 
         // Create the triple term
@@ -1350,7 +1352,9 @@ export class TurtleReader extends BaseVisitor {
                     reifierTerm = lastReifier;
                     lastReifier = null;
                 } else {
-                    reifierTerm = RdfDataFactory.blankNode();
+                    // Use pre-assigned ID from the OPEN_ANNOTATION token, as TurtleQuadReader does
+                    const open = (item.ctx!.children?.OPEN_ANNOTATION as IToken[] | undefined)?.[0];
+                    reifierTerm = RdfDataFactory.blankNode(open ? getBlankNodeIdFromToken(open) : undefined);
                     quads.push(RdfDataFactory.quad(reifierTerm, rdfReifies, tripleTerm));
                 }
 

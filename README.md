@@ -87,6 +87,10 @@ const tokens = new TurtleLexer().tokenize(input).tokens;
 const quads = new TurtleQuadReader().read(tokens);
 ```
 
+### Blank node ids
+
+The lexers assign each blank node its id when they tokenize, in the token's payload (`getBlankNodeIdFromToken`), and every reader names the blank node by it, so the tokens, the quads and the quad contexts of a document agree. `createFileBlankNodeIdGenerator(uri)` scopes the ids to a file. The Turtle, TriG and N3 lexers also tell it where each anonymous blank node (`[ … ]`, `( … )`, a formula, an annotation or a reifier) is written: the subject, the predicate and its place among the anonymous values of that predicate, or its place among the anonymous subjects of its graph. The id is a hash of that place, so it stays the same when the document changes elsewhere. The default generator numbers blank nodes in token order (`b0`, `b1`, …).
+
 ## Documentation
 
 ### Examples by Language

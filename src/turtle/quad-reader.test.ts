@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { Quad, Term } from '@rdfjs/types';
 import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.js';
-import { createFileBlankNodeIdGenerator } from '../utils.js';
+import { createFileBlankNodeIdGenerator, getBlankNodeIdFromToken } from '../utils.js';
 import { QuadReaderError } from '../quad-reader-error.js';
 import { TurtleLexer, TurtleParser } from './parser.js';
 import { TurtleReader } from './reader.js';
@@ -207,7 +207,9 @@ describe('TurtleQuadReader', () => {
 
             expect(reifiers).toHaveLength(2);
             expect(new Set(reifiers).size).toBe(2);
-            expect(reifiers.every(id => id.includes('_b'))).toBe(true);
+            const opening = tokens.filter(token => token.tokenType.name === 'OPEN_REIFIED_TRIPLE' || token.tokenType.name === 'OPEN_ANNOTATION');
+
+            expect(reifiers).toEqual(opening.map(token => getBlankNodeIdFromToken(token)));
         });
     });
 
