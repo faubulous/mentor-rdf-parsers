@@ -1,3 +1,4 @@
+import type { DirectionalLanguage } from '@rdfjs/types';
 import type { CstNode, CstParser, IToken } from 'chevrotain';
 
 type CstLikeContext = {
@@ -124,6 +125,23 @@ export function unescapeRdfString(raw: string): string {
             default: return match;
         }
     });
+}
+
+/**
+ * Read the language tag of a literal from its token, splitting off the base direction of
+ * RDF 1.2 (`@en--ltr`) so that the data factory creates a directional language string.
+ * @param image The image of the LANGTAG token, with its leading `@`.
+ * @returns The language tag, or the language tag with its direction.
+ */
+export function getLanguageTag(image: string): string | DirectionalLanguage {
+    const tag = image.startsWith('@') ? image.slice(1) : image;
+    const separator = tag.indexOf('--');
+
+    if (separator < 0) {
+        return tag;
+    }
+
+    return { language: tag.slice(0, separator), direction: tag.slice(separator + 2) as 'ltr' | 'rtl' };
 }
 
 /**

@@ -1,6 +1,6 @@
 import type { IToken } from 'chevrotain';
 import type { Quad, Quad_Subject, Quad_Predicate, Quad_Object, Quad_Graph, Term } from '@rdfjs/types';
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from './data-factory.js';
 
 /**
  * An extended RDF/JS Quad that includes source tokens for each component.
@@ -60,7 +60,7 @@ export function toQuadContext(
     object: Term, objectToken: IToken,
     graph?: Term, graphToken?: IToken,
 ): QuadContext {
-    const quad = dataFactory.quad(
+    const quad = RdfDataFactory.quad(
         subject as Quad_Subject,
         predicate as Quad_Predicate,
         object as Quad_Object,

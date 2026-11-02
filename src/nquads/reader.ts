@@ -1,12 +1,12 @@
 // @ts-nocheck
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { NQuadsParser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
-import { getCstChildren, findFirstTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
+import { getCstChildren, findFirstTokenInCst, unescapeRdfString, createLazyBaseVisitor, getLanguageTag } from '../reader-helpers.js';
 import type { NQuadsReaderCstContext as CstContext } from '../reader-cst-types.js';
 
 const BaseVisitor = createLazyBaseVisitor(() => new NQuadsParser());
@@ -157,12 +157,12 @@ export class NQuadsReader extends BaseVisitor {
         
         if (context.datatype) {
             const datatype = this.visit(context.datatype[0]) as NamedNode;
-            literal = dataFactory.literal(value, datatype);
+            literal = RdfDataFactory.literal(value, datatype);
         } else if (context.LANGTAG) {
-            const langtag = context.LANGTAG[0].image.slice(1).toLowerCase();
-            literal = dataFactory.literal(value, langtag);
+            const langtag = getLanguageTag(context.LANGTAG[0].image);
+            literal = RdfDataFactory.literal(value, langtag);
         } else {
-            literal = dataFactory.literal(value);
+            literal = RdfDataFactory.literal(value);
         }
 
         return { term: literal, token };
@@ -181,7 +181,7 @@ export class NQuadsReader extends BaseVisitor {
         const token = this.findFirstToken(context);
 
         return {
-            term: dataFactory.quad(subject, predicate, object),
+            term: RdfDataFactory.quad(subject, predicate, object),
             token: token!
         };
     }
@@ -225,7 +225,7 @@ export class NQuadsReader extends BaseVisitor {
         const object = this.visit(ctx.object![0]) as Term;
         const graph = ctx.graphLabel ? this.visit(ctx.graphLabel[0]) as NamedNode | BlankNode : undefined;
 
-        return dataFactory.quad(subject, predicate, object, graph);
+        return RdfDataFactory.quad(subject, predicate, object, graph);
     }
 
     subject(ctx: CstContext): NamedNode | BlankNode | undefined {
@@ -264,7 +264,7 @@ export class NQuadsReader extends BaseVisitor {
         const predicate = this.visit(ctx.predicate![0]) as NamedNode;
         const object = this.visit(ctx.object![0]) as Term;
 
-        return dataFactory.quad(subject, predicate, object);
+        return RdfDataFactory.quad(subject, predicate, object);
     }
 
     literal(ctx: CstContext): Literal {
@@ -272,14 +272,14 @@ export class NQuadsReader extends BaseVisitor {
 
         if (ctx.datatype) {
             const datatype = this.visit(ctx.datatype[0]) as NamedNode;
-            return dataFactory.literal(value, datatype);
+            return RdfDataFactory.literal(value, datatype);
         } else if (ctx.LANGTAG) {
             // LANGTAG image includes the leading '@', e.g. "@en" — strip it.
             // Language tags are normalized to lowercase per BCP 47.
-            const langtag = ctx.LANGTAG[0].image.slice(1).toLowerCase();
-            return dataFactory.literal(value, langtag);
+            const langtag = getLanguageTag(ctx.LANGTAG[0].image);
+            return RdfDataFactory.literal(value, langtag);
         } else {
-            return dataFactory.literal(value);
+            return RdfDataFactory.literal(value);
         }
     }
 
@@ -309,13 +309,13 @@ export class NQuadsReader extends BaseVisitor {
             String.fromCodePoint(parseInt(hex, 16))
         );
 
-        return dataFactory.namedNode(value);
+        return RdfDataFactory.namedNode(value);
     }
 
     getBlankNode(ctx: CstContext): BlankNode {
         const token = ctx.BLANK_NODE_LABEL![0];
         
-        return dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
+        return RdfDataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
     }
 
     getLiteralValue(ctx: CstContext): string {

@@ -1,12 +1,12 @@
 // @ts-nocheck
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 import type { Quad, NamedNode, BlankNode, Literal, Term, DefaultGraph } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { TrigParser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
 import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
-import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
+import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor, getLanguageTag } from '../reader-helpers.js';
 import type { TrigReaderCstContext as CstContext } from '../reader-cst-types.js';
 import type {
     DirectiveResult,
@@ -28,9 +28,9 @@ type ObjectListInfoResult = SharedObjectListInfoResult<any, CstContext, QuadCont
  */
 type TermToken = { term: Term; token: IToken };
 
-const RDF_FIRST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
-const RDF_REST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-const RDF_NIL = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+const RDF_FIRST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+const RDF_REST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+const RDF_NIL = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
 
 /**
  * A visitor class that constructs RDF/JS quads from TriG syntax trees.
@@ -355,7 +355,7 @@ export class TrigReader extends BaseVisitor {
             return this.iriInfo(context.iri[0]);
         } else if (context.A) {
             return {
-                term: dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                term: RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
                 token: context.A[0]
             };
         }
@@ -423,7 +423,7 @@ export class TrigReader extends BaseVisitor {
         const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
 
         return {
-            term: dataFactory.namedNode(namespaceIri.value + unescapedLocalName),
+            term: RdfDataFactory.namedNode(namespaceIri.value + unescapedLocalName),
             token
         };
     }
@@ -435,7 +435,7 @@ export class TrigReader extends BaseVisitor {
         const context = this.getChildren(ctx);
         if (context.BLANK_NODE_LABEL) {
             return {
-                term: dataFactory.blankNode(context.BLANK_NODE_LABEL[0].image),
+                term: RdfDataFactory.blankNode(context.BLANK_NODE_LABEL[0].image),
                 token: context.BLANK_NODE_LABEL[0]
             };
         } else if (context.anon) {
@@ -444,7 +444,7 @@ export class TrigReader extends BaseVisitor {
             // Use pre-assigned ID from LBRACKET token
             const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
             return {
-                term: dataFactory.blankNode(blankNodeId),
+                term: RdfDataFactory.blankNode(blankNodeId),
                 token: token!
             };
         }
@@ -459,7 +459,7 @@ export class TrigReader extends BaseVisitor {
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
         // Use pre-assigned ID from LBRACKET token
         const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
-        const subject = dataFactory.blankNode(blankNodeId);
+        const subject = RdfDataFactory.blankNode(blankNodeId);
         const subjectToken = { term: subject, token };
 
         if (context.predicateObjectList) {
@@ -502,12 +502,12 @@ export class TrigReader extends BaseVisitor {
         let literal: Literal;
         if (context.datatype) {
             const datatype = this.visit(context.datatype[0] as any) as NamedNode;
-            literal = dataFactory.literal(value, datatype);
+            literal = RdfDataFactory.literal(value, datatype);
         } else if (context.LANGTAG) {
-            const langtag = context.LANGTAG[0].image.slice(1);
-            literal = dataFactory.literal(value, langtag);
+            const langtag = getLanguageTag(context.LANGTAG[0].image);
+            literal = RdfDataFactory.literal(value, langtag);
         } else {
-            literal = dataFactory.literal(value);
+            literal = RdfDataFactory.literal(value);
         }
 
         return { term: literal, token };
@@ -520,17 +520,17 @@ export class TrigReader extends BaseVisitor {
         const context = this.getChildren(ctx);
         if (context.INTEGER) {
             return {
-                term: dataFactory.literal(context.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
+                term: RdfDataFactory.literal(context.INTEGER[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
                 token: context.INTEGER[0]
             };
         } else if (context.DECIMAL) {
             return {
-                term: dataFactory.literal(context.DECIMAL[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal')),
+                term: RdfDataFactory.literal(context.DECIMAL[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal')),
                 token: context.DECIMAL[0]
             };
         } else if (context.DOUBLE) {
             return {
-                term: dataFactory.literal(context.DOUBLE[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double')),
+                term: RdfDataFactory.literal(context.DOUBLE[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double')),
                 token: context.DOUBLE[0]
             };
         }
@@ -544,12 +544,12 @@ export class TrigReader extends BaseVisitor {
         const context = this.getChildren(ctx);
         if (context.true) {
             return {
-                term: dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                term: RdfDataFactory.literal('true', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
                 token: context.true[0]
             };
         } else if (context.false) {
             return {
-                term: dataFactory.literal('false', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                term: RdfDataFactory.literal('false', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
                 token: context.false[0]
             };
         }
@@ -586,7 +586,7 @@ export class TrigReader extends BaseVisitor {
 
         // Use pre-assigned ID from LPARENT token for the head blank node
         const baseId = token ? getBlankNodeIdFromToken(token) : undefined;
-        const head = dataFactory.blankNode(baseId);
+        const head = RdfDataFactory.blankNode(baseId);
         let current: BlankNode = head;
         let currentToken: IToken = token;
 
@@ -596,7 +596,7 @@ export class TrigReader extends BaseVisitor {
 
             // Derive rest node IDs from base ID
             const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
-            const next: Term = isLast ? RDF_NIL : dataFactory.blankNode(restId);
+            const next: Term = isLast ? RDF_NIL : RdfDataFactory.blankNode(restId);
             const nextToken = isLast ? closingToken : items[i + 1].token;
 
             this._emitQuad(quads, current, RDF_FIRST, item.term);
@@ -630,7 +630,7 @@ export class TrigReader extends BaseVisitor {
         const object = this.visit(context.ttObject![0] as any) as Term;
 
         return {
-            term: dataFactory.quad(subject, predicate, object),
+            term: RdfDataFactory.quad(subject, predicate, object),
             token
         };
     }
@@ -641,7 +641,7 @@ export class TrigReader extends BaseVisitor {
     protected reifiedTripleInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[]) {
         const context = this.getChildren(ctx);
         const token = this.findFirstToken(context)!;
-        const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+        const rdfReifies = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
 
         const subject = this.visit(context.rtSubject![0], quads as any) as NamedNode | BlankNode;
         const predicate = this.visit(context.predicate![0] as any) as NamedNode;
@@ -654,10 +654,10 @@ export class TrigReader extends BaseVisitor {
             // Use pre-assigned ID from OPEN_REIFIED_TRIPLE token for anonymous reifier
             const openReifiedTripleToken = context.OPEN_REIFIED_TRIPLE?.[0];
             const blankNodeId = openReifiedTripleToken ? getBlankNodeIdFromToken(openReifiedTripleToken) : undefined;
-            reifierNode = dataFactory.blankNode(blankNodeId);
+            reifierNode = RdfDataFactory.blankNode(blankNodeId);
         }
 
-        const tripleTerm = dataFactory.quad(subject, predicate, object);
+        const tripleTerm = RdfDataFactory.quad(subject, predicate, object);
         this._emitQuad(quads, reifierNode, rdfReifies, tripleTerm);
 
         return { term: reifierNode, token };
@@ -878,9 +878,9 @@ export class TrigReader extends BaseVisitor {
      */
     _emitQuad(quads: Quad[], subject: NamedNode | BlankNode, predicate: NamedNode, object: Term): void {
         if (this.currentGraph) {
-            quads.push(dataFactory.quad(subject, predicate, object, this.currentGraph));
+            quads.push(RdfDataFactory.quad(subject, predicate, object, this.currentGraph));
         } else {
-            quads.push(dataFactory.quad(subject, predicate, object));
+            quads.push(RdfDataFactory.quad(subject, predicate, object));
         }
     }
 
@@ -979,9 +979,9 @@ export class TrigReader extends BaseVisitor {
     }
 
     collection(ctx: CstContext, quads: Quad[]): NamedNode | BlankNode {
-        const nil = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
-        const rest = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-        const first = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+        const nil = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+        const rest = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+        const first = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
 
         const objectNodes = ctx.object ?? [];
 
@@ -992,7 +992,7 @@ export class TrigReader extends BaseVisitor {
         // Use pre-assigned ID from LPARENT token for the head blank node
         const lparentToken = ctx.LPARENT?.[0];
         const baseId = lparentToken ? getBlankNodeIdFromToken(lparentToken) : undefined;
-        let head = dataFactory.blankNode(baseId);
+        let head = RdfDataFactory.blankNode(baseId);
         let current = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
@@ -1004,7 +1004,7 @@ export class TrigReader extends BaseVisitor {
             if (i < objectNodes.length - 1) {
                 // Derive rest node IDs from base ID
                 const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
-                const next = dataFactory.blankNode(restId);
+                const next = RdfDataFactory.blankNode(restId);
 
                 this._emitQuad(quads, current, rest, next);
 
@@ -1033,7 +1033,7 @@ export class TrigReader extends BaseVisitor {
         if (ctx.iri) {
             return this.visit(ctx.iri as any) as NamedNode;
         } else if (ctx.A) {
-            return dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+            return RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
         } else {
             throw new Error('Invalid predicate: ' + JSON.stringify(ctx));
         }
@@ -1123,16 +1123,16 @@ export class TrigReader extends BaseVisitor {
         // Use pre-assigned ID from LBRACKET token
         const lbracketToken = ctx.LBRACKET?.[0];
         const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
-        return dataFactory.blankNode(blankNodeId);
+        return RdfDataFactory.blankNode(blankNodeId);
     }
 
     numericLiteral(ctx: CstContext): Literal {
         if (ctx.INTEGER) {
-            return dataFactory.literal(ctx.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer'));
+            return RdfDataFactory.literal(ctx.INTEGER[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer'));
         } else if (ctx.DECIMAL) {
-            return dataFactory.literal(ctx.DECIMAL[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal'));
+            return RdfDataFactory.literal(ctx.DECIMAL[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal'));
         } else if (ctx.DOUBLE) {
-            return dataFactory.literal(ctx.DOUBLE[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double'));
+            return RdfDataFactory.literal(ctx.DOUBLE[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double'));
         } else {
             throw new Error('Invalid numeric literal: ' + JSON.stringify(ctx));
         }
@@ -1140,9 +1140,9 @@ export class TrigReader extends BaseVisitor {
 
     booleanLiteral(ctx: CstContext): Literal {
         if (ctx.true) {
-            return dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
+            return RdfDataFactory.literal('true', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
         } else if (ctx.false) {
-            return dataFactory.literal('false', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
+            return RdfDataFactory.literal('false', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
         } else {
             throw new Error('Invalid boolean literal: ' + JSON.stringify(ctx));
         }
@@ -1154,13 +1154,13 @@ export class TrigReader extends BaseVisitor {
         if (ctx.datatype) {
             const datatype = this.visit(ctx.datatype[0] as any) as NamedNode;
 
-            return dataFactory.literal(value, datatype);
+            return RdfDataFactory.literal(value, datatype);
         } else if (ctx.LANGTAG) {
-            const langtag = ctx.LANGTAG[0].image.slice(1);
+            const langtag = getLanguageTag(ctx.LANGTAG[0].image);
 
-            return dataFactory.literal(value, langtag);
+            return RdfDataFactory.literal(value, langtag);
         } else {
-            return dataFactory.literal(value);
+            return RdfDataFactory.literal(value);
         }
     }
 
@@ -1208,7 +1208,7 @@ export class TrigReader extends BaseVisitor {
 
         const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
 
-        return dataFactory.namedNode(namespaceIri.value + unescapedLocalName);
+        return RdfDataFactory.namedNode(namespaceIri.value + unescapedLocalName);
     }
 
     literal(ctx: CstContext): Literal {
@@ -1232,7 +1232,7 @@ export class TrigReader extends BaseVisitor {
     }
 
     reifiedTriple(ctx: CstContext, quads: Quad[]): NamedNode | BlankNode {
-        const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+        const rdfReifies = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
 
         const subject = this.visit(ctx.rtSubject![0], quads as any) as NamedNode | BlankNode;
         const predicate = this.visit(ctx.predicate![0] as any) as NamedNode;
@@ -1245,10 +1245,10 @@ export class TrigReader extends BaseVisitor {
             // Use pre-assigned ID from OPEN_REIFIED_TRIPLE token for anonymous reifier
             const openReifiedTripleToken = ctx.OPEN_REIFIED_TRIPLE?.[0];
             const blankNodeId = openReifiedTripleToken ? getBlankNodeIdFromToken(openReifiedTripleToken) : undefined;
-            reifierNode = dataFactory.blankNode(blankNodeId);
+            reifierNode = RdfDataFactory.blankNode(blankNodeId);
         }
 
-        const tripleTerm = dataFactory.quad(subject, predicate, object);
+        const tripleTerm = RdfDataFactory.quad(subject, predicate, object);
 
         this._emitQuad(quads, reifierNode, rdfReifies, tripleTerm);
 
@@ -1284,7 +1284,7 @@ export class TrigReader extends BaseVisitor {
         const predicate = this.visit(ctx.predicate![0] as any) as NamedNode;
         const object = this.visit(ctx.ttObject![0] as any) as Term;
 
-        return dataFactory.quad(subject, predicate, object);
+        return RdfDataFactory.quad(subject, predicate, object);
     }
 
     ttSubject(ctx: CstContext): NamedNode | BlankNode | undefined {
@@ -1316,7 +1316,7 @@ export class TrigReader extends BaseVisitor {
             // Use pre-assigned ID from TILDE token for anonymous reifier
             const tildeToken = ctx.TILDE?.[0];
             const blankNodeId = tildeToken ? getBlankNodeIdFromToken(tildeToken) : undefined;
-            return dataFactory.blankNode(blankNodeId);
+            return RdfDataFactory.blankNode(blankNodeId);
         }
     }
 
@@ -1331,8 +1331,8 @@ export class TrigReader extends BaseVisitor {
     processAnnotation(annotationCtx: CstContext | undefined, subject: NamedNode | BlankNode, predicate: NamedNode, object: Term, quads: Quad[]): void {
         if (!annotationCtx) return;
 
-        const rdfReifies = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
-        const tripleTerm = dataFactory.quad(subject, predicate, object);
+        const rdfReifies = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+        const tripleTerm = RdfDataFactory.quad(subject, predicate, object);
 
         const children = annotationCtx.children;
         if (!children) return;
@@ -1396,7 +1396,7 @@ export class TrigReader extends BaseVisitor {
                     const annotationBlockContext = item.ctx?.children;
                     const openAnnotationToken = annotationBlockContext?.OPEN_ANNOTATION?.[0];
                     const blankNodeId = openAnnotationToken ? getBlankNodeIdFromToken(openAnnotationToken) : undefined;
-                    reifierTerm = dataFactory.blankNode(blankNodeId);
+                    reifierTerm = RdfDataFactory.blankNode(blankNodeId);
                     this._emitQuad(quads, reifierTerm, rdfReifies, tripleTerm);
                 }
 
@@ -1429,13 +1429,13 @@ export class TrigReader extends BaseVisitor {
         );
 
         if (value.includes(':')) {
-            return dataFactory.namedNode(value);
+            return RdfDataFactory.namedNode(value);
         } else if (value === '' && this.baseIri) {
-            return dataFactory.namedNode(this.baseIri.value);
+            return RdfDataFactory.namedNode(this.baseIri.value);
         } else if (value !== '' && this.baseIri) {
-            return dataFactory.namedNode(new URL(value, this.baseIri.value).href);
+            return RdfDataFactory.namedNode(new URL(value, this.baseIri.value).href);
         } else {
-            return dataFactory.namedNode(value);
+            return RdfDataFactory.namedNode(value);
         }
     }
 
@@ -1443,12 +1443,12 @@ export class TrigReader extends BaseVisitor {
         if (ctx.BLANK_NODE_LABEL !== undefined) {
             const value = ctx.BLANK_NODE_LABEL[0].image;
 
-            return dataFactory.blankNode(value);
+            return RdfDataFactory.blankNode(value);
         } else {
             // Use pre-assigned ID from LBRACKET token
             const lbracketToken = ctx.LBRACKET?.[0];
             const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
-            return dataFactory.blankNode(blankNodeId);
+            return RdfDataFactory.blankNode(blankNodeId);
         }
     }
 }

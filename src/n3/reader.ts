@@ -1,12 +1,12 @@
 // @ts-nocheck
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 import type { Quad, NamedNode, BlankNode, Literal, Term, Variable } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { N3Parser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
 import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
-import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
+import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor, getLanguageTag } from '../reader-helpers.js';
 import type { N3ReaderCstContext as CstContext } from '../reader-cst-types.js';
 import type {
     DirectiveResult,
@@ -19,12 +19,12 @@ import type {
 const BaseVisitor = createLazyBaseVisitor(() => new N3Parser());
 
 // Well-known IRIs
-const RDF_TYPE = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
-const RDF_FIRST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
-const RDF_REST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-const RDF_NIL = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
-const OWL_SAME_AS = dataFactory.namedNode('http://www.w3.org/2002/07/owl#sameAs');
-const LOG_IMPLIES = dataFactory.namedNode('http://www.w3.org/2000/10/swap/log#implies');
+const RDF_TYPE = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+const RDF_FIRST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+const RDF_REST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+const RDF_NIL = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+const OWL_SAME_AS = RdfDataFactory.namedNode('http://www.w3.org/2002/07/owl#sameAs');
+const LOG_IMPLIES = RdfDataFactory.namedNode('http://www.w3.org/2000/10/swap/log#implies');
 
 /**
  * A visitor class that constructs RDF/JS quads from N3 syntax trees.
@@ -172,16 +172,16 @@ export class N3Reader extends BaseVisitor {
         // Handle path operators: ! (forward) and ^ (reverse)
         if (context.EXCL && context.path) {
             const property = this.visit(context.path[0], quads as any) as NamedNode;
-            const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+            const blank = RdfDataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
 
-            quads.push(dataFactory.quad(nodeToken.term as NamedNode | BlankNode, property, blank));
+            quads.push(RdfDataFactory.quad(nodeToken.term as NamedNode | BlankNode, property, blank));
 
             return { term: blank, token: nodeToken.token };
         } else if (context.CARET && context.path) {
             const property = this.visit(context.path[0], quads as any) as NamedNode;
-            const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+            const blank = RdfDataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
 
-            quads.push(dataFactory.quad(blank, property, nodeToken.term as NamedNode | BlankNode | Literal));
+            quads.push(RdfDataFactory.quad(blank, property, nodeToken.term as NamedNode | BlankNode | Literal));
 
             return { term: blank, token: nodeToken.token };
         }
@@ -359,7 +359,7 @@ export class N3Reader extends BaseVisitor {
 
         if (!namespaceIri) {
             if (prefix === '') {
-                namespaceIri = dataFactory.namedNode('#');
+                namespaceIri = RdfDataFactory.namedNode('#');
 
                 this.namespaces[''] = namespaceIri;
             } else {
@@ -370,7 +370,7 @@ export class N3Reader extends BaseVisitor {
         const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
 
         return {
-            term: dataFactory.namedNode(namespaceIri.value + unescapedLocalName),
+            term: RdfDataFactory.namedNode(namespaceIri.value + unescapedLocalName),
             token
         };
     }
@@ -385,7 +385,7 @@ export class N3Reader extends BaseVisitor {
             const token = context.BLANK_NODE_LABEL[0];
             
             return {
-                term: dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2)),
+                term: RdfDataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2)),
                 token
             };
         } else if (context.anon) {
@@ -394,7 +394,7 @@ export class N3Reader extends BaseVisitor {
             // Use pre-assigned ID from LBRACKET token
             const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
             return {
-                term: dataFactory.blankNode(blankNodeId),
+                term: RdfDataFactory.blankNode(blankNodeId),
                 token: token!
             };
         }
@@ -411,16 +411,16 @@ export class N3Reader extends BaseVisitor {
         // Use pre-assigned ID from LBRACKET token
         const token = context.LBRACKET ? context.LBRACKET[0] : this.findFirstToken(context)!;
         const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
-        const subject = dataFactory.blankNode(blankNodeId);
+        const subject = RdfDataFactory.blankNode(blankNodeId);
         const subjectToken = { term: subject, token };
 
         if (context.predicateObjectList) {
             for (const { predicate, object, inversePredicate } of this.predicateObjectListInfo(context.predicateObjectList[0], quads)) {
                 if (inversePredicate) {
-                    quads.push(dataFactory.quad(object.term as NamedNode | BlankNode, predicate.term as NamedNode, subject));
+                    quads.push(RdfDataFactory.quad(object.term as NamedNode | BlankNode, predicate.term as NamedNode, subject));
                     infoResults.push(toQuadContext(object.term, object.token, predicate.term, predicate.token, subjectToken.term, subjectToken.token));
                 } else {
-                    quads.push(dataFactory.quad(subject, predicate.term as NamedNode, object.term as NamedNode | BlankNode | Literal));
+                    quads.push(RdfDataFactory.quad(subject, predicate.term as NamedNode, object.term as NamedNode | BlankNode | Literal));
                     infoResults.push(toQuadContext(subjectToken.term, subjectToken.token, predicate.term, predicate.token, object.term, object.token));
                 }
             }
@@ -459,12 +459,12 @@ export class N3Reader extends BaseVisitor {
 
         if (context.datatype) {
             const datatype = this.visit(context.datatype[0] as any) as NamedNode;
-            literal = dataFactory.literal(value, datatype);
+            literal = RdfDataFactory.literal(value, datatype);
         } else if (context.LANGTAG) {
-            const langtag = context.LANGTAG[0].image.slice(1);
-            literal = dataFactory.literal(value, langtag);
+            const langtag = getLanguageTag(context.LANGTAG[0].image);
+            literal = RdfDataFactory.literal(value, langtag);
         } else {
-            literal = dataFactory.literal(value);
+            literal = RdfDataFactory.literal(value);
         }
 
         return { term: literal, token };
@@ -478,17 +478,17 @@ export class N3Reader extends BaseVisitor {
 
         if (context.INTEGER) {
             return {
-                term: dataFactory.literal(context.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
+                term: RdfDataFactory.literal(context.INTEGER[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer')),
                 token: context.INTEGER[0]
             };
         } else if (context.DECIMAL) {
             return {
-                term: dataFactory.literal(context.DECIMAL[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal')),
+                term: RdfDataFactory.literal(context.DECIMAL[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal')),
                 token: context.DECIMAL[0]
             };
         } else if (context.DOUBLE) {
             return {
-                term: dataFactory.literal(context.DOUBLE[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double')),
+                term: RdfDataFactory.literal(context.DOUBLE[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double')),
                 token: context.DOUBLE[0]
             };
         }
@@ -504,12 +504,12 @@ export class N3Reader extends BaseVisitor {
 
         if (context.true) {
             return {
-                term: dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                term: RdfDataFactory.literal('true', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
                 token: context.true[0]
             };
         } else if (context.false) {
             return {
-                term: dataFactory.literal('false', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
+                term: RdfDataFactory.literal('false', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean')),
                 token: context.false[0]
             };
         }
@@ -532,23 +532,23 @@ export class N3Reader extends BaseVisitor {
         // Use pre-assigned ID from LPARENT token for the head blank node
         const baseId = token ? getBlankNodeIdFromToken(token) : undefined;
 
-        let head = dataFactory.blankNode(baseId);
+        let head = RdfDataFactory.blankNode(baseId);
         let current: BlankNode = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
             const element = this.visit(objectNodes[i], quads as any) as Term;
 
-            quads.push(dataFactory.quad(current, RDF_FIRST, element as NamedNode | BlankNode | Literal));
+            quads.push(RdfDataFactory.quad(current, RDF_FIRST, element as NamedNode | BlankNode | Literal));
 
             if (i < objectNodes.length - 1) {
                 // Derive rest node IDs from base ID
                 const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
-                const next = dataFactory.blankNode(restId);
+                const next = RdfDataFactory.blankNode(restId);
 
-                quads.push(dataFactory.quad(current, RDF_REST, next));
+                quads.push(RdfDataFactory.quad(current, RDF_REST, next));
                 current = next;
             } else {
-                quads.push(dataFactory.quad(current, RDF_REST, RDF_NIL));
+                quads.push(RdfDataFactory.quad(current, RDF_REST, RDF_NIL));
             }
         }
 
@@ -570,10 +570,10 @@ export class N3Reader extends BaseVisitor {
 
         // Use pre-assigned ID from LCURLY token for formula blank node
         const blankNodeId = token ? getBlankNodeIdFromToken(token) : undefined;
-        const graphNode = dataFactory.blankNode(blankNodeId);
+        const graphNode = RdfDataFactory.blankNode(blankNodeId);
 
         for (const q of formulaQuads) {
-            parentQuads.push(dataFactory.quad(q.subject, q.predicate, q.object, graphNode));
+            parentQuads.push(RdfDataFactory.quad(q.subject, q.predicate, q.object, graphNode));
         }
 
         return { term: graphNode, token };
@@ -602,7 +602,7 @@ export class N3Reader extends BaseVisitor {
         const name = token.image.slice(1);
 
         return {
-            term: dataFactory.variable(name),
+            term: RdfDataFactory.variable(name),
             token
         };
     }
@@ -708,9 +708,9 @@ export class N3Reader extends BaseVisitor {
             for (const { predicate, object, inversePredicate } of this.visit(ctx.predicateObjectList[0], quads as any) as PredicateObjectResult[]) {
                 if (inversePredicate) {
                     // For `<- pred`, the object becomes the subject and vice versa
-                    quads.push(dataFactory.quad(object as NamedNode | BlankNode, predicate as NamedNode, subject as NamedNode | BlankNode | Literal));
+                    quads.push(RdfDataFactory.quad(object as NamedNode | BlankNode, predicate as NamedNode, subject as NamedNode | BlankNode | Literal));
                 } else {
-                    quads.push(dataFactory.quad(subject as NamedNode | BlankNode, predicate as NamedNode, object as NamedNode | BlankNode | Literal));
+                    quads.push(RdfDataFactory.quad(subject as NamedNode | BlankNode, predicate as NamedNode, object as NamedNode | BlankNode | Literal));
                 }
             }
         }
@@ -816,17 +816,17 @@ export class N3Reader extends BaseVisitor {
         if (ctx.EXCL && ctx.path) {
             // a!b means: create a blank node _:x, emit a b _:x, return _:x
             const property = this.visit(ctx.path[0], quads as any) as NamedNode;
-            const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+            const blank = RdfDataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
 
-            quads.push(dataFactory.quad(node as NamedNode | BlankNode, property, blank));
+            quads.push(RdfDataFactory.quad(node as NamedNode | BlankNode, property, blank));
 
             return blank;
         } else if (ctx.CARET && ctx.path) {
             // a^b means: create a blank node _:x, emit _:x b a, return _:x
             const property = this.visit(ctx.path[0], quads as any) as NamedNode;
-            const blank = dataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
+            const blank = RdfDataFactory.blankNode(`_path${this._pathBlankNodeCounter++}`);
 
-            quads.push(dataFactory.quad(blank, property, node as NamedNode | BlankNode | Literal));
+            quads.push(RdfDataFactory.quad(blank, property, node as NamedNode | BlankNode | Literal));
 
             return blank;
         }
@@ -868,11 +868,11 @@ export class N3Reader extends BaseVisitor {
         // Use pre-assigned ID from LCURLY token for formula blank node
         const lcurlyToken = ctx.LCURLY?.[0];
         const blankNodeId = lcurlyToken ? getBlankNodeIdFromToken(lcurlyToken) : undefined;
-        const graphNode = dataFactory.blankNode(blankNodeId);
+        const graphNode = RdfDataFactory.blankNode(blankNodeId);
 
         // Push formula quads into the parent quads with the graph node
         for (const q of formulaQuads) {
-            parentQuads.push(dataFactory.quad(q.subject, q.predicate, q.object, graphNode));
+            parentQuads.push(RdfDataFactory.quad(q.subject, q.predicate, q.object, graphNode));
         }
 
         return graphNode;
@@ -902,7 +902,7 @@ export class N3Reader extends BaseVisitor {
         // Quick variables are represented as N3 variables — we use blank nodes
         // following the convention of other N3 implementations.
         const name = ctx.QUICK_VAR![0].image.slice(1); // Remove leading '?'
-        return dataFactory.variable(name);
+        return RdfDataFactory.variable(name);
     }
 
     // ── Collections ────────────────────────────────────────────────────────
@@ -918,22 +918,22 @@ export class N3Reader extends BaseVisitor {
         const lparentToken = ctx.LPARENT?.[0];
         const baseId = lparentToken ? getBlankNodeIdFromToken(lparentToken) : undefined;
 
-        let head = dataFactory.blankNode(baseId);
+        let head = RdfDataFactory.blankNode(baseId);
         let current: BlankNode = head;
 
         for (let i = 0; i < objectNodes.length; i++) {
             const element = this.visit(objectNodes[i], quads as any) as Term;
 
-            quads.push(dataFactory.quad(current, RDF_FIRST, element as NamedNode | BlankNode | Literal));
+            quads.push(RdfDataFactory.quad(current, RDF_FIRST, element as NamedNode | BlankNode | Literal));
 
             if (i < objectNodes.length - 1) {
                 // Derive rest node IDs from base ID
                 const restId = baseId ? `${baseId}-rest-${i + 1}` : undefined;
-                const next = dataFactory.blankNode(restId);
-                quads.push(dataFactory.quad(current, RDF_REST, next));
+                const next = RdfDataFactory.blankNode(restId);
+                quads.push(RdfDataFactory.quad(current, RDF_REST, next));
                 current = next;
             } else {
-                quads.push(dataFactory.quad(current, RDF_REST, RDF_NIL));
+                quads.push(RdfDataFactory.quad(current, RDF_REST, RDF_NIL));
             }
         }
 
@@ -946,14 +946,14 @@ export class N3Reader extends BaseVisitor {
         // Use pre-assigned ID from LBRACKET token
         const lbracketToken = ctx.LBRACKET?.[0];
         const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
-        const subject = dataFactory.blankNode(blankNodeId);
+        const subject = RdfDataFactory.blankNode(blankNodeId);
 
         if (ctx.predicateObjectList) {
             for (const { predicate, object, inversePredicate } of this.visit(ctx.predicateObjectList[0], quads as any) as PredicateObjectResult[]) {
                 if (inversePredicate) {
-                    quads.push(dataFactory.quad(object as NamedNode | BlankNode, predicate as NamedNode, subject));
+                    quads.push(RdfDataFactory.quad(object as NamedNode | BlankNode, predicate as NamedNode, subject));
                 } else {
-                    quads.push(dataFactory.quad(subject, predicate as NamedNode, object as NamedNode | BlankNode | Literal));
+                    quads.push(RdfDataFactory.quad(subject, predicate as NamedNode, object as NamedNode | BlankNode | Literal));
                 }
             }
         }
@@ -982,7 +982,7 @@ export class N3Reader extends BaseVisitor {
         if (!namespaceIri) {
             // N3 allows implicit empty prefix — resolve to '#'
             if (prefix === '') {
-                namespaceIri = dataFactory.namedNode('#');
+                namespaceIri = RdfDataFactory.namedNode('#');
                 this.namespaces[''] = namespaceIri;
             } else {
                 throw new Error(`Undefined prefix: ${prefix}`);
@@ -992,7 +992,7 @@ export class N3Reader extends BaseVisitor {
         // Unescape backslash-escaped characters in local names
         const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
 
-        return dataFactory.namedNode(namespaceIri.value + unescapedLocalName);
+        return RdfDataFactory.namedNode(namespaceIri.value + unescapedLocalName);
     }
 
     // ── Blank Nodes ────────────────────────────────────────────────────────
@@ -1012,7 +1012,7 @@ export class N3Reader extends BaseVisitor {
         const lbracketToken = ctx.LBRACKET?.[0];
         const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
         
-        return dataFactory.blankNode(blankNodeId);
+        return RdfDataFactory.blankNode(blankNodeId);
     }
 
     // ── Literals ───────────────────────────────────────────────────────────
@@ -1031,11 +1031,11 @@ export class N3Reader extends BaseVisitor {
 
     numericLiteral(ctx: CstContext): Literal {
         if (ctx.INTEGER) {
-            return dataFactory.literal(ctx.INTEGER[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer'));
+            return RdfDataFactory.literal(ctx.INTEGER[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer'));
         } else if (ctx.DECIMAL) {
-            return dataFactory.literal(ctx.DECIMAL[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal'));
+            return RdfDataFactory.literal(ctx.DECIMAL[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal'));
         } else if (ctx.DOUBLE) {
-            return dataFactory.literal(ctx.DOUBLE[0].image, dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double'));
+            return RdfDataFactory.literal(ctx.DOUBLE[0].image, RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double'));
         } else {
             throw new Error('Invalid numeric literal: ' + JSON.stringify(ctx));
         }
@@ -1043,9 +1043,9 @@ export class N3Reader extends BaseVisitor {
 
     booleanLiteral(ctx: CstContext): Literal {
         if (ctx.true) {
-            return dataFactory.literal('true', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
+            return RdfDataFactory.literal('true', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
         } else if (ctx.false) {
-            return dataFactory.literal('false', dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
+            return RdfDataFactory.literal('false', RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'));
         } else {
             throw new Error('Invalid boolean literal: ' + JSON.stringify(ctx));
         }
@@ -1056,12 +1056,12 @@ export class N3Reader extends BaseVisitor {
 
         if (ctx.datatype) {
             const datatype = this.visit(ctx.datatype[0] as any) as NamedNode;
-            return dataFactory.literal(value, datatype);
+            return RdfDataFactory.literal(value, datatype);
         } else if (ctx.LANGTAG) {
-            const langtag = ctx.LANGTAG[0].image.slice(1);
-            return dataFactory.literal(value, langtag);
+            const langtag = getLanguageTag(ctx.LANGTAG[0].image);
+            return RdfDataFactory.literal(value, langtag);
         } else {
-            return dataFactory.literal(value);
+            return RdfDataFactory.literal(value);
         }
     }
 
@@ -1112,26 +1112,26 @@ export class N3Reader extends BaseVisitor {
         );
 
         if (value.includes(':')) {
-            return dataFactory.namedNode(value);
+            return RdfDataFactory.namedNode(value);
         } else if (value === '' && this.baseIri) {
-            return dataFactory.namedNode(this.baseIri.value);
+            return RdfDataFactory.namedNode(this.baseIri.value);
         } else if (value !== '' && this.baseIri) {
-            return dataFactory.namedNode(new URL(value, this.baseIri.value).href);
+            return RdfDataFactory.namedNode(new URL(value, this.baseIri.value).href);
         } else {
-            return dataFactory.namedNode(value);
+            return RdfDataFactory.namedNode(value);
         }
     }
 
     getBlankNode(ctx: CstContext): BlankNode {
         if (ctx.BLANK_NODE_LABEL !== undefined) {
             const token = ctx.BLANK_NODE_LABEL[0];
-            return dataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
+            return RdfDataFactory.blankNode(getBlankNodeIdFromToken(token) ?? token.image.substring(2));
         } else {
             // Use pre-assigned ID from LBRACKET token
             const lbracketToken = ctx.LBRACKET?.[0];
             const blankNodeId = lbracketToken ? getBlankNodeIdFromToken(lbracketToken) : undefined;
 
-            return dataFactory.blankNode(blankNodeId);
+            return RdfDataFactory.blankNode(blankNodeId);
         }
     }
 }

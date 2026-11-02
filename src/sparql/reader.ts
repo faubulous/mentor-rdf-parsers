@@ -1,26 +1,26 @@
 // @ts-nocheck
-import dataFactory from '@rdfjs/data-model';
+import { RdfDataFactory } from '../data-factory.js';
 import type { Quad, NamedNode, BlankNode, Literal, Term } from '@rdfjs/types';
 import type { CstNode, IToken } from 'chevrotain';
 import { SparqlParser } from './parser.js';
 import { sparql, BUILT_IN_FUNCTIONS } from './vocabulary.js';
 import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
-import { getCstChildren, getOrderedCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor } from '../reader-helpers.js';
+import { getCstChildren, getOrderedCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor, getLanguageTag } from '../reader-helpers.js';
 
 const BaseVisitor = createLazyBaseVisitor(() => new SparqlParser());
 
-const RDF_TYPE = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
-const RDF_FIRST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
-const RDF_REST = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
-const RDF_NIL = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
-const RDF_REIFIES = dataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
+const RDF_TYPE = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+const RDF_FIRST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
+const RDF_REST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#rest');
+const RDF_NIL = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#nil');
+const RDF_REIFIES = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies');
 
-const XSD_INTEGER = dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer');
-const XSD_DECIMAL = dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal');
-const XSD_DOUBLE = dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double');
-const XSD_BOOLEAN = dataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean');
+const XSD_INTEGER = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#integer');
+const XSD_DECIMAL = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#decimal');
+const XSD_DOUBLE = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double');
+const XSD_BOOLEAN = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean');
 
-const TRUE = dataFactory.literal('true', XSD_BOOLEAN);
+const TRUE = RdfDataFactory.literal('true', XSD_BOOLEAN);
 
 /**
  * The result of visiting a group graph pattern: either the elements of the
@@ -101,14 +101,14 @@ export class SparqlReader extends BaseVisitor {
     // ==========================================
 
     protected emit(subject: Term, predicate: NamedNode, object: Term): void {
-        this._quads.push(dataFactory.quad(subject, predicate, object));
+        this._quads.push(RdfDataFactory.quad(subject, predicate, object));
     }
 
     /**
      * Create a fresh structural blank node, optionally typed.
      */
     protected createNode(type?: NamedNode): BlankNode {
-        const node = dataFactory.blankNode();
+        const node = RdfDataFactory.blankNode();
 
         if (type) {
             this.emit(node, RDF_TYPE, type);
@@ -125,14 +125,14 @@ export class SparqlReader extends BaseVisitor {
             return RDF_NIL;
         }
 
-        const head = dataFactory.blankNode();
+        const head = RdfDataFactory.blankNode();
         let current = head;
 
         for (let i = 0; i < items.length; i++) {
             this.emit(current, RDF_FIRST, items[i]);
 
             if (i < items.length - 1) {
-                const next = dataFactory.blankNode();
+                const next = RdfDataFactory.blankNode();
                 this.emit(current, RDF_REST, next);
                 current = next;
             } else {
@@ -200,7 +200,7 @@ export class SparqlReader extends BaseVisitor {
      */
     protected syntacticBlankNode(token?: IToken): BlankNode {
         const id = token ? getBlankNodeIdFromToken(token) : undefined;
-        const node = dataFactory.blankNode(id);
+        const node = RdfDataFactory.blankNode(id);
         this.emit(node, RDF_TYPE, sparql.BlankNode);
         return node;
     }
@@ -213,10 +213,10 @@ export class SparqlReader extends BaseVisitor {
         let node = this.variables.get(name);
 
         if (!node) {
-            node = dataFactory.blankNode();
+            node = RdfDataFactory.blankNode();
             this.variables.set(name, node);
             this.emit(node, RDF_TYPE, sparql.Variable);
-            this.emit(node, sparql.varName, dataFactory.literal(name));
+            this.emit(node, sparql.varName, RdfDataFactory.literal(name));
         }
 
         return node;
@@ -227,16 +227,16 @@ export class SparqlReader extends BaseVisitor {
      */
     protected resolveIri(value: string): NamedNode {
         if (value === '' && this.baseIri) {
-            return dataFactory.namedNode(this.baseIri.value);
+            return RdfDataFactory.namedNode(this.baseIri.value);
         } else if (value !== '' && this.baseIri) {
             try {
-                return dataFactory.namedNode(new URL(value, this.baseIri.value).href);
+                return RdfDataFactory.namedNode(new URL(value, this.baseIri.value).href);
             } catch {
-                return dataFactory.namedNode(value);
+                return RdfDataFactory.namedNode(value);
             }
         }
 
-        return dataFactory.namedNode(value);
+        return RdfDataFactory.namedNode(value);
     }
 
     /**
@@ -285,7 +285,7 @@ export class SparqlReader extends BaseVisitor {
         }
 
         if (root && this.versionString !== null) {
-            this.emit(root, sparql.version, dataFactory.literal(this.versionString));
+            this.emit(root, sparql.version, RdfDataFactory.literal(this.versionString));
         }
 
         // Give the root node a stable identity when a root IRI is configured.
@@ -295,7 +295,7 @@ export class SparqlReader extends BaseVisitor {
             const rootIri = this.rootIri;
 
             this._quads = this._quads.map(q => (q.subject.equals(root) || q.object.equals(root))
-                ? dataFactory.quad(
+                ? RdfDataFactory.quad(
                     q.subject.equals(root) ? rootIri : q.subject,
                     q.predicate,
                     q.object.equals(root) ? rootIri : q.object)
@@ -610,11 +610,11 @@ export class SparqlReader extends BaseVisitor {
     }
 
     limitClause(ctx, node: Term): void {
-        this.emit(node, sparql.limit, dataFactory.literal(ctx.INTEGER[0].image, XSD_INTEGER));
+        this.emit(node, sparql.limit, RdfDataFactory.literal(ctx.INTEGER[0].image, XSD_INTEGER));
     }
 
     offsetClause(ctx, node: Term): void {
-        this.emit(node, sparql.offset, dataFactory.literal(ctx.INTEGER[0].image, XSD_INTEGER));
+        this.emit(node, sparql.offset, RdfDataFactory.literal(ctx.INTEGER[0].image, XSD_INTEGER));
     }
 
     // ==========================================
@@ -981,7 +981,7 @@ export class SparqlReader extends BaseVisitor {
 
         for (let i = 0; i < members.length; i++) {
             const cellId = i === 0 ? headId : (headId ? `${headId}-rest-${i}` : undefined);
-            const cell = dataFactory.blankNode(cellId);
+            const cell = RdfDataFactory.blankNode(cellId);
             this.emit(cell, RDF_TYPE, sparql.BlankNode);
             cells.push(cell);
         }
@@ -1800,7 +1800,7 @@ export class SparqlReader extends BaseVisitor {
         }
 
         if (ctx.string) {
-            this.emit(node, sparql.separator, dataFactory.literal(this.visit(ctx.string[0])));
+            this.emit(node, sparql.separator, RdfDataFactory.literal(this.visit(ctx.string[0])));
         }
 
         return node;
@@ -2133,7 +2133,7 @@ export class SparqlReader extends BaseVisitor {
 
         const unescapedLocalName = localName.replace(/\\([_~.\-!$&'()*+,;=/?#@%])/g, '$1');
 
-        return dataFactory.namedNode(namespaceIri.value + unescapedLocalName);
+        return RdfDataFactory.namedNode(namespaceIri.value + unescapedLocalName);
     }
 
     blankNode(ctx): Term {
@@ -2145,10 +2145,10 @@ export class SparqlReader extends BaseVisitor {
             let node = this.blankNodes.get(id);
 
             if (!node) {
-                node = dataFactory.blankNode(id);
+                node = RdfDataFactory.blankNode(id);
                 this.blankNodes.set(id, node);
                 this.emit(node, RDF_TYPE, sparql.BlankNode);
-                this.emit(node, sparql.label, dataFactory.literal(label));
+                this.emit(node, sparql.label, RdfDataFactory.literal(label));
             }
 
             return node;
@@ -2165,12 +2165,12 @@ export class SparqlReader extends BaseVisitor {
         const value = this.visit(ctx.string[0]);
 
         if (ctx.LANGTAG) {
-            return dataFactory.literal(value, ctx.LANGTAG[0].image.slice(1));
+            return RdfDataFactory.literal(value, getLanguageTag(ctx.LANGTAG[0].image));
         } else if (ctx.iri) {
-            return dataFactory.literal(value, this.visit(ctx.iri[0]));
+            return RdfDataFactory.literal(value, this.visit(ctx.iri[0]));
         }
 
-        return dataFactory.literal(value);
+        return RdfDataFactory.literal(value);
     }
 
     string(ctx): string {
@@ -2229,10 +2229,10 @@ export class SparqlReader extends BaseVisitor {
             datatype = XSD_DOUBLE;
         }
 
-        return dataFactory.literal(token.image, datatype);
+        return RdfDataFactory.literal(token.image, datatype);
     }
 
     booleanLiteral(ctx): Literal {
-        return dataFactory.literal(ctx['true'] ? 'true' : 'false', XSD_BOOLEAN);
+        return RdfDataFactory.literal(ctx['true'] ? 'true' : 'false', XSD_BOOLEAN);
     }
 }
