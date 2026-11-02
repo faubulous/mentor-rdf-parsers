@@ -144,6 +144,23 @@ export class SparqlReader extends BaseVisitor {
     }
 
     /**
+     * Visit the given nodes in order and collect the terms they return.
+     * @param nodes The nodes to visit, which return term arrays; none when the rule is absent.
+     * @returns The terms of all nodes, in the order of the nodes.
+     */
+    protected visitAll(nodes: CstNode[] | undefined): Term[] {
+        const elements: Term[] = [];
+
+        for (const node of nodes ?? []) {
+            for (const element of this.visit(node) as Term[]) {
+                elements.push(element);
+            }
+        }
+
+        return elements;
+    }
+
+    /**
      * Create a sparql:TriplePattern element node.
      */
     protected triplePatternNode(subject: Term, predicate: Term, object: Term): BlankNode {
@@ -715,23 +732,11 @@ export class SparqlReader extends BaseVisitor {
     }
 
     groupGraphPatternSub(ctx): Term[] {
-        const elements: Term[] = [];
-
-        for (const { node } of getOrderedCstChildren(ctx, ['triplesBlock', 'graphPatternNotTriples'])) {
-            elements.push(...this.visit(node));
-        }
-
-        return elements;
+        return this.visitAll(getOrderedCstChildren(ctx, ['triplesBlock', 'graphPatternNotTriples']).map(({ node }) => node));
     }
 
     triplesBlock(ctx): Term[] {
-        const elements = this.visit(ctx.triplesSameSubjectPath[0]);
-
-        if (ctx.triplesBlock) {
-            elements.push(...this.visit(ctx.triplesBlock[0]));
-        }
-
-        return elements;
+        return this.visitAll(ctx.triplesSameSubjectPath);
     }
 
     graphPatternNotTriples(ctx): Term[] {
@@ -999,13 +1004,7 @@ export class SparqlReader extends BaseVisitor {
     // ==========================================
 
     triplesTemplate(ctx): Term[] {
-        const elements = this.visit(ctx.triplesSameSubject[0]);
-
-        if (ctx.triplesTemplate) {
-            elements.push(...this.visit(ctx.triplesTemplate[0]));
-        }
-
-        return elements;
+        return this.visitAll(ctx.triplesSameSubject);
     }
 
     constructTemplate(ctx): Term[] {
@@ -1013,13 +1012,7 @@ export class SparqlReader extends BaseVisitor {
     }
 
     constructTriples(ctx): Term[] {
-        const elements = this.visit(ctx.triplesSameSubject[0]);
-
-        if (ctx.constructTriples) {
-            elements.push(...this.visit(ctx.constructTriples[0]));
-        }
-
-        return elements;
+        return this.visitAll(ctx.triplesSameSubject);
     }
 
     triplesSameSubject(ctx): Term[] {
@@ -2034,13 +2027,7 @@ export class SparqlReader extends BaseVisitor {
     }
 
     quads(ctx): Term[] {
-        const elements: Term[] = [];
-
-        for (const { node } of getOrderedCstChildren(ctx, ['triplesTemplate', 'quadsNotTriples'])) {
-            elements.push(...this.visit(node));
-        }
-
-        return elements;
+        return this.visitAll(getOrderedCstChildren(ctx, ['triplesTemplate', 'quadsNotTriples']).map(({ node }) => node));
     }
 
     quadsNotTriples(ctx): Term[] {

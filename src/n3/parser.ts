@@ -417,25 +417,30 @@ export class N3Parser extends CstParser implements IParser {
 
     /**
      * formulaContent ::= n3Statement ('.' formulaContent?)? | sparqlDirective formulaContent?
+     *
+     * Parsed as a loop over directives and statements rather than by recursion, so that the
+     * depth of the parse does not grow with the number of statements in a formula. A statement
+     * without a period ends the content, as in the production.
      */
     formulaContent = this.RULE('formulaContent', () => {
-        this.OR([
-            {
-                ALT: () => {
-                    this.SUBRULE1(this.sparqlDirective);
-                    this.OPTION1(() => this.SUBRULE1(this.formulaContent));
-                }
-            },
-            {
-                ALT: () => {
-                    this.SUBRULE2(this.n3Statement);
-                    this.OPTION2(() => {
-                        this.CONSUME(RdfToken.PERIOD);
-                        this.OPTION3(() => this.SUBRULE2(this.formulaContent));
-                    });
-                }
+        // Declared per invocation, because formulas nest.
+        let mayContinue = true;
+
+        this.AT_LEAST_ONE({
+            GATE: () => mayContinue,
+            DEF: () => {
+                this.OR([
+                    { ALT: () => this.SUBRULE(this.sparqlDirective) },
+                    {
+                        ALT: () => {
+                            this.SUBRULE(this.n3Statement);
+
+                            mayContinue = this.OPTION(() => this.CONSUME(RdfToken.PERIOD)) !== undefined;
+                        }
+                    }
+                ]);
             }
-        ]);
+        });
     });
 
     // ── Quick Variables ────────────────────────────────────────────────────

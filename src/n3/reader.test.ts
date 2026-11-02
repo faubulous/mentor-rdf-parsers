@@ -484,3 +484,47 @@ describe("N3Reader.readQuadContexts", () => {
         expect(infos[0].objectToken.startColumn).toBeDefined();
     });
 });
+
+describe("N3Reader - formula content", () => {
+    /**
+     * More statements than the call stack allows when each statement adds a parser frame.
+     */
+    const STATEMENT_COUNT = 5000;
+
+    /**
+     * Parses an N3 document, throwing on syntax errors.
+     * @param input The N3 document.
+     */
+    function parse(input: string) {
+        return new N3Parser().parse(new N3Lexer().tokenize(input).tokens);
+    }
+
+    it('reads a formula with more statements than the call stack is deep', () => {
+        const statements = Array.from({ length: STATEMENT_COUNT }, (_, i) => `:s${i} :p "v${i}" .`);
+        const cst = parse(`@prefix : <http://example.org/> .\n:doc :says {\n${statements.join('\n')}\n} .`);
+
+        // The statements of the formula and the statement holding it.
+        expect(new N3Reader().visit(cst)).toHaveLength(STATEMENT_COUNT + 1);
+        expect(new N3Reader().readQuadContexts(cst)).toHaveLength(STATEMENT_COUNT + 1);
+    });
+
+    it('returns a quad context for every statement of a formula', () => {
+        const cst = parse('@prefix : <http://example.org/> .\n:doc :says { :a :b :c . :d :e :f } .');
+        const infos = new N3Reader().readQuadContexts(cst);
+
+        expect(infos.map(i => i.subject.value)).toEqual(expect.arrayContaining(['http://example.org/a', 'http://example.org/d']));
+        expect(infos).toHaveLength(3);
+    });
+
+    it('applies a directive in a formula to the statements after it', () => {
+        const cst = parse('@prefix : <http://example.org/> .\n:doc :says { :a :b :c . PREFIX ex: <http://example.org/ns#> ex:d ex:e ex:f } .');
+        const subjects = (new N3Reader().visit(cst) as { subject: { value: string } }[]).map(q => q.subject.value);
+
+        expect(subjects).toContain('http://example.org/a');
+        expect(subjects).toContain('http://example.org/ns#d');
+    });
+
+    it('rejects two statements without a period between them in a formula', () => {
+        expect(() => parse('@prefix : <http://example.org/> .\n:doc :says { :a :b :c :d :e :f } .')).toThrow();
+    });
+});

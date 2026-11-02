@@ -247,12 +247,9 @@ export class TrigReader extends BaseVisitor {
      */
     protected triplesBlockInfo(ctx: CstContext, quads: Quad[], infoResults: QuadContext[], graphToken?: any): void {
         const context = this.getChildren(ctx);
-        if (context.triples) {
-            this.triplesInfo(context.triples[0], quads, infoResults, graphToken);
-        }
 
-        if (context.triplesBlock) {
-            this.triplesBlockInfo(context.triplesBlock[0], quads, infoResults, graphToken);
+        for (const triples of context.triples ?? []) {
+            this.triplesInfo(triples, quads, infoResults, graphToken);
         }
     }
 
@@ -815,13 +812,8 @@ export class TrigReader extends BaseVisitor {
      * https://www.w3.org/TR/trig/#grammar-production-triplesBlock
      */
     triplesBlock(ctx: CstContext, quads: Quad[]): void {
-        if (ctx.triples) {
-            this.visit(ctx.triples[0], quads as any);
-        }
-
-        // Handle recursive triplesBlock
-        if (ctx.triplesBlock) {
-            this.visit(ctx.triplesBlock[0], quads as any);
+        for (const triples of ctx.triples ?? []) {
+            this.visit(triples, quads as any);
         }
     }
 
