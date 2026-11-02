@@ -119,11 +119,11 @@ const DIRECTIVE_TOKENS: Record<string, number> = {
  * A node written as a subject is keyed by its place, so adding an anonymous subject, such as an
  * N3 formula, before it changes its key and those of the nodes inside it.
  *
- * The labeller follows the statements token by token, without parsing them, so that the keys
+ * The key generator follows the statements token by token, without parsing them, so that the keys
  * are known when the document is tokenized. Where the tokens do not form valid statements the
  * keys are still unique, but may change with edits nearby.
  */
-export class BlankNodeLabeller {
+export class BlankNodeKeyGenerator {
     private readonly _keys = new Map<IToken, string>();
 
     private readonly _occurrences = new Map<string, number>();
@@ -137,17 +137,17 @@ export class BlankNodeLabeller {
     private _skipsDatatype = false;
 
     /**
-     * Create a labeller for a syntax.
+     * Create a key generator for a syntax.
      * @param _layout How the statements of the syntax are laid out.
      */
     constructor(private readonly _layout: StatementLayout) { }
 
     /**
-     * Key the anonymous blank nodes of a document.
+     * Generate the keys of the anonymous blank nodes of a document.
      * @param tokens The tokens of the document.
      * @returns The key of each token that opens an anonymous blank node.
      */
-    label(tokens: IToken[]): Map<IToken, string> {
+    generate(tokens: IToken[]): Map<IToken, string> {
         this._frames = [this._createFrame('document', '', 'subject', false)];
 
         for (const token of tokens) {

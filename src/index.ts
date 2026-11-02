@@ -18,7 +18,7 @@ export { TrigReader } from './trig/reader.js';
 export { TurtleLexer, TurtleParser, TurtleTokens } from './turtle/parser.js';
 export { TurtleReader } from './turtle/reader.js';
 export { TurtleQuadReader } from './turtle/quad-reader.js';
-export { type StatementLayout } from './blank-node-labeller.js';
+export { type StatementLayout } from './blank-node-key-generator.js';
 export { QuadReaderError } from './quad-reader-error.js';
 export { TriplateToken } from './triplate/tokens.js';
 export { tokenizeWithTriplate, type TriplateLexingResult } from './triplate/overlay.js';

@@ -1,6 +1,6 @@
 import { IToken } from "chevrotain";
 import { RdfToken } from "./tokens.js";
-import { BlankNodeLabeller, StatementLayout } from "./blank-node-labeller.js";
+import { BlankNodeKeyGenerator, StatementLayout } from "./blank-node-key-generator.js";
 import { SparqlLexer } from './sparql/parser.js';
 
 /**
@@ -46,11 +46,11 @@ export const defaultBlankNodeIdGenerator: BlankNodeIdGenerator = (counter: numbe
  * @param tokens The array of tokens to process.
  * @param generator Optional custom ID generator function. Defaults to generating 'b0', 'b1', etc.
  * @param layout How the statements of the syntax are laid out. When given, the generator is told
- * where each anonymous blank node is written, see {@link BlankNodeLabeller}.
+ * where each anonymous blank node is written, see {@link BlankNodeKeyGenerator}.
  * @returns The same array of tokens with blank node IDs assigned.
  */
 export function assignBlankNodeIds(tokens: IToken[], generator: BlankNodeIdGenerator = defaultBlankNodeIdGenerator, layout?: StatementLayout): IToken[] {
-    const keys = layout ? new BlankNodeLabeller(layout).label(tokens) : undefined;
+    const keys = layout ? new BlankNodeKeyGenerator(layout).generate(tokens) : undefined;
     const labelMap = new Map<string, string>();
     const assigned = new Set<string>();
     let counter = 0;
