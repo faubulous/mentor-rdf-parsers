@@ -6,7 +6,7 @@ import { N3Parser } from './parser.js';
 import type { QuadContext } from '../quad-context.js';
 import { toQuadContext } from '../quad-context.js';
 import { getBlankNodeIdFromToken, splitPrefixedName } from '../utils.js';
-import { getCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor, getLanguageTag } from '../reader-helpers.js';
+import { getCstChildren, getOrderedCstChildren, findFirstTokenInCst, findStringTokenInCst, unescapeRdfString, createLazyBaseVisitor, getLanguageTag } from '../reader-helpers.js';
 import type { N3ReaderCstContext as CstContext } from '../reader-cst-types.js';
 import type {
     DirectiveResult,
@@ -879,19 +879,12 @@ export class N3Reader extends BaseVisitor {
     }
 
     formulaContent(ctx: CstContext, quads: Quad[]): void {
-        if (ctx.sparqlDirective) {
-            const result = this.visit(ctx.sparqlDirective[0] as any) as DirectiveResult;
-
-            this._processDirectiveResult(result);
-        }
-
-        if (ctx.n3Statement) {
-            this.visit(ctx.n3Statement[0], quads as any);
-        }
-
-        if (ctx.formulaContent) {
-            for (const fc of ctx.formulaContent) {
-                this.visit(fc, quads as any);
+        // In written order, because a directive applies to the statements after it.
+        for (const { key, node } of getOrderedCstChildren(ctx, ['sparqlDirective', 'n3Statement'])) {
+            if (key === 'sparqlDirective') {
+                this._processDirectiveResult(this.visit(node as any) as DirectiveResult);
+            } else {
+                this.visit(node, quads as any);
             }
         }
     }

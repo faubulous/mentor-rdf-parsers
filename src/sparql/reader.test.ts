@@ -600,6 +600,60 @@ describe('SparqlReader', () => {
         });
     });
 
+    describe('Large triple blocks', () => {
+        /**
+         * More triples than the call stack allows when each triple adds a parser frame.
+         */
+        const TRIPLE_COUNT = 5000;
+
+        const RDF_TYPE = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+
+        /**
+         * Builds the given number of triples, one statement per line.
+         * @param count The number of triples.
+         * @param variables Whether the subjects are variables rather than IRIs.
+         */
+        const createTriples = (count: number, variables: boolean) => Array.from({ length: count }, (_, i) => {
+            const subject = variables ? `?s${i}` : `<http://example.org/s${i}>`;
+
+            return `${subject} <http://example.org/p> "v${i}" .`;
+        }).join('\n');
+
+        /**
+         * Counts the triple pattern nodes in the quads of a query.
+         * @param quads The quads produced by the reader.
+         */
+        const countTriplePatterns = (quads: Quad[]) => quads.filter(q => q.predicate.equals(RDF_TYPE) && q.object.equals(sparql.TriplePattern)).length;
+
+        it('reads a group graph pattern with more triples than the call stack is deep', () => {
+            const { quads } = read(`SELECT * WHERE {\n${createTriples(TRIPLE_COUNT, true)}\n}`);
+
+            expect(countTriplePatterns(quads)).toBe(TRIPLE_COUNT);
+        });
+
+        it('reads INSERT DATA with more triples than the call stack is deep', () => {
+            const { quads } = read(`INSERT DATA {\n${createTriples(TRIPLE_COUNT, false)}\n}`);
+
+            expect(countTriplePatterns(quads)).toBe(TRIPLE_COUNT);
+        });
+
+        it('reads a CONSTRUCT template with more triples than the call stack is deep', () => {
+            const { quads } = read(`CONSTRUCT {\n${createTriples(TRIPLE_COUNT, true)}\n} WHERE {}`);
+
+            expect(countTriplePatterns(quads)).toBe(TRIPLE_COUNT);
+        });
+
+        it('reads a triple block whose last triple has no period', () => {
+            const { quads } = read('SELECT * WHERE { ?a ?p 1 . ?b ?p 2 }');
+
+            expect(countTriplePatterns(quads)).toBe(2);
+        });
+
+        it('rejects two periods after a triple', () => {
+            expect(() => read('SELECT * WHERE { ?s ?p ?o . . }')).toThrow();
+        });
+    });
+
     describe('Vocabulary', () => {
         it('every term of the vocabulary module is defined in the ontology', async () => {
             const ontology = fs.readFileSync(resolvePath('../../vocab/sparql-syntax.ttl'), 'utf-8');

@@ -187,16 +187,20 @@ export class TrigParser extends TurtleParserBase implements IParser {
 
     /**
      * https://www.w3.org/TR/trig/#grammar-production-triplesBlock
+     *
+     * The production `triples ('.' triplesBlock?)?` is parsed as `triples ('.' triples)* '.'?`,
+     * so that the depth of the parse does not grow with the number of statements in a graph.
      */
     triplesBlock = this.RULE('triplesBlock', () => {
         this.SUBRULE(this.triples);
 
-        this.OPTION(() => {
+        this.MANY(() => {
             this.CONSUME(RdfToken.PERIOD);
+            this.SUBRULE1(this.triples);
+        });
 
-            this.OPTION1(() => {
-                this.SUBRULE1(this.triplesBlock);
-            });
+        this.OPTION(() => {
+            this.CONSUME1(RdfToken.PERIOD);
         });
     });
 

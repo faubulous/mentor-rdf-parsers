@@ -589,3 +589,45 @@ ex:s ex:p [ ex:q ( 1 2 ) ] .`);
         expect(infos.every(i => i.graphToken === undefined)).toBe(true);
     });
 });
+
+describe("TrigReader - large graph blocks", () => {
+    /**
+     * More statements than the call stack allows when each statement adds a parser frame.
+     */
+    const STATEMENT_COUNT = 5000;
+
+    /**
+     * Builds a TriG document with one named graph holding the given number of statements.
+     * @param count The number of statements in the graph.
+     */
+    function createGraph(count: number): string {
+        const statements = Array.from({ length: count }, (_, i) => `ex:s${i} ex:p "v${i}" .`);
+
+        return `@prefix ex: <http://example.org/> .\nex:g {\n${statements.join('\n')}\n}`;
+    }
+
+    /**
+     * Parses a TriG document, throwing on syntax errors.
+     * @param input The TriG document.
+     */
+    function parse(input: string) {
+        return new TrigParser().parse(new TrigLexer().tokenize(input).tokens);
+    }
+
+    it('reads a graph block with more statements than the call stack is deep', () => {
+        const cst = parse(createGraph(STATEMENT_COUNT));
+
+        expect(new TrigReader().visit(cst)).toHaveLength(STATEMENT_COUNT);
+        expect(new TrigReader().readQuadContexts(cst)).toHaveLength(STATEMENT_COUNT);
+    });
+
+    it('reads a graph block whose last statement has no period', () => {
+        const cst = parse('@prefix ex: <http://example.org/> .\nex:g { ex:a ex:p 1 . ex:b ex:p 2 }');
+
+        expect(new TrigReader().visit(cst)).toHaveLength(2);
+    });
+
+    it('rejects two periods after a statement in a graph block', () => {
+        expect(() => parse('@prefix ex: <http://example.org/> .\nex:g { ex:a ex:p 1 . . }')).toThrow();
+    });
+});

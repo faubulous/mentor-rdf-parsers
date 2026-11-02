@@ -1153,13 +1153,17 @@ export class SparqlParser extends CstParser implements IParser {
 
     /**
      * [54] TriplesTemplate ::= TriplesSameSubject ('.' TriplesTemplate?)?
+     *
+     * Parsed as `TriplesSameSubject ('.' TriplesSameSubject)* '.'?`, so that the depth of the
+     * parse does not grow with the number of triples, as in a large `INSERT DATA` block.
      */
     triplesTemplate = this.RULE('triplesTemplate', () => {
         this.SUBRULE(this.triplesSameSubject);
-        this.OPTION(() => {
+        this.MANY(() => {
             this.CONSUME(RdfToken.PERIOD);
-            this.OPTION2(() => this.SUBRULE(this.triplesTemplate));
+            this.SUBRULE2(this.triplesSameSubject);
         });
+        this.OPTION(() => this.CONSUME2(RdfToken.PERIOD));
     });
 
     // ==========================================
@@ -1192,13 +1196,17 @@ export class SparqlParser extends CstParser implements IParser {
 
     /**
      * [57] TriplesBlock ::= TriplesSameSubjectPath ('.' TriplesBlock?)?
+     *
+     * Parsed as `TriplesSameSubjectPath ('.' TriplesSameSubjectPath)* '.'?`, so that the depth
+     * of the parse does not grow with the number of triple patterns.
      */
     triplesBlock = this.RULE('triplesBlock', () => {
         this.SUBRULE(this.triplesSameSubjectPath);
-        this.OPTION(() => {
+        this.MANY(() => {
             this.CONSUME(RdfToken.PERIOD);
-            this.OPTION2(() => this.SUBRULE(this.triplesBlock));
+            this.SUBRULE2(this.triplesSameSubjectPath);
         });
+        this.OPTION(() => this.CONSUME2(RdfToken.PERIOD));
     });
 
     /**
@@ -1445,13 +1453,17 @@ export class SparqlParser extends CstParser implements IParser {
 
     /**
      * [77] ConstructTriples ::= TriplesSameSubject ('.' ConstructTriples?)?
+     *
+     * Parsed as `TriplesSameSubject ('.' TriplesSameSubject)* '.'?`, so that the depth of the
+     * parse does not grow with the number of triples in the template.
      */
     constructTriples = this.RULE('constructTriples', () => {
         this.SUBRULE(this.triplesSameSubject);
-        this.OPTION(() => {
+        this.MANY(() => {
             this.CONSUME(RdfToken.PERIOD);
-            this.OPTION2(() => this.SUBRULE(this.constructTriples));
+            this.SUBRULE2(this.triplesSameSubject);
         });
+        this.OPTION(() => this.CONSUME2(RdfToken.PERIOD));
     });
 
     // ==========================================
