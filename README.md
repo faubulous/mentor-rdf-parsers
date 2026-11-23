@@ -78,7 +78,7 @@ flowchart LR
 
 ### Reading quads without a syntax tree
 
-When only the quads are needed, such as when loading a document into a store, `TurtleQuadReader` reads them straight from the token stream. It skips the parser and the CST, which makes it about 15 times faster than parsing and reading on large documents (`npm run perf` measures both), and it emits the same quads with the same blank node ids. It stops at the first error and throws a `QuadReaderError` that carries the offending token; hand such a document to `TurtleParser`, whose error recovery reports every error.
+When only the quads are needed, such as when loading a document into a store, a quad reader reads them straight from the token stream: `TurtleQuadReader`, `TrigQuadReader`, `NTriplesQuadReader` and `NQuadsQuadReader`. They skip the parser and the CST, which makes them many times faster than parsing and reading on large documents (`npm run perf` measures Turtle), and they emit the same quads with the same blank node ids. `read` stops at the first error and throws a `QuadReaderError` that carries the offending token.
 
 ```typescript
 import { TurtleLexer, TurtleQuadReader } from '@faubulous/mentor-rdf-parsers';
@@ -86,6 +86,19 @@ import { TurtleLexer, TurtleQuadReader } from '@faubulous/mentor-rdf-parsers';
 const tokens = new TurtleLexer().tokenize(input).tokens;
 const quads = new TurtleQuadReader().read(tokens);
 ```
+
+### Reading documents with errors
+
+`readStatements` reads a document statement by statement and skips the statements that have errors, so that a document being edited still yields the quads of everything else in it. A statement with an error is dropped as a whole, including the quads it emitted before the error, and a directive with an error declares nothing. Reading resumes after the next period, or at the next token that can only begin a statement, such as `@prefix` or `GRAPH`. In TriG, a broken statement inside a graph block is skipped up to its period or the end of the block, and reading never resumes inside a block, so no statement of a block lands in the default graph; a block that is not closed is dropped with everything after it. Nothing is guessed: a statement missing its period is dropped together with the statement after it.
+
+```typescript
+import { TurtleLexer, TurtleQuadReader } from '@faubulous/mentor-rdf-parsers';
+
+const tokens = new TurtleLexer().tokenize(input).tokens;
+const { quads, errors } = new TurtleQuadReader().readStatements(tokens);
+```
+
+`errors` holds the first error of each statement skipped. To report all the errors of a document with their positions, hand it to the parser of its syntax, whose error recovery collects them.
 
 ### Blank node ids
 

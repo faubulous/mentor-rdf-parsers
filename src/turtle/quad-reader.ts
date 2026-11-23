@@ -1,10 +1,11 @@
 import { RdfDataFactory } from '../data-factory.js';
-import type { BlankNode, Literal, NamedNode, Quad, Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
+import type { BlankNode, Literal, NamedNode, Quad, Quad_Graph, Quad_Object, Quad_Subject, Term } from '@rdfjs/types';
 import type { IToken, TokenType } from 'chevrotain';
 import { RdfToken } from '../tokens.js';
 import { getBlankNodeIdFromToken } from '../utils.js';
-import { unescapeRdfString, getLanguageTag } from '../reader-helpers.js';
+import { unescapeRdfString, unescapeIriReference, getLanguageTag } from '../reader-helpers.js';
 import { QuadReaderError } from '../quad-reader-error.js';
+import { StatementQuadReader } from '../statement-quad-reader.js';
 
 const RDF_TYPE = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
 const RDF_FIRST = RdfDataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#first');
@@ -16,8 +17,19 @@ const XSD_DECIMAL = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#d
 const XSD_DOUBLE = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#double');
 const XSD_BOOLEAN = RdfDataFactory.namedNode('http://www.w3.org/2001/XMLSchema#boolean');
 
+/**
+ * The tokens that begin a directive, which cannot occur anywhere else in a document.
+ */
+const DIRECTIVE_TOKENS: ReadonlySet<TokenType> = new Set([
+    RdfToken.TTL_PREFIX,
+    RdfToken.PREFIX,
+    RdfToken.TTL_BASE,
+    RdfToken.BASE,
+    RdfToken.VERSION,
+    RdfToken.SPARQL_VERSION
+]);
+
 const LOCAL_NAME_ESCAPE = /\\([_~.\-!$&'()*+,;=/?#@%])/g;
-const IRI_UNICODE_ESCAPE = /\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})/g;
 
 /**
  * A predicate and object read from a predicate-object list, with the annotation
@@ -54,11 +66,12 @@ interface AnnotationBlock {
  * This is the reader for the load path: it accepts the tokens of {@link TurtleLexer} and
  * emits the same quads as `TurtleReader.visit(TurtleParser.parse(tokens))`, in the same
  * order and with the same blank node ids, which it takes from the token payloads assigned
- * by the lexer. Directives apply from the point where they are written. The reader stops
- * at the first error and reports it as a {@link QuadReaderError}; a document with errors
- * is best handed to {@link TurtleParser}, whose error recovery reports them all.
+ * by the lexer. Directives apply from the point where they are written. {@link read} stops
+ * at the first error and reports it as a {@link QuadReaderError}; {@link readStatements}
+ * skips the statements that have errors and reads the others. To report all the errors of a
+ * document, hand it to {@link TurtleParser}, whose error recovery collects them.
  */
-export class TurtleQuadReader {
+export class TurtleQuadReader extends StatementQuadReader {
     /**
      * The namespace IRIs declared so far, by prefix.
      */
@@ -69,11 +82,10 @@ export class TurtleQuadReader {
      */
     baseIri: string | undefined;
 
-    private _tokens: IToken[] = [];
-
-    private _index: number = 0;
-
-    private _quads: Quad[] = [];
+    /**
+     * The graph of the quads being emitted.
+     */
+    protected _graph: Quad_Graph = RdfDataFactory.defaultGraph();
 
     /**
      * The named nodes of the prefixed names read so far, by their written form. A new prefix
@@ -82,30 +94,42 @@ export class TurtleQuadReader {
     private _prefixedNames: Map<string, NamedNode> = new Map();
 
     /**
-     * Reads the quads of a Turtle document.
-     * @param tokens The tokens of the document, as produced by {@link TurtleLexer}. Comment tokens are skipped.
-     * @returns The quads of the document.
-     * @throws {QuadReaderError} At the first syntax error or undefined prefix.
+     * Prepares a read of new tokens: the prefixed names read before may mean something else now,
+     * and quads are emitted into the default graph.
+     * @param tokens The tokens to read.
+     * @param recovering Whether statements with errors are skipped.
      */
-    read(tokens: IToken[]): Quad[] {
-        this._tokens = tokens;
-        this._index = 0;
-        this._quads = [];
+    protected override _begin(tokens: IToken[], recovering: boolean): void {
+        super._begin(tokens, recovering);
+
         this._prefixedNames.clear();
-
-        this._skipComments();
-
-        while (this._index < this._tokens.length) {
-            this._readStatement();
-        }
-
-        return this._quads;
+        this._graph = RdfDataFactory.defaultGraph();
     }
 
     /**
      * Reads one directive, or one triples block with its terminating period.
      */
-    private _readStatement(): void {
+    protected _readStatement(): void {
+        if (!this._readDirective()) {
+            this._readTriples();
+            this._consume(RdfToken.PERIOD);
+        }
+    }
+
+    /**
+     * Whether a token can only begin a statement: the keywords of the directives.
+     * @param type The type of the token.
+     * @returns `true` for the keyword of a directive.
+     */
+    protected _beginsStatement(type: TokenType): boolean {
+        return DIRECTIVE_TOKENS.has(type);
+    }
+
+    /**
+     * Reads a directive at the current token, if there is one.
+     * @returns Whether a directive was read.
+     */
+    protected _readDirective(): boolean {
         const type = this._peekType();
 
         if (type === RdfToken.TTL_PREFIX) {
@@ -121,9 +145,10 @@ export class TurtleQuadReader {
         } else if (type === RdfToken.SPARQL_VERSION) {
             this._readVersionDirective(false);
         } else {
-            this._readTriples();
-            this._consume(RdfToken.PERIOD);
+            return false;
         }
+
+        return true;
     }
 
     /**
@@ -184,19 +209,19 @@ export class TurtleQuadReader {
      * Reads a triples block: a subject with its predicate-object list, a blank node property
      * list or a reified triple, each optionally followed by a predicate-object list.
      */
-    private _readTriples(): void {
+    protected _readTriples(): void {
         const type = this._peekType();
 
         if (type === RdfToken.LBRACKET && this._peekType(1) !== RdfToken.RBRACKET) {
             const subject = this._readBlankNodePropertyList();
 
-            if (this._peekType() !== RdfToken.PERIOD) {
+            if (!this._endsTriples(this._peekType())) {
                 this._emitPairs(subject, this._readPredicateObjectList());
             }
         } else if (type === RdfToken.OPEN_REIFIED_TRIPLE) {
             const subject = this._readReifiedTriple();
 
-            if (this._peekType() !== RdfToken.PERIOD) {
+            if (!this._endsTriples(this._peekType())) {
                 this._emitPairs(subject, this._readPredicateObjectList());
             }
         } else {
@@ -204,6 +229,16 @@ export class TurtleQuadReader {
 
             this._emitPairs(subject, this._readPredicateObjectList());
         }
+    }
+
+    /**
+     * Whether a token ends a triples block, so that no predicate-object list follows a subject
+     * that may stand alone.
+     * @param type The type of the token.
+     * @returns `true` for a period.
+     */
+    protected _endsTriples(type: TokenType | undefined): boolean {
+        return type === RdfToken.PERIOD;
     }
 
     /**
@@ -360,14 +395,14 @@ export class TurtleQuadReader {
 
             position++;
 
-            this._quads.push(RdfDataFactory.quad(current, RDF_FIRST, item as Quad_Object));
+            this._quads.push(RdfDataFactory.quad(current, RDF_FIRST, item as Quad_Object, this._graph));
 
             if (this._peekType() === RdfToken.RPARENT) {
-                this._quads.push(RdfDataFactory.quad(current, RDF_REST, RDF_NIL));
+                this._quads.push(RdfDataFactory.quad(current, RDF_REST, RDF_NIL, this._graph));
             } else {
                 const next = RdfDataFactory.blankNode(headId ? `${headId}-rest-${position}` : undefined);
 
-                this._quads.push(RdfDataFactory.quad(current, RDF_REST, next));
+                this._quads.push(RdfDataFactory.quad(current, RDF_REST, next, this._graph));
 
                 current = next;
             }
@@ -390,7 +425,7 @@ export class TurtleQuadReader {
         const reifier = this._peekType() === RdfToken.TILDE ? this._readReifier() : this._blankNodeFor(open);
 
         this._consume(RdfToken.CLOSE_REIFIED_TRIPLE);
-        this._quads.push(RdfDataFactory.quad(reifier, RDF_REIFIES, RdfDataFactory.quad(subject, predicate, object as Quad_Object)));
+        this._quads.push(RdfDataFactory.quad(reifier, RDF_REIFIES, RdfDataFactory.quad(subject, predicate, object as Quad_Object), this._graph));
 
         return reifier;
     }
@@ -506,7 +541,7 @@ export class TurtleQuadReader {
      */
     private _emitPairs(subject: Quad_Subject, pairs: PredicateObjectPair[]): void {
         for (const pair of pairs) {
-            this._quads.push(RdfDataFactory.quad(subject, pair.predicate, pair.object as Quad_Object));
+            this._quads.push(RdfDataFactory.quad(subject, pair.predicate, pair.object as Quad_Object, this._graph));
 
             if (pair.annotation) {
                 this._emitAnnotation(subject, pair, pair.annotation);
@@ -526,7 +561,7 @@ export class TurtleQuadReader {
 
         for (const item of items) {
             if (item.reifier) {
-                this._quads.push(RdfDataFactory.quad(item.reifier, RDF_REIFIES, tripleTerm));
+                this._quads.push(RdfDataFactory.quad(item.reifier, RDF_REIFIES, tripleTerm, this._graph));
 
                 lastReifier = item.reifier;
             } else if (item.block) {
@@ -537,7 +572,7 @@ export class TurtleQuadReader {
                 } else {
                     reifier = this._blankNodeFor(item.block.token);
 
-                    this._quads.push(RdfDataFactory.quad(reifier, RDF_REIFIES, tripleTerm));
+                    this._quads.push(RdfDataFactory.quad(reifier, RDF_REIFIES, tripleTerm, this._graph));
                 }
 
                 for (const quad of item.block.nested) {
@@ -552,7 +587,7 @@ export class TurtleQuadReader {
     /**
      * Reads a blank node: a label, or the anonymous node `[ ]`.
      */
-    private _readBlankNode(): BlankNode {
+    protected _readBlankNode(): BlankNode {
         const token = this._advance();
 
         if (token.tokenType === RdfToken.BLANK_NODE_LABEL) {
@@ -621,7 +656,7 @@ export class TurtleQuadReader {
     /**
      * Reads an IRI reference or a prefixed name.
      */
-    private _readIri(): NamedNode {
+    protected _readIri(): NamedNode {
         const token = this._advance();
         const type = token.tokenType;
 
@@ -673,11 +708,7 @@ export class TurtleQuadReader {
      * is resolved against the base IRI, if one is declared.
      */
     private _readIriRef(token: IToken): NamedNode {
-        let value = token.image.slice(1, -1);
-
-        if (value.includes('\\')) {
-            value = value.replace(IRI_UNICODE_ESCAPE, (_, u4, u8) => String.fromCodePoint(parseInt(u4 ?? u8, 16)));
-        }
+        const value = unescapeIriReference(token.image.slice(1, -1));
 
         if (value.includes(':') || this.baseIri === undefined) {
             return RdfDataFactory.namedNode(value);
@@ -686,85 +717,5 @@ export class TurtleQuadReader {
         } else {
             return RdfDataFactory.namedNode(new URL(value, this.baseIri).href);
         }
-    }
-
-    /**
-     * The type of the token `offset` positions ahead of the current one, ignoring comments,
-     * or `undefined` past the end of the input.
-     */
-    private _peekType(offset: number = 0): TokenType | undefined {
-        let index = this._index;
-
-        while (offset > 0 && index < this._tokens.length) {
-            index = this._nextIndex(index);
-            offset--;
-        }
-
-        return this._tokens[index]?.tokenType;
-    }
-
-    /**
-     * Returns the current token and moves to the next one that is not a comment.
-     */
-    private _advance(): IToken {
-        const token = this._tokens[this._index];
-
-        if (token === undefined) {
-            throw this._unexpected('more input');
-        }
-
-        this._index = this._nextIndex(this._index);
-
-        return token;
-    }
-
-    /**
-     * Returns the current token after checking its type, and moves on.
-     */
-    private _consume(type: TokenType): IToken {
-        const token = this._tokens[this._index];
-
-        if (token === undefined || token.tokenType !== type) {
-            throw this._unexpected(`'${type.name}'`, token);
-        }
-
-        this._index = this._nextIndex(this._index);
-
-        return token;
-    }
-
-    /**
-     * Moves the position to the first token that is not a comment.
-     */
-    private _skipComments(): void {
-        while (this._tokens[this._index]?.tokenType === RdfToken.COMMENT) {
-            this._index++;
-        }
-    }
-
-    /**
-     * The index of the next token after `index` that is not a comment.
-     */
-    private _nextIndex(index: number): number {
-        index++;
-
-        while (this._tokens[index]?.tokenType === RdfToken.COMMENT) {
-            index++;
-        }
-
-        return index;
-    }
-
-    /**
-     * Creates the error for a token that does not fit the grammar at the current position.
-     * @param expected What the grammar expected at this point.
-     * @param token The token found, or the current token when omitted.
-     */
-    private _unexpected(expected: string, token: IToken | undefined = this._tokens[this._index]): QuadReaderError {
-        if (token === undefined) {
-            return new QuadReaderError(`Unexpected end of input, expected ${expected}`, undefined);
-        }
-
-        return new QuadReaderError(`Expected ${expected} but found '${token.image}'`, token);
     }
 }

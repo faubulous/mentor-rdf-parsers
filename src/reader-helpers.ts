@@ -106,6 +106,24 @@ export function findStringTokenInCst(ctx: CstLikeContext): IToken | undefined {
 }
 
 /**
+ * The unicode escape sequences an IRI reference may contain.
+ */
+const IRI_UNICODE_ESCAPE = /\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})/g;
+
+/**
+ * Decode the unicode escape sequences (`\uXXXX`, `\UXXXXXXXX`) of the text of an IRI reference.
+ * @param value The text between the angle brackets.
+ * @returns The text with the escapes decoded.
+ */
+export function unescapeIriReference(value: string): string {
+    if (!value.includes('\\')) {
+        return value;
+    }
+
+    return value.replace(IRI_UNICODE_ESCAPE, (_, u4, u8) => String.fromCodePoint(parseInt(u4 ?? u8, 16)));
+}
+
+/**
  * Interpret escape sequences in an RDF string value.
  */
 export function unescapeRdfString(raw: string): string {
