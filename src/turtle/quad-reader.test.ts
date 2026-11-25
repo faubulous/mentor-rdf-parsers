@@ -1,9 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import type { Quad, Term } from '@rdfjs/types';
+import type { Quad } from '@rdfjs/types';
 import { parseQuads, parseNTriples12, quadsMatch } from '../helpers.js';
 import { createFileBlankNodeIdGenerator, getBlankNodeIdFromToken } from '../utils.js';
 import { QuadReaderError } from '../quad-reader-error.js';
+import { listFixtures as listFixturesIn, quadKeys, readFixture as readFixtureIn, relabeledQuadKeys } from '../quad-reader-fixtures.js';
 import { TurtleLexer, TurtleParser } from './parser.js';
 import { TurtleReader } from './reader.js';
 import { TurtleQuadReader } from './quad-reader.js';
@@ -25,62 +26,17 @@ const REDECLARING_FIXTURES = new Set(['prefix_reassigned_and_used.ttl', 'turtle-
 const COLLIDING_FIXTURES = new Set(['turtle12-eval-annotation-02.ttl']);
 
 /**
- * Lists the fixture files of a directory relative to the fixtures root.
+ * Lists the Turtle fixture files of a directory relative to the fixtures root.
  */
 function listFixtures(directory: string): string[] {
-    const absolute = path.join(fixturesDirectory, directory);
-
-    return fs.readdirSync(absolute)
-        .filter(name => name.endsWith('.ttl'))
-        .map(name => path.join(directory, name))
-        .sort();
+    return listFixturesIn(fixturesDirectory, directory, '.ttl');
 }
 
 /**
- * Reads a fixture file.
+ * Reads a Turtle fixture file.
  */
 function readFixture(relativePath: string): string {
-    return fs.readFileSync(path.join(fixturesDirectory, relativePath), 'utf-8');
-}
-
-/**
- * Renders a term so that equal terms, including blank node ids and triple terms, render equally.
- */
-function termKey(term: Term): string {
-    switch (term.termType) {
-        case 'Literal':
-            return `"${term.value}"@${term.language}^^${term.datatype.value}`;
-        case 'Quad':
-            return `<<${termKey(term.subject)} ${termKey(term.predicate)} ${termKey(term.object)}>>`;
-        default:
-            return `${term.termType}:${term.value}`;
-    }
-}
-
-/**
- * Renders quads in order, one line each, for exact comparison.
- */
-function quadKeys(quads: Quad[]): string[] {
-    return quads.map(quad => `${termKey(quad.subject)} ${termKey(quad.predicate)} ${termKey(quad.object)} ${termKey(quad.graph)}`);
-}
-
-/**
- * Renders quads in order with blank nodes numbered by first occurrence, so that two readers
- * agree when they emit the same statements in the same order with consistently mapped ids.
- */
-function relabeledQuadKeys(quads: Quad[]): string[] {
-    const labels = new Map<string, string>();
-
-    return quadKeys(quads).map(key => key.replace(/BlankNode:([^ >]+)/g, (_, id) => {
-        let label = labels.get(id);
-
-        if (label === undefined) {
-            label = `BlankNode:#${labels.size}`;
-            labels.set(id, label);
-        }
-
-        return label;
-    }));
+    return readFixtureIn(fixturesDirectory, relativePath);
 }
 
 /**
@@ -253,6 +209,93 @@ describe('TurtleQuadReader', () => {
 
             expect(() => reader.read(tokenize('<s> <p>').tokens)).toThrow(QuadReaderError);
             expect(reader.read(tokenize('<s> <p> <o> .').tokens)).toHaveLength(1);
+        });
+    });
+
+    describe('reading statement by statement', () => {
+        const PREAMBLE = '@prefix ex: <http://example.org/> .\n';
+
+        /**
+         * Reads a Turtle text statement by statement, skipping the statements that have errors.
+         */
+        function readStatements(text: string, tokens = tokenize(text).tokens) {
+            return new TurtleQuadReader().readStatements(tokens);
+        }
+
+        /**
+         * The local names of the subjects of quads, in order.
+         */
+        function subjectsOf(quads: Quad[]): string[] {
+            return quads.map(quad => quad.subject.value.replace('http://example.org/', ''));
+        }
+
+        it('skips a statement without an object and reads the others', () => {
+            const { quads, errors } = readStatements(`${PREAMBLE}ex:a ex:p ex:b .\nex:c ex:p .\nex:d ex:p ex:e .`);
+
+            expect(subjectsOf(quads)).toEqual(['a', 'd']);
+            expect(errors).toHaveLength(1);
+            expect(errors[0].token?.image).toBe('.');
+        });
+
+        it('skips a statement without its period together with the statement after it', () => {
+            const { quads, errors } = readStatements(`${PREAMBLE}ex:a ex:p ex:b\nex:c ex:p ex:d .\nex:e ex:p ex:f .`);
+
+            expect(subjectsOf(quads)).toEqual(['e']);
+            expect(errors.map(error => error.message)).toEqual(["Expected 'PERIOD' but found 'ex:c'"]);
+        });
+
+        it('skips a statement with an undefined prefix', () => {
+            const { quads, errors } = readStatements('<s> <p> foo:o .\n<s> <p> <o> .');
+
+            expect(quads).toHaveLength(1);
+            expect(errors[0].message).toBe('Undefined prefix: foo');
+        });
+
+        it('declares nothing with a directive that has an error', () => {
+            const { quads, errors } = readStatements('@prefix ex: <http://example.org/>\nex:a ex:p ex:b .\n<http://example.org/c> <http://example.org/p> <http://example.org/d> .\nex:e ex:p ex:f .');
+
+            expect(subjectsOf(quads)).toEqual(['c']);
+            expect(errors.map(error => error.message)).toEqual(["Expected 'PERIOD' but found 'ex:a'", 'Undefined prefix: ex']);
+        });
+
+        it('resumes at a directive after a statement that is not terminated', () => {
+            const { quads } = readStatements(`${PREAMBLE}ex:a ex:p\n@prefix ex2: <http://example.org/> .\nex2:b ex2:p ex2:c .`);
+
+            expect(subjectsOf(quads)).toEqual(['b']);
+        });
+
+        it('removes the quads a broken statement emitted before its error', () => {
+            const { quads } = readStatements(`${PREAMBLE}ex:a ex:p [ ex:q ( ex:r ) ] ; ex:s .\nex:b ex:p ex:c .`);
+
+            expect(subjectsOf(quads)).toEqual(['b']);
+        });
+
+        it('goes on with the statements after an error inside an annotation block', () => {
+            const { quads, errors } = readStatements(`${PREAMBLE}ex:a ex:p ex:b {| ex:q |} .\nex:c ex:p ex:d .`);
+
+            expect(subjectsOf(quads)).toEqual(['c']);
+            expect(errors).toHaveLength(1);
+        });
+
+        it('keeps the blank node ids of the other statements', () => {
+            const valid = `${PREAMBLE}[] ex:p [ ex:q 1 ] .\n[] ex:p ( 1 2 ) .`;
+            const broken = `${PREAMBLE}[] ex:p [ ex:q 1 ] .\nex:x ex:p .\n[] ex:p ( 1 2 ) .`;
+            const lexer = new TurtleLexer(createFileBlankNodeIdGenerator('file:///doc.ttl'));
+
+            expect(quadKeys(readStatements(broken, lexer.tokenize(broken).tokens).quads)).toEqual(quadKeys(new TurtleQuadReader().read(lexer.tokenize(valid).tokens)));
+        });
+
+        it('reports the end of the input as an error without a token', () => {
+            const { quads, errors } = readStatements(`${PREAMBLE}ex:a ex:p ex:b .\nex:c ex:p`);
+
+            expect(subjectsOf(quads)).toEqual(['a']);
+            expect(errors[0].token).toBeUndefined();
+        });
+
+        it('reads a document without errors as read does', () => {
+            const text = readFixture('turtle-subm-10.ttl');
+
+            expect(readStatements(text)).toEqual({ quads: new TurtleQuadReader().read(tokenize(text).tokens), errors: [] });
         });
     });
 
